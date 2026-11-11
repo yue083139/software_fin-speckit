@@ -1,0 +1,26 @@
+@startuml 005-guided-notes-export-component
+title 005 guided-notes-export：組件圖
+
+package "web" {
+  [Teacher.PhaseControls\n「匯出 Guided Notes」（ended 才可按）] as Btn
+  [api.ts\nteacherDownload（fetch＋blob）] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\nGET /api/teacher/export\nexport_filename（RFC 5987）] as App
+  [results\nwinning_answers（經規則）] as Results
+  [guided_notes\nwrite_answers・fill] as Notes
+  [activity.Activity\nsource_bytes・notes] as Act
+}
+
+file "匯出 xlsx\n<原檔名>-搶答結果.xlsx" as Out
+cloud "Google 試算表\n檔案→匯入→取代" as GS
+
+Btn --> Api
+Api --> App : X-Teacher-Key
+App --> Act : 確認 ended、取原檔與解析結果
+App --> Results
+App --> Notes : write_answers(原檔, notes, 得主答案)
+Notes --> Out
+Out ..> GS : 老師手動匯入
+@enduml
