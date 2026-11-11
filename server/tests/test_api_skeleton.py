@@ -126,10 +126,9 @@ def test_configure_teams_out_of_range(client, teacher_headers):
 
 
 def test_binary_frame_is_ignored(loaded_client, teacher_headers):
-    client = loaded_client
-    tok = join(client, "第1組")
-    with client.websocket_connect(f"/ws?role=student&token={tok}") as ws:
+    tok = join(loaded_client, "第1組")
+    with loaded_client.websocket_connect(f"/ws?role=student&token={tok}") as ws:
         ws.receive_json()
         ws.send_bytes(b"\x00\x01")
-        client.post("/api/teacher/start", headers=teacher_headers)
+        loaded_client.post("/api/teacher/start", headers=teacher_headers)
         assert ws.receive_json()["view"]["phase"] == "answering"

@@ -5,6 +5,7 @@ import os
 import secrets
 from pathlib import Path
 from typing import Annotated, Any
+from urllib.parse import quote
 
 import httpx
 from fastapi import (
@@ -19,13 +20,14 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from . import results
 from .activity import Activity, AlreadySubmittedError, TeamTakenError
-from .guided_notes import GuidedNotesError
-from .phases import PhaseError
+from .guided_notes import GuidedNotesError, write_answers
+from .phases import Phase, PhaseError
 from .sources import MAX_BYTES, SourceError, check_upload, download_sheet
 from .views import view_for
 
@@ -49,6 +51,14 @@ class UrlBody(BaseModel):
 class SubmitBody(BaseModel):
     question: int
     answers: list[str]
+
+
+XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def export_filename(source: str | None) -> str:
+    stem = (source or "guided-notes").rsplit(".", 1)[0]
+    return f"{stem}-搶答結果.xlsx"
 
 
 def resolve_teacher_key(explicit: str | None = None) -> str:
@@ -149,6 +159,17 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
         await act.load_questions(data, "Google 試算表.xlsx")
         log.info("匯入 Google 試算表：%d 題", len(act.questions))
         return {"source": act.source_name, "count": len(act.questions)}
+
+    @app.get("/api/teacher/export", dependencies=teacher)
+    async def export() -> Response:
+        if act.phase is not Phase.ENDED:
+            raise PhaseError("搶答結束後才能匯出")
+        if act.notes is None or act.source_bytes is None:
+            raise PhaseError("尚未匯入題目")
+        data = write_answers(act.source_bytes, act.notes, results.winning_answers(act))
+        name = export_filename(act.source_name)
+        disposition = f"attachment; filename=\"guided-notes-result.xlsx\"; filename*=UTF-8''{quote(name)}"
+        return Response(data, media_type=XLSX_MEDIA, headers={"Content-Disposition": disposition})
 
     @app.post("/api/teacher/start", dependencies=teacher)
     async def start() -> dict[str, str]:

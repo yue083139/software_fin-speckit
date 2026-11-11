@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { Board, StudentResults } from "./Results";
+import { TeacherPanel } from "./Teacher";
 import type { QuestionResult } from "../types";
 
 const results: QuestionResult[] = [
@@ -37,5 +38,29 @@ describe("學生結果畫面", () => {
     expect(screen.getByText("搶答成功：第2組（位址）")).toBeInTheDocument();
     expect(screen.getByText("本組：第 2 順位（地址）")).toBeInTheDocument();
     expect(screen.getByText("沒有組別搶答")).toBeInTheDocument();
+  });
+});
+
+describe("匯出", () => {
+  const view = {
+    role: "teacher" as const,
+    teams: ["第1組", "第2組"],
+    joined: [],
+    source: "group.xlsx",
+    questions: [],
+    board: results,
+    team_scores: scores,
+  };
+
+  it("只有結束後可匯出", () => {
+    const { unmount } = render(<TeacherPanel view={{ ...view, phase: "answering" }} act={() => {}} upload={() => {}} />);
+    expect(screen.getByText("匯出 Guided Notes")).toBeDisabled();
+    unmount();
+    let clicked = 0;
+    render(
+      <TeacherPanel view={{ ...view, phase: "ended" }} act={() => {}} upload={() => {}} download={() => clicked++} />,
+    );
+    screen.getByText("匯出 Guided Notes").click();
+    expect(clicked).toBe(1);
   });
 });

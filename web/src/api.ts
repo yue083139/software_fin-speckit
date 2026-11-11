@@ -44,6 +44,24 @@ export async function studentSubmit(token: string, question: number, answers: st
   return parse(await fetch("/api/student/submit", jsonInit({ "X-Team-Token": token }, { question, answers })));
 }
 
+// 老師金鑰在標頭，不能用一般連結下載；改以 fetch 取回檔案再觸發瀏覽器儲存
+export async function teacherDownload(key: string): Promise<void> {
+  const res = await fetch("/api/teacher/export", { headers: { "X-Teacher-Key": key } });
+  if (!res.ok) {
+    await parse(res);
+    return;
+  }
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = /filename\*=UTF-8''([^;]+)/.exec(disposition);
+  const name = match ? decodeURIComponent(match[1]) : "guided-notes-result.xlsx";
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function publicInfo(): Promise<{ phase: string; teams: string[]; joined: string[] }> {
   return (await parse(await fetch("/api/public/info"))) as { phase: string; teams: string[]; joined: string[] };
 }

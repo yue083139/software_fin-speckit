@@ -26,3 +26,13 @@ def team_scores(a: Activity) -> dict[str, int]:
     """各組得分，由目前規則產生（經典規則＝各組得題數）。"""
     ranked = [a.rule.rank(a.submissions.get(q.number, [])) for q in a.questions]
     return a.rule.team_scores(a.teams, ranked)
+
+
+def winning_answers(a: Activity) -> dict[int, tuple[str, ...]]:
+    """每題得主的答案（經規則產生）；無得主的題目不列入。"""
+    out: dict[int, tuple[str, ...]] = {}
+    for q in a.questions:
+        winner = next((r for r in a.rule.rank(a.submissions.get(q.number, [])) if r.is_winner), None)
+        if winner is not None:
+            out[q.number] = winner.answers
+    return out
