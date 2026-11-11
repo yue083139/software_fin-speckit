@@ -1,0 +1,13 @@
+# software_fin 專案層 Codex 規則——對應 .claude/settings.json 的 deny。
+# 專案層 .codex/ 須經使用者信任才載入；不論是否載入，pre-push 鉤子（make hooks）都擋推 main／dev。
+# 規則只比對指令前綴：git -C <路徑> push、bash -lc "…push…"、make --eval 等包裝形式比對不到，仍屬禁止（CLAUDE.md 紀律「並行隔離」）。
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "forbidden",
+    justification = "推送由負責人自己執行（CLAUDE.md 紀律「並行隔離」）",
+)
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "forbidden",
+    justification = "對應 .claude/settings.json deny rm -rf",
+)

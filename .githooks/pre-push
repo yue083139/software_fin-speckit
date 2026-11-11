@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# 拒絕推往 main／dev（CLAUDE.md 基本紀律「並行隔離」）。
+# GitHub 免費方案的私人 repo 無分支保護，本鉤子是本機唯一的機械防線；
+# 判的是實際要推的遠端分支（stdin 第三欄），不看指令怎麼寫，故 HEAD:main、-f、裸 push 都擋得到。
+# 擋 Claude 的推送不在這裡：負責人以 ! 執行的指令與 Claude 的 Bash 工具環境變數完全相同，
+# 鉤子分不出兩者；改由 .claude/settings.json 的 deny 規則擋（! 不經權限層）。
+# 可被 --no-verify 跳過：防手滑與換寫法，不防故意繞過。
+set -u
+PROTECTED_RE='^refs/heads/(main|dev)$'
+blocked=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${remote_ref:-}" ] && continue
+  if [[ "$remote_ref" =~ $PROTECTED_RE ]]; then
+    echo "✗ 拒絕：${remote_ref#refs/heads/} 只能經 PR 合入（CLAUDE.md 基本紀律「並行隔離」）" >&2
+    blocked=1
+  fi
+done
+exit $blocked

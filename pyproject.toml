@@ -1,0 +1,39 @@
+[project]
+name = "software-fin-ops"
+version = "0.1.0"
+description = "課堂搶答系統的門禁與工作流工具（應用程式本體由第一張功能卡建立，另有自己的依賴檔）"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "openpyxl>=3.1",
+]
+
+[tool.uv]
+package = false
+# 開發機是 Windows、CI 是 Linux；兩邊都要解得出 wheel
+required-environments = [
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin'",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = [".specify", ".tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+# 門禁腳本只以固定參數呼叫 git 與本機 python，無不可信輸入
+"ops/*.py" = ["S603", "S607"]
+"ops/tests/**" = ["S"]
+
+[tool.pytest.ini_options]
+testpaths = ["ops/tests"]

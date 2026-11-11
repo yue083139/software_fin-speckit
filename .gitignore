@@ -1,0 +1,21 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+/.tmp/
+/.tools/
+node_modules/
+dist/
+# 本機活動資料與匯出物（真實學生作答不入庫，見 CLAUDE.md「真實資料不入庫」）
+data/
+exports/
+*.db
+*.sqlite
+*.tsbuildinfo
+# Google 服務帳戶等憑證檔一律不入庫
+*credentials*.json
+*service-account*.json
