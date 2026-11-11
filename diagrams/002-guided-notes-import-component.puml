@@ -1,0 +1,33 @@
+@startuml 002-guided-notes-import-component
+title 002 guided-notes-import：組件圖
+
+package "web" {
+  [ImportPanel\n上傳 xlsx・貼連結・題目清單] as Import
+  [StudentPanel\n題號清單 QuestionList] as Student
+  [api.ts\nteacherUpload・teacherPost(import-url)] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\nPOST /api/teacher/import\nPOST /api/teacher/import-url] as App
+  [sources\ncheck_upload・export_url\ndownload_sheet（逐跳檢查）] as Sources
+  [guided_notes\nparse_workbook] as Notes
+  [activity.Activity\nload_questions] as Act
+  [views\nquestion_outline] as Views
+}
+
+cloud "docs.google.com\n*.googleusercontent.com" as Google
+
+Import --> Api
+Api --> App
+App --> Sources : 上傳驗證／連結改寫
+Sources ..> Google : https、每跳限 Google 網域、5 MB 串流上限
+App --> Act : load_questions(bytes, 檔名)
+Act --> Notes : parse_workbook
+App --> Views
+Views --> Student : 只有題號與子題標籤
+
+note bottom of Notes
+  以表頭別名定位欄、以題號格縱向合併範圍定位題組；
+  不含任何寫死的儲存格座標
+end note
+@enduml
