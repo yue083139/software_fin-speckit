@@ -1,0 +1,13 @@
+# 2026-11-11 uv run --group dev python probes/openpyxl_writeback_probe.py <fixture>
+## single.xlsx
+寫入目標 G11 原值 None 框線 thin
+讀回值 '探針答案' 框線 thin
+合併範圍不變 True 21
+其他非空格變動數 0
+工作表名稱 學習單 欄寬G 13.0
+## group.xlsx
+寫入目標 G11 原值 None 框線 thin
+讀回值 '探針答案' 框線 thin
+合併範圍不變 True 13
+其他非空格變動數 0
+工作表名稱 學習單 欄寬G 8.0

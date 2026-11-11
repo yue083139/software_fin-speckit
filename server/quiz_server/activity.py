@@ -7,6 +7,7 @@
 import asyncio
 import secrets
 
+from .guided_notes import ParsedNotes, Question, parse_workbook
 from .phases import Phase, PhaseError, check_transition
 
 MIN_TEAMS, MAX_TEAMS, DEFAULT_TEAMS = 2, 12, 4
@@ -28,6 +29,13 @@ class Activity:
         self.teams = team_names(team_count)
         self.version = 0
         self._tokens: dict[str, str] = {}  # 組別憑證 → 組別（app-skeleton D6）
+        self.notes: ParsedNotes | None = None
+        self.source_bytes: bytes | None = None  # 匯入當下的原檔，供匯出寫回（guided-notes-import D6）
+        self.source_name: str | None = None
+
+    @property
+    def questions(self) -> tuple[Question, ...]:
+        return self.notes.questions if self.notes else ()
 
     @staticmethod
     async def _checkpoint() -> None:
@@ -84,6 +92,22 @@ class Activity:
             self.teams = team_names(count)
             self._tokens.clear()  # 改組數即撤銷所有組別憑證
             await self._bump()
+
+    def require_preparing(self) -> None:
+        self._require(Phase.PREPARING)
+
+    # ---- 題目 ----
+    async def load_questions(self, data: bytes, name: str) -> None:
+        async with self._lock:
+            self._require(Phase.PREPARING)
+            notes = parse_workbook(data)  # 解析失敗拋 GuidedNotesError，狀態不變
+            await self._checkpoint()
+            self.notes, self.source_bytes, self.source_name = notes, data, name
+            self._clear_answers()
+            await self._bump()
+
+    def _clear_answers(self) -> None:
+        """清除作答紀錄；作答由 buzz-answering 卡加入。"""
 
     # ---- 階段 ----
     async def _transition(self, target: Phase) -> None:

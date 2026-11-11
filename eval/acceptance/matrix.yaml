@@ -18,8 +18,8 @@ rows:
   - id: M-003
     需求: R-02
     聲明: 匯入任一份合規 Guided Notes 後題數與原檔一致，不依賴固定座標（至少三份版面不同的夾具）
-    守門: （由 guided-notes-import 卡填）
-    狀態: uncovered
+    守門: server/tests/test_guided_notes_parse.py（single、group、variant 三份夾具）；server/tests/test_api_import.py
+    狀態: covered
     卡: guided-notes-import
   - id: M-004
     需求: R-09

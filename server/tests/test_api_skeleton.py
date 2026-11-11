@@ -118,6 +118,7 @@ def test_configure_teams_out_of_range(client, teacher_headers):
 
 
 def test_binary_frame_is_ignored(client, teacher_headers):
+    client = client
     tok = join(client, "第1組")
     with client.websocket_connect(f"/ws?role=student&token={tok}") as ws:
         ws.receive_json()

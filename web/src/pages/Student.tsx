@@ -1,5 +1,6 @@
 import { useLiveView } from "../live";
 import { PHASE_LABEL, type StudentView } from "../types";
+import { QuestionList } from "./ImportPanel";
 
 export function StudentPanel({ view }: { view: StudentView }) {
   if (!view.team_valid)
@@ -16,7 +17,12 @@ export function StudentPanel({ view }: { view: StudentView }) {
       <p className="phase">
         目前階段：<strong>{PHASE_LABEL[view.phase]}</strong>
       </p>
-      {view.phase === "preparing" && <p>等待老師開始搶答…</p>}
+      {view.phase === "preparing" && (
+        <>
+          <p>等待老師開始搶答…</p>
+          <QuestionList questions={view.questions ?? []} />
+        </>
+      )}
     </section>
   );
 }

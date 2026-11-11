@@ -27,6 +27,8 @@
 | `GET /api/teacher/state` | 老師 | — | 老師 view（同 WebSocket） | 401 |
 | `POST /api/teacher/teams` | 老師 | `{count}`（2–12） | `{teams}`；撤銷所有組別憑證 | 401；409 非 preparing；422 超出範圍 |
 | `POST /api/teacher/release` | 老師 | `{team}` | `{released}`；撤銷該組憑證 | 401；404 |
+| `POST /api/teacher/import` | 老師 | `multipart/form-data`，欄位 `file`（.xlsx，≤5 MB） | `{source, count}`；取代題目並清空作答 | 400 檔案或格式不符；401；409 非 preparing |
+| `POST /api/teacher/import-url` | 老師 | `{url}`（`https://docs.google.com/spreadsheets/d/<id>/…`，知道連結者可檢視） | `{source, count}` | 400 連結或下載不符；401；409 非 preparing |
 | `POST /api/teacher/start` | 老師 | — | `{phase}` | 401；409 階段不符 |
 | `POST /api/teacher/end` | 老師 | — | `{phase}` | 401；409 階段不符 |
 | `POST /api/teacher/reset` | 老師 | — | `{phase}`；清空作答 | 401；409 階段不符 |
@@ -41,13 +43,17 @@
 ### 老師 view
 
 ```json
-{"role": "teacher", "phase": "preparing", "teams": ["第1組", "第2組"], "joined": ["第1組"]}
+{"role": "teacher", "phase": "preparing", "teams": ["第1組", "第2組"], "joined": ["第1組"],
+ "source": "group.xlsx", "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
+
+`questions[].labels`：每個子題給學生看的標籤，長度＝子題數；單題為 `[""]`。不含作答格座標（guided-notes-import）。
 
 ### 學生 view
 
 ```json
-{"role": "student", "phase": "preparing", "team": "第1組", "team_valid": true}
+{"role": "student", "phase": "preparing", "team": "第1組", "team_valid": true,
+ "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
 
 憑證缺、錯或已撤銷：

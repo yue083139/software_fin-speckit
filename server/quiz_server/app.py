@@ -6,13 +6,26 @@ import secrets
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
+import httpx
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .activity import Activity, TeamTakenError
+from .guided_notes import GuidedNotesError
 from .phases import PhaseError
+from .sources import MAX_BYTES, SourceError, check_upload, download_sheet
 from .views import view_for
 
 log = logging.getLogger("quiz_server")
@@ -28,12 +41,17 @@ class TeamBody(BaseModel):
     team: str
 
 
+class UrlBody(BaseModel):
+    url: str
+
+
 def resolve_teacher_key(explicit: str | None = None) -> str:
     return explicit or os.environ.get("QUIZ_TEACHER_KEY") or secrets.token_urlsafe(16)
 
 
 def create_app(activity: Activity | None = None, teacher_key: str | None = None,
-               static_dir: Path | None = DEFAULT_STATIC) -> FastAPI:
+               static_dir: Path | None = DEFAULT_STATIC,
+               http_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     app = FastAPI(title="課堂搶答系統")
     act = activity or Activity()
     secret = resolve_teacher_key(teacher_key)
@@ -55,6 +73,11 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
     @app.exception_handler(TeamTakenError)
     async def _team_taken(_: Request, exc: TeamTakenError) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=409)
+
+    @app.exception_handler(GuidedNotesError)
+    @app.exception_handler(SourceError)
+    async def _bad_source(_: Request, exc: ValueError) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
 
     @app.exception_handler(ValueError)
     async def _value_error(_: Request, exc: ValueError) -> JSONResponse:
@@ -87,6 +110,22 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
     async def release(body: TeamBody) -> dict[str, str]:
         await act.release(body.team)
         return {"released": body.team}
+
+    @app.post("/api/teacher/import", dependencies=teacher)
+    async def import_file(file: Annotated[UploadFile, File()]) -> dict[str, Any]:
+        data = await file.read(MAX_BYTES + 1)
+        check_upload(file.filename, data)
+        await act.load_questions(data, file.filename or "guided-notes.xlsx")
+        log.info("匯入上傳檔：%d 題", len(act.questions))
+        return {"source": act.source_name, "count": len(act.questions)}
+
+    @app.post("/api/teacher/import-url", dependencies=teacher)
+    async def import_url(body: UrlBody) -> dict[str, Any]:
+        act.require_preparing()  # 先擋階段，避免搶答中還對外發請求
+        data = await download_sheet(body.url, transport=http_transport)
+        await act.load_questions(data, "Google 試算表.xlsx")
+        log.info("匯入 Google 試算表：%d 題", len(act.questions))
+        return {"source": act.source_name, "count": len(act.questions)}
 
     @app.post("/api/teacher/start", dependencies=teacher)
     async def start() -> dict[str, str]:
