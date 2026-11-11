@@ -4,9 +4,11 @@ SHELL := bash
 .SHELLFLAGS := -eu -o pipefail -c
 export PYTHONUTF8 := 1
 OPS := uv run --group dev
+SRV := uv run --project server
+WEB := npm --prefix web
 SIBLING ?= ../software_fin-openspec
 
-.PHONY: help hooks test lint gate-zh-hant gate-secrets gate-speckit gate-diagrams gate-diagrams-syntax gate-agents gate-parity gate-docs gate-pr gate probe-guided-notes sync-agents review-codex codex-venv diagrams
+.PHONY: help hooks dev web-install test lint gate-zh-hant gate-secrets gate-speckit gate-diagrams gate-diagrams-syntax gate-agents gate-parity gate-docs gate-pr gate probe-guided-notes sync-agents review-codex codex-venv diagrams
 
 help: ## 列出所有目標
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-22s %s\n",$$1,$$2}'
@@ -15,11 +17,23 @@ hooks: ## 安裝本機 git 鉤子（pre-push 拒推 main／dev）；clone 後執
 	git config core.hooksPath .githooks
 	@echo "core.hooksPath=$$(git config core.hooksPath)"
 
-test: ## 全部單元測試（目前為門禁腳本負例），認末行「N passed」
-	$(OPS) pytest -q ops/tests
+dev: ## 建置前端並啟動伺服器（http://127.0.0.1:8000，終端機會印出老師頁網址）
+	$(WEB) run build
+	$(SRV) python -m quiz_server
 
-lint: ## ruff（門禁腳本與探針）
+web-install: ## 依 package-lock.json 安裝前端依賴（clone 後與 CI 執行）
+	$(WEB) ci --no-fund --no-audit
+
+test: ## 全部單元測試：server、門禁腳本、前端；認 pytest 末行「N passed」與 vitest「Tests … passed」
+	$(SRV) pytest -q server/tests
+	$(OPS) pytest -q ops/tests
+	$(WEB) test
+
+lint: ## ruff（server、門禁腳本、探針）＋前端 ESLint 與型別檢查
+	$(SRV) ruff check server
 	$(OPS) ruff check ops probes
+	$(WEB) run lint
+	$(WEB) run typecheck
 
 gate-zh-hant: ## 倉內不得含簡體專用字
 	$(OPS) python ops/gate_zh_hant.py .
