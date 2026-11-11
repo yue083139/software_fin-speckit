@@ -14,7 +14,8 @@ def _recv_phase(ws) -> str:
     return ws.receive_json()["view"]["phase"]
 
 
-def test_phase_sync_all_clients(client, teacher_headers):
+def test_phase_sync_all_clients(loaded_client, teacher_headers):
+    client = loaded_client
     t1, t2 = join(client, "第1組"), join(client, "第2組")
     with client.websocket_connect(f"/ws?role=teacher&key={TEACHER_KEY}") as t, \
          client.websocket_connect(f"/ws?role=student&token={t1}") as s1, \
@@ -26,7 +27,8 @@ def test_phase_sync_all_clients(client, teacher_headers):
         assert [_recv_phase(w) for w in (t, s1, s2)] == ["ended"] * 3
 
 
-def test_per_connection_seq_increments_by_one(client, teacher_headers):
+def test_per_connection_seq_increments_by_one(loaded_client, teacher_headers):
+    client = loaded_client
     tok = join(client, "第1組")
     with client.websocket_connect(f"/ws?role=student&token={tok}") as s:
         first = s.receive_json()
@@ -94,6 +96,11 @@ def test_teacher_sees_joined_teams(client, teacher_headers):
     assert client.get("/api/teacher/state", headers=teacher_headers).json()["joined"] == ["第3組"]
 
 
+def test_start_without_questions_is_409(client, teacher_headers, activity):
+    assert client.post("/api/teacher/start", headers=teacher_headers).status_code == 409
+    assert activity.phase.value == "preparing"
+
+
 def test_illegal_transition_is_409(client, teacher_headers, activity):
     r = client.post("/api/teacher/end", headers=teacher_headers)
     assert r.status_code == 409
@@ -108,7 +115,8 @@ def test_configure_teams_broadcasts_and_revokes_tokens(client, teacher_headers):
         assert ws.receive_json()["view"]["team_valid"] is False
 
 
-def test_configure_teams_rejected_while_answering(client, teacher_headers):
+def test_configure_teams_rejected_while_answering(loaded_client, teacher_headers):
+    client = loaded_client
     client.post("/api/teacher/start", headers=teacher_headers)
     assert client.post("/api/teacher/teams", json={"count": 5}, headers=teacher_headers).status_code == 409
 
@@ -117,8 +125,8 @@ def test_configure_teams_out_of_range(client, teacher_headers):
     assert client.post("/api/teacher/teams", json={"count": 20}, headers=teacher_headers).status_code == 422
 
 
-def test_binary_frame_is_ignored(client, teacher_headers):
-    client = client
+def test_binary_frame_is_ignored(loaded_client, teacher_headers):
+    client = loaded_client
     tok = join(client, "第1組")
     with client.websocket_connect(f"/ws?role=student&token={tok}") as ws:
         ws.receive_json()

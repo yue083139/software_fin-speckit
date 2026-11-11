@@ -22,9 +22,20 @@ def activity():
 
 
 @pytest.fixture
-def ready_activity(activity):
-    """可直接開始搶答的活動；後續卡要求開始前須有題目時，在此補上匯入。"""
+def ready_activity(activity, fixture_bytes):
+    """可直接開始搶答的活動：開始前須已匯入題目（buzz-answering MODIFIED requirement）。"""
+    import asyncio
+    asyncio.run(activity.load_questions(fixture_bytes("group.xlsx"), "group.xlsx"))
     return activity
+
+
+@pytest.fixture
+def loaded_client(client, fixture_bytes, teacher_headers):
+    """已匯入 group.xlsx（4 題：第 1、2 題為 2 子題題組）的測試用戶端。"""
+    r = client.post("/api/teacher/import", headers=teacher_headers,
+                    files={"file": ("group.xlsx", fixture_bytes("group.xlsx"), "application/octet-stream")})
+    assert r.status_code == 200
+    return client
 
 
 @pytest.fixture

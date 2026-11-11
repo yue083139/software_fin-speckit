@@ -21,6 +21,23 @@ export interface StudentView {
   team: string | null;
   team_valid: boolean;
   questions?: QuestionOutline[];
+  my_submissions?: { question: number; answers: string[] }[];
+  results?: QuestionResult[];
+}
+
+export interface RankedAnswer {
+  team: string;
+  answers: string[];
+  rank: number;
+  is_winner: boolean;
+  score: number;
+}
+
+export interface QuestionResult {
+  number: number;
+  labels: string[];
+  ranking: RankedAnswer[];
+  winner: { team: string; answers: string[] } | null;
 }
 
 export type View = TeacherView | StudentView;

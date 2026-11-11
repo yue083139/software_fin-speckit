@@ -18,11 +18,12 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .activity import Activity, TeamTakenError
+from .activity import Activity, AlreadySubmittedError, TeamTakenError
 from .guided_notes import GuidedNotesError
 from .phases import PhaseError
 from .sources import MAX_BYTES, SourceError, check_upload, download_sheet
@@ -43,6 +44,11 @@ class TeamBody(BaseModel):
 
 class UrlBody(BaseModel):
     url: str
+
+
+class SubmitBody(BaseModel):
+    question: int
+    answers: list[str]
 
 
 def resolve_teacher_key(explicit: str | None = None) -> str:
@@ -71,8 +77,14 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
         return JSONResponse({"detail": str(exc)}, status_code=409)
 
     @app.exception_handler(TeamTakenError)
-    async def _team_taken(_: Request, exc: TeamTakenError) -> JSONResponse:
+    @app.exception_handler(AlreadySubmittedError)
+    async def _conflict(_: Request, exc: Exception) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=409)
+
+    @app.exception_handler(RequestValidationError)
+    async def _invalid_body(_: Request, exc: RequestValidationError) -> JSONResponse:
+        # FastAPI 預設會把請求本體原樣放進錯誤回應；本體可能含答案，一律不回顯（作答隔離）
+        return JSONResponse({"detail": "請求格式不正確"}, status_code=422)
 
     @app.exception_handler(GuidedNotesError)
     @app.exception_handler(SourceError)
@@ -96,6 +108,17 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
         token = await act.join(body.team)
         log.info("組別 %s 加入", body.team)
         return {"team": body.team, "token": token}
+
+    @app.post("/api/student/submit")
+    async def submit(body: SubmitBody,
+                     x_team_token: Annotated[str | None, Header()] = None) -> dict[str, Any]:
+        team = act.team_of(x_team_token)  # 只認憑證，不採信請求內的任何組別名稱
+        if team is None:
+            raise HTTPException(403, "組別憑證無效，請回首頁重新加入")
+        sub = await act.submit(team, body.question, body.answers)
+        log.info("送出：組別 %s 題 %s 序號 %s", team, sub.question, sub.seq)
+        # 成功回應只回本組這筆的題號與答案，不含序號與順位（buzz-answering D3）
+        return {"question": sub.question, "answers": list(sub.answers)}
 
     @app.get("/api/teacher/state", dependencies=teacher)
     async def teacher_state() -> dict[str, Any]:
