@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { teacherPost, teacherUpload } from "../api";
 import { ImportPanel } from "./ImportPanel";
+import { Board } from "./Results";
 import { useLiveView } from "../live";
 import { PHASE_LABEL, type TeacherView } from "../types";
 
@@ -68,6 +69,10 @@ export function TeacherPanel({ view, act, upload }: { view: TeacherView; act: Ac
   return (
     <>
       <PhaseControls view={view} act={act} />
+      <section className="card">
+        <h2>作答狀況與結果</h2>
+        <Board board={view.board} teams={view.teams} scores={view.team_scores} />
+      </section>
       <ImportPanel view={view} onUpload={upload} onUrl={(url) => act("import-url", { url })} />
       <TeamSettings view={view} act={act} />
     </>

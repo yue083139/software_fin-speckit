@@ -53,7 +53,7 @@ function QuestionCard({
       </h3>
       {submitted ? (
         <p className="ok">
-          已送出：{submitted.map((a, i) => `${question.labels[i] ?? ""}${a}`).join("　")}
+          已送出：{submitted.map((a, i) => `${question.labels[i] ?? ""}${a}`).join(" ／ ")}
         </p>
       ) : (
         <>

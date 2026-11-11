@@ -13,6 +13,8 @@ export interface TeacherView {
   joined: string[];
   source: string | null;
   questions: QuestionOutline[];
+  board: QuestionResult[];
+  team_scores: Record<string, number>;
 }
 
 export interface StudentView {
@@ -23,6 +25,7 @@ export interface StudentView {
   questions?: QuestionOutline[];
   my_submissions?: { question: number; answers: string[] }[];
   results?: QuestionResult[];
+  team_scores?: Record<string, number>;
 }
 
 export interface RankedAnswer {

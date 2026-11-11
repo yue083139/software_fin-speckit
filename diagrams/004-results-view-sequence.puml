@@ -1,0 +1,26 @@
+@startuml 004-results-view-sequence
+title 004 results-view：時序圖
+
+actor "第3組" as S3
+actor "老師" as T
+actor "第1組" as S1
+participant "app.py" as App
+participant "views" as V
+participant "results" as R
+participant "ScoringRule" as Rule
+
+S3 -> App : POST /api/student/submit {question: 2}
+App -> V : teacher_view
+V -> R : build、team_scores
+R -> Rule : rank(第 2 題送出紀錄)
+Rule --> R : 排名、得主、分數
+App --> T : 推播 board（第 2 題第3組：答案、第 1 順位、搶答成功）
+App -> V : student_view(第1組)
+note right of V : 搶答中不含 results，內容不變則不推送
+
+T -> App : POST /api/teacher/end
+App -> V : student_view(第1組)（phase = ended）
+V -> R : build、team_scores
+App --> S1 : 推播 results＋team_scores
+App --> T : 推播 board（與學生 results 相同）
+@enduml

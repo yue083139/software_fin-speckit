@@ -39,3 +39,15 @@ rows:
     守門: （由 guided-notes-export 卡填）
     狀態: uncovered
     卡: guided-notes-export
+  - id: M-007
+    需求: R-04
+    聲明: 老師畫面即時顯示每題每組的答案、順位、得主與各組得題數
+    守門: server/tests/test_results_view.py::test_teacher_board_live；web/src/pages/results.test.tsx
+    狀態: covered
+    卡: results-view
+  - id: M-008
+    需求: R-08
+    聲明: 學生只在搶答結束後看到每題得主、得主答案、全部組別答案與順位，且與老師畫面一致
+    守門: server/tests/test_results_view.py::test_student_results_only_when_ended、test_teacher_and_student_agree
+    狀態: covered
+    卡: results-view

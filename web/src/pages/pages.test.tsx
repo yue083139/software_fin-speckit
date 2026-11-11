@@ -13,6 +13,8 @@ const view: TeacherView = {
     { number: 1, labels: ["（1）", "（2）"] },
     { number: 3, labels: [""] },
   ],
+  board: [],
+  team_scores: { 第1組: 0, 第2組: 0 },
 };
 
 describe("學生頁", () => {

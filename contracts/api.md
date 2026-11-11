@@ -50,6 +50,8 @@
 
 `questions[].labels`：每個子題給學生看的標籤，長度＝子題數；單題為 `[""]`。不含作答格座標（guided-notes-import）。
 
+老師 view 另含（results-view）：`board`（格式同學生 view 的 `results`，任何階段即時更新）與 `team_scores`（`{組名: 分數}`，經典規則＝得題數）。
+
 ### 學生 view
 
 ```json
@@ -65,7 +67,7 @@
                           {"team": "第1組", "answers": ["地址"], "rank": 2, "is_winner": false, "score": 0}]}]}
 ```
 
-順位依伺服器接收序；經典規則得主得 1 分（buzz-answering D2）。
+順位依伺服器接收序；經典規則得主得 1 分（buzz-answering D2）。`ended` 另含 `team_scores`。老師的 `board` 與學生的 `results` 由同一函式產生，內容一致（results-view D1）。
 
 憑證缺、錯或已撤銷：
 
