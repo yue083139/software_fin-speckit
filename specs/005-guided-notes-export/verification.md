@@ -66,6 +66,59 @@ $ diff software_fin-openspec/contracts/api.md software_fin-speckit/contracts/api
 
 偏離：無。
 
+## 交付版圖碼核對（001–005 全部圖，最終分支行號）
+
+由腳本以正則逐一定位每個圖上元素的定義行，任一找不到即失敗（2026-11-11 產生於 `005-guided-notes-export`）。各功能 verification.md 的表保留其實作提交當下的行號作為歷史紀錄。
+
+| 圖 | 元素 | 程式落點 | 一致 |
+|---|---|---|---|
+| 001 class | `Phase` | `server/quiz_server/phases.py:8` | 一致 |
+| 001 class | `check_transition` | `server/quiz_server/phases.py:27` | 一致 |
+| 001 class | `TeamTakenError` | `server/quiz_server/activity.py:20` | 一致 |
+| 001 class | `Activity` | `server/quiz_server/activity.py:52` | 一致 |
+| 001 class | `Activity._checkpoint` | `server/quiz_server/activity.py:73` | 一致 |
+| 001 class | `Activity.team_of` | `server/quiz_server/activity.py:87` | 一致 |
+| 001 class | `Activity.join` | `server/quiz_server/activity.py:99` | 一致 |
+| 001 class | `Activity.release` | `server/quiz_server/activity.py:111` | 一致 |
+| 001 class | `Activity.start` | `server/quiz_server/activity.py:178` | 一致 |
+| 001 class | `views.teacher_view` | `server/quiz_server/views.py:18` | 一致 |
+| 001 class | `views.student_view` | `server/quiz_server/views.py:32` | 一致 |
+| 001 class | `app.create_app` | `server/quiz_server/app.py:68` | 一致 |
+| 001 sequence | `POST /api/student/join` | `server/quiz_server/app.py:116` | 一致 |
+| 001 sequence | `WebSocket /ws（每連線送出迴圈）` | `server/quiz_server/app.py:207` | 一致 |
+| 001 sequence | `view 相同不送` | `server/quiz_server/app.py:219` | 一致 |
+| 001 component | `__main__ log_level=warning` | `server/quiz_server/__main__.py:23` | 一致 |
+| 002 class | `Slot` | `server/quiz_server/guided_notes.py:27` | 一致 |
+| 002 class | `Question` | `server/quiz_server/guided_notes.py:36` | 一致 |
+| 002 class | `ParsedNotes` | `server/quiz_server/guided_notes.py:46` | 一致 |
+| 002 class | `parse_workbook` | `server/quiz_server/guided_notes.py:102` | 一致 |
+| 002 class | `export_url` | `server/quiz_server/sources.py:26` | 一致 |
+| 002 class | `_allowed_hop` | `server/quiz_server/sources.py:43` | 一致 |
+| 002 class | `download_sheet` | `server/quiz_server/sources.py:50` | 一致 |
+| 002 class | `Activity.load_questions` | `server/quiz_server/activity.py:132` | 一致 |
+| 002 component | `views.question_outline` | `server/quiz_server/views.py:13` | 一致 |
+| 002 sequence | `POST /api/teacher/import-url` | `server/quiz_server/app.py:155` | 一致 |
+| 003 class | `Submission` | `server/quiz_server/scoring.py:11` | 一致 |
+| 003 class | `ScoringRule` | `server/quiz_server/scoring.py:29` | 一致 |
+| 003 class | `ClassicBuzzRule` | `server/quiz_server/scoring.py:38` | 一致 |
+| 003 class | `clean_answers` | `server/quiz_server/activity.py:32` | 一致 |
+| 003 class | `Activity.submit` | `server/quiz_server/activity.py:152` | 一致 |
+| 003 sequence | `submit 內讓出點` | `server/quiz_server/activity.py:123` | 一致 |
+| 003 component | `POST /api/student/submit` | `server/quiz_server/app.py:122` | 一致 |
+| 003 component | `RequestValidationError 不回顯本體` | `server/quiz_server/app.py:94` | 一致 |
+| 004 class | `results.build` | `server/quiz_server/results.py:7` | 一致 |
+| 004 class | `results.team_scores` | `server/quiz_server/results.py:25` | 一致 |
+| 004 component | `student_view 只在 ended 加 results` | `server/quiz_server/views.py:48` | 一致 |
+| 004 class | `Board` | `web/src/pages/Results.tsx:8` | 一致 |
+| 004 class | `StudentResults` | `web/src/pages/Results.tsx:76` | 一致 |
+| 005 class | `guided_notes.fill` | `server/quiz_server/guided_notes.py:162` | 一致 |
+| 005 class | `guided_notes.write_answers` | `server/quiz_server/guided_notes.py:169` | 一致 |
+| 005 class | `data_type = "s"` | `server/quiz_server/guided_notes.py:183` | 一致 |
+| 005 class | `results.winning_answers` | `server/quiz_server/results.py:31` | 一致 |
+| 005 class | `app.export_filename` | `server/quiz_server/app.py:59` | 一致 |
+| 005 sequence | `GET /api/teacher/export` | `server/quiz_server/app.py:163` | 一致 |
+| 005 component | `teacherDownload` | `web/src/api.ts:48` | 一致 |
+
 ## 人工驗證（需求 P-05）
 
 狀態：**待負責人執行**。步驟同 OpenSpec 組 `openspec/changes/guided-notes-export/verification.md`：匯出檔名、Excel 開啟確認作答格與框線、上傳回 Google 試算表確認答案在原填空格。

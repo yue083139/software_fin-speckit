@@ -26,6 +26,8 @@ $ git grep -nE '"[A-Z]{1,2}[0-9]+"' -- server/quiz_server
 
 ## 圖碼一致核對（憲章原則 VII）
 
+> 本表行號以本功能實作提交 `454bc07` 當下的程式為準（後續功能會移動行號）；交付版（最終分支）的行號見 `specs/005-guided-notes-export/verification.md`「交付版圖碼核對」。
+
 | 圖 | 元素 | 程式落點 | 一致／偏離 |
 |---|---|---|---|
 | class | `GuidedNotesError`、`Slot`、`Question`（`is_group`）、`ParsedNotes` | `server/quiz_server/guided_notes.py:22`、`:27`、`:36`（`:41`）、`:46` | 一致 |

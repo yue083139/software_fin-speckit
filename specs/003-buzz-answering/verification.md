@@ -28,6 +28,8 @@ FAILED server\tests\test_submit.py::test_concurrent_same_team_same_question
 
 ## 圖碼一致核對（憲章原則 VII）
 
+> 本表行號以本功能實作提交 `43e0126` 當下的程式為準（後續功能會移動行號）；交付版（最終分支）的行號見 `specs/005-guided-notes-export/verification.md`「交付版圖碼核對」。
+
 | 圖 | 元素 | 程式落點 | 一致／偏離 |
 |---|---|---|---|
 | class | `Submission`、`Ranked` | `server/quiz_server/scoring.py:11`、`:20` | 一致 |
