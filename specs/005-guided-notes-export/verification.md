@@ -68,7 +68,7 @@ $ diff software_fin-openspec/contracts/api.md software_fin-speckit/contracts/api
 
 ## 交付版圖碼核對（001–005 全部圖，最終分支行號）
 
-由腳本以正則逐一定位每個圖上元素的定義行，任一找不到即失敗（2026-11-11 產生於 `005-guided-notes-export`）。各功能 verification.md 的表保留其實作提交當下的行號作為歷史紀錄。
+由腳本以正則逐一定位每個圖上元素的定義行，任一找不到即失敗；腳本只保證「找得到」，不保證「找對位置」，故經評審抽查 22 列並更正 1 列（2026-11-11 產生於 `005-guided-notes-export`）。各功能 verification.md 的表保留其實作提交當下的行號作為歷史紀錄。
 
 | 圖 | 元素 | 程式落點 | 一致 |
 |---|---|---|---|
@@ -103,7 +103,7 @@ $ diff software_fin-openspec/contracts/api.md software_fin-speckit/contracts/api
 | 003 class | `ClassicBuzzRule` | `server/quiz_server/scoring.py:38` | 一致 |
 | 003 class | `clean_answers` | `server/quiz_server/activity.py:32` | 一致 |
 | 003 class | `Activity.submit` | `server/quiz_server/activity.py:152` | 一致 |
-| 003 sequence | `submit 內讓出點` | `server/quiz_server/activity.py:123` | 一致 |
+| 003 sequence | `submit 內讓出點` | `server/quiz_server/activity.py:161`（`submit` 自 :152 起；檔內其他 `_checkpoint()` 屬其他方法） | 一致 |
 | 003 component | `POST /api/student/submit` | `server/quiz_server/app.py:122` | 一致 |
 | 003 component | `RequestValidationError 不回顯本體` | `server/quiz_server/app.py:94` | 一致 |
 | 004 class | `results.build` | `server/quiz_server/results.py:7` | 一致 |
