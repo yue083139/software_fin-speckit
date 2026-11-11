@@ -36,8 +36,8 @@ rows:
   - id: M-006
     需求: R-05
     聲明: 匯出的 Guided Notes 中每題作答格填入搶答成功的答案，其餘格內容與格式不變
-    守門: （由 guided-notes-export 卡填）
-    狀態: uncovered
+    守門: server/tests/test_guided_notes_export.py（三份夾具往返、公式形式答案存為文字）；server/tests/test_api_export.py；probes/results/2026-11-11-e2e-flow.txt
+    狀態: covered
     卡: guided-notes-export
   - id: M-007
     需求: R-04

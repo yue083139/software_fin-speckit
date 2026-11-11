@@ -22,11 +22,29 @@ make gate-pr          # PR 門禁
 make help             # 全部指令
 ```
 
-需求：Python 3.12＋[uv](https://docs.astral.sh/uv/)、Node.js 24、GNU make、bash（Windows 用 Git Bash）。應用程式的啟動方式（`make dev`）由第一張功能卡 `app-skeleton` 加入。
+需求：Python 3.12＋[uv](https://docs.astral.sh/uv/)、Node.js 24、GNU make、bash（Windows 用 Git Bash）；轉 PlantUML 圖需 Java 或 Docker（`make diagrams`）。
+
+## 執行搶答活動
+
+```bash
+uv sync --project server --group dev
+make web-install
+make dev              # 建置前端並啟動 http://127.0.0.1:8000，終端機印出老師頁網址（含老師金鑰）
+```
+
+1. 老師開終端機印出的老師頁網址；學生（每組一台裝置）開 `http://127.0.0.1:8000/` 選組別。
+2. 老師匯入 Guided Notes：上傳 xlsx（Google 試算表「檔案 → 下載 → Microsoft Excel」），或貼「知道連結者可檢視」的試算表連結。
+3. 老師按「開始搶答」；各組作答、送出（每題每組一次，題組一次送出全部子題）；最先送出的組別得該題。
+4. 老師按「結束搶答」後，學生看到結果；老師按「匯出 Guided Notes」下載填好答案的 xlsx。
+5. 放回 Google 試算表：在原試算表「檔案 → 匯入 → 上傳 → 取代試算表」。
+
+限制：伺服器重啟即清空活動（結束後請先匯出）；匯出只保證儲存格內容與合併範圍不變，圖片、資料驗證等 openpyxl 不完整支援的元素可能遺失；同一組只能一台裝置，裝置關閉後由老師在組別區按「釋放」。
+
 
 ## 狀態
 
 | 卡 | 狀態 |
 |---|---|
 | 專案建置（治理文件、SpecKit 初始化、門禁、CI） | 已完成 |
+| 第一期子功能 `001-app-skeleton`～`005-guided-notes-export` | 已實作，見 `specs/` 各功能 `verification.md` 與 `diagrams/` |
 | 功能卡 | 見 [`docs/parity.md`](docs/parity.md) §4 |

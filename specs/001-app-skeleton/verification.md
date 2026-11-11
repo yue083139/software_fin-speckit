@@ -28,10 +28,12 @@ FAILED server\tests\test_phases.py::test_concurrent_join_same_team_once - ass...
 
 ## 圖碼一致核對（憲章原則 VII 實作階段）
 
+> 本表行號以本功能實作提交 `59a6bfa` 當下的程式為準（後續功能會移動行號）；交付版（最終分支）的行號見 `specs/005-guided-notes-export/verification.md`「交付版圖碼核對」。
+
 | 圖 | 元素 | 程式落點 | 一致／偏離 |
 |---|---|---|---|
 | class | `Phase`（含預留 JUDGING） | `server/quiz_server/phases.py:8` | 一致 |
-| class | `PhaseError`、轉移檢查 | `phases.py:23`、`phases.py:28` | 一致 |
+| class | `PhaseError`、轉移檢查 | `phases.py:23`、`phases.py:27` | 一致 |
 | class | `TeamTakenError` | `server/quiz_server/activity.py:15` | 一致 |
 | class | `Activity._checkpoint`、`_bump` | `activity.py:33`、`activity.py:36` | 一致 |
 | class | `Activity.team_of`／`joined_teams`／`join`／`release` | `activity.py:47`、`:56`、`:59`、`:71` | 一致 |

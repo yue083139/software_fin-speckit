@@ -30,6 +30,7 @@
 | `POST /api/teacher/release` | 老師 | `{team}` | `{released}`；撤銷該組憑證 | 401；404 |
 | `POST /api/teacher/import` | 老師 | `multipart/form-data`，欄位 `file`（.xlsx，≤5 MB） | `{source, count}`；取代題目並清空作答 | 400 檔案或格式不符；401；409 非 preparing |
 | `POST /api/teacher/import-url` | 老師 | `{url}`（`https://docs.google.com/spreadsheets/d/<id>/…`，知道連結者可檢視） | `{source, count}` | 400 連結或下載不符；401；409 非 preparing |
+| `GET /api/teacher/export` | 老師 | — | xlsx 檔（原 Guided Notes，得主答案寫入作答格、一律為文字）；`Content-Disposition` 含 `filename*=UTF-8''<原檔名>-搶答結果.xlsx` | 401；409 非 ended 或尚未匯入 |
 | `POST /api/teacher/start` | 老師 | — | `{phase}` | 401；409 階段不符或尚未匯入題目 |
 | `POST /api/teacher/end` | 老師 | — | `{phase}` | 401；409 階段不符 |
 | `POST /api/teacher/reset` | 老師 | — | `{phase}`；清空作答 | 401；409 階段不符 |
@@ -59,7 +60,7 @@
  "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
 
-搶答中與其他非 `ended` 階段另含 `my_submissions`（只有本組：`[{question, answers}]`，不含順位、序號、他組是否送出）。`ended` 階段另含 `results`：
+所有階段都含 `my_submissions`（只有本組：`[{question, answers}]`，不含順位、序號、他組是否送出）。只有 `ended` 階段另含 `results`：
 
 ```json
 {"results": [{"number": 3, "labels": [""], "winner": {"team": "第2組", "answers": ["位址"]},

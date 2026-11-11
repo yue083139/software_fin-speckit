@@ -157,3 +157,30 @@ def _parse_sheet(ws: Worksheet, merged: dict, header: tuple[int, int, int]) -> P
         for number, slots in raw
     )
     return ParsedNotes(ws.title, questions)
+
+
+def fill(slot: Slot, answer: str) -> str:
+    """佔位符 ⇒ 取代第一段底線；否則接在既有標籤之後（guided-notes-export D2）。"""
+    if slot.placeholder:
+        return PLACEHOLDER.sub(lambda _: answer, slot.label, count=1)
+    return f"{slot.label}{answer}"
+
+
+def write_answers(original: bytes, notes: ParsedNotes, answers: dict[int, tuple[str, ...]]) -> bytes:
+    """把每題得主答案寫回匯入時記下的作答格；其他儲存格與合併範圍不動（guided-notes-export D1）。
+
+    `answers`：題號 → 各子題答案（無得主的題目不在其中，保持原樣）。
+    """
+    wb = openpyxl.load_workbook(io.BytesIO(original))
+    for q in notes.questions:
+        values = answers.get(q.number)
+        if values is None:
+            continue
+        for slot, answer in zip(q.slots, values, strict=True):
+            cell = wb[slot.sheet][slot.cell]
+            cell.value = fill(slot, answer)
+            # openpyxl 會把 = 開頭的字串存成公式；學生答案一律存為文字（v1.1 評審實證）
+            cell.data_type = "s"
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
