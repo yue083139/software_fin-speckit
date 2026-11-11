@@ -3,6 +3,7 @@ import { useLiveView } from "../live";
 import { PHASE_LABEL, type StudentView } from "../types";
 import { AnswerForm, type Submit } from "./AnswerForm";
 import { QuestionList } from "./ImportPanel";
+import { StudentResults } from "./Results";
 
 export function StudentPanel({ view, onSubmit = async () => {} }: { view: StudentView; onSubmit?: Submit }) {
   if (!view.team_valid)
@@ -31,6 +32,9 @@ export function StudentPanel({ view, onSubmit = async () => {} }: { view: Studen
         {view.phase === "answering" && <p>搶答進行中：每題每組只能送出一次，送出後不能修改。</p>}
       </section>
       {view.phase === "answering" && <AnswerForm questions={questions} submitted={mine} onSubmit={onSubmit} />}
+      {view.phase === "ended" && view.results && view.team && (
+        <StudentResults team={view.team} results={view.results} scores={view.team_scores ?? {}} />
+      )}
     </>
   );
 }

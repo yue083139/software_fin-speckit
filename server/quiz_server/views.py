@@ -23,6 +23,9 @@ def teacher_view(a: Activity) -> dict[str, Any]:
         "joined": a.joined_teams(),
         "source": a.source_name,
         "questions": question_outline(a),
+        # 老師任何階段都看得到即時作答狀況與結果（results-view D2）
+        "board": results.build(a),
+        "team_scores": results.team_scores(a),
     }
 
 
@@ -44,6 +47,7 @@ def student_view(a: Activity, team: str | None) -> dict[str, Any]:
     # 只有 ended 才揭曉；其餘階段（含日後新增者）一律不帶他組資料
     if a.phase is Phase.ENDED:
         view["results"] = results.build(a)
+        view["team_scores"] = results.team_scores(a)
     return view
 
 

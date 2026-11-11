@@ -20,3 +20,9 @@ def build(a: Activity) -> list[dict[str, Any]]:
             "winner": None if winner is None else {"team": winner.team, "answers": list(winner.answers)},
         })
     return out
+
+
+def team_scores(a: Activity) -> dict[str, int]:
+    """各組得分，由目前規則產生（經典規則＝各組得題數）。"""
+    ranked = [a.rule.rank(a.submissions.get(q.number, [])) for q in a.questions]
+    return a.rule.team_scores(a.teams, ranked)
