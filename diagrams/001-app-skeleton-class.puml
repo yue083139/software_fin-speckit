@@ -1,0 +1,51 @@
+@startuml 001-app-skeleton-class
+title 001 app-skeleton：類別圖
+
+enum Phase {
+  PREPARING
+  ANSWERING
+  JUDGING  ' 遊戲模式預留，經典模式不經過
+  ENDED
+}
+
+class PhaseError <<Exception>>
+class TeamTakenError <<Exception>>
+
+class Activity {
+  - _lock : asyncio.Lock
+  + changed : asyncio.Condition
+  + phase : Phase
+  + teams : list[str]
+  + version : int
+  - _tokens : dict[str, str]
+  - _checkpoint() : 讓出點（檢查與寫入之間）
+  - _bump() : version+1 並喚醒 changed
+  + team_of(token) : str | None
+  + joined_teams() : list[str]
+  + join(team) : str
+  + release(team)
+  + configure_teams(count)
+  + start()
+  + end()
+  + reset()
+}
+
+class views <<module>> {
+  + teacher_view(a) : dict
+  + student_view(a, team) : dict
+  + view_for(role, team, a) : dict
+}
+
+class app <<module>> {
+  + create_app(activity, teacher_key, static_dir) : FastAPI
+  + resolve_teacher_key() : str
+  ws：每連線 first_then_loop\n（view 相同就不送、每連線 seq）
+}
+
+Activity --> Phase
+Activity ..> PhaseError : 非法轉移
+Activity ..> TeamTakenError : 同組重複加入
+views ..> Activity : 讀取
+app --> Activity
+app ..> views
+@enduml

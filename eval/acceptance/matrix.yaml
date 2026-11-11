@@ -5,15 +5,15 @@
 rows:
   - id: M-001
     需求: R-01
-    聲明: 進場時可選擇老師或學生身分，學生須選定組別
-    守門: （由 app-skeleton 卡填）
-    狀態: uncovered
+    聲明: 進場時可選擇老師或學生身分，學生須選定組別並以組別憑證辨識
+    守門: server/tests/test_api_skeleton.py；web/src/pages/pages.test.tsx
+    狀態: covered
     卡: app-skeleton
   - id: M-002
     需求: R-11
     聲明: 老師切換活動階段後，所有已連線的老師與學生頁面在同一階段
-    守門: （由 app-skeleton 卡填）
-    狀態: uncovered
+    守門: server/tests/test_api_skeleton.py::test_phase_sync_all_clients；server/tests/test_phases.py
+    狀態: covered
     卡: app-skeleton
   - id: M-003
     需求: R-02

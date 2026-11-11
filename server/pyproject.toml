@@ -1,0 +1,51 @@
+[project]
+name = "quiz-server"
+version = "0.1.0"
+description = "課堂搶答系統伺服器：活動狀態機、搶答判定、Guided Notes 匯入匯出"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    # uvicorn 本身不含 WebSocket 實作；少了它真瀏覽器連 /ws 會 404（真棧探針 2026-11-11 發現，TestClient 測不到）
+    "websockets>=13",
+    "openpyxl>=3.1",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-timeout>=2.3",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["quiz_server"]
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin'",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# WebSocket 測試等不到訊息時會永遠卡住；逾時即判紅，門禁不得掛起
+timeout = 30
