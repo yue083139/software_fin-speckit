@@ -1,0 +1,28 @@
+@startuml 004-results-view-component
+title 004 results-view：組件圖
+
+package "web" {
+  [Teacher\n＋ Board（題號 × 組別表）] as Teacher
+  [Student\n＋ StudentResults（ended）] as Student
+}
+
+package "server/quiz_server" {
+  [views.teacher_view\nboard・team_scores（任何階段）] as TV
+  [views.student_view\nresults・team_scores（只在 ended）] as SV
+  [results\nbuild・team_scores] as Results
+  [scoring.ScoringRule] as Rule
+  [activity.Activity\nsubmissions・rule] as Act
+}
+
+TV --> Results
+SV --> Results
+Results --> Rule : 排名與分數只經規則
+Results --> Act : 讀送出紀錄
+TV ..> Teacher : WebSocket 推播
+SV ..> Student : WebSocket 推播
+
+note bottom of Results
+  老師 board 與學生 results 同源，
+  前端不重算順位與得主
+end note
+@enduml
