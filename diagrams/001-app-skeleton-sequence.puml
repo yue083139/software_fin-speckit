@@ -1,0 +1,41 @@
+@startuml 001-app-skeleton-sequence
+title 001 app-skeleton：時序圖（加入組別與階段同步）
+
+actor "第1組學生" as S1
+actor "第2組學生" as S2
+actor "老師" as T
+participant "app.py" as App
+participant "Activity" as Act
+participant "views" as V
+
+S1 -> App : POST /api/student/join {team: 第1組}
+App -> Act : join(第1組)
+Act --> App : token1
+App --> S1 : {team, token}（存 sessionStorage）
+S2 -> App : POST /api/student/join {team: 第1組}
+App -> Act : join(第1組)
+Act --> App : TeamTakenError
+App --> S2 : 409 此組已有裝置加入
+
+S1 -> App : WS /ws?role=student&token=token1
+App -> Act : team_of(token1) = 第1組
+App -> V : student_view(第1組)
+App --> S1 : {type: state, seq: 1, view: preparing}
+T -> App : WS /ws?role=teacher&key=…
+App --> T : {seq: 1, view: teacher_view}
+
+T -> App : POST /api/teacher/start（X-Teacher-Key）
+App -> Act : start()（鎖內：檢查 → 讓出點 → 寫入 → version+1）
+Act -> Act : changed.notify_all()
+par 每條連線各自的送出迴圈
+  App -> V : student_view(第1組)
+  App --> S1 : {seq: 2, view: answering}
+else
+  App -> V : teacher_view
+  App --> T : {seq: 2, view: answering}
+end
+note over App
+  view 與該連線上次送出的相同 則 不送；
+  他組動作不會造成本連線的推播
+end note
+@enduml
