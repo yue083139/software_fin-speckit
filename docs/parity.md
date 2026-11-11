@@ -29,6 +29,7 @@
 | Guided Notes 匯入／匯出管道 | **xlsx 檔往返為主**：老師在 Google Sheets「檔案→下載→xlsx」匯入；系統輸出填好答案的 xlsx，老師以「檔案→匯入→取代試算表」放回 Google Sheets。另支援貼上「知道連結者可檢視」的 Sheets 網址直接匯入（`/export?format=xlsx`，免憑證，已實測可下載範本）。**直接寫回 Google Sheets** 需 OAuth／服務帳戶，列為選做卡，憑證只走環境變數 | 阻塞匯入卡的 design，不阻塞骨架 |
 | 搶答成功的判定單位 | 以**題**為單位：每題最先送出的組別得該題；題組（X-01）以整組為單位同時送出、同時判定 | 阻塞作答卡 |
 | 「最快」的時間基準 | **伺服器接收順序**（單一事件迴圈內遞增序號），不採信客戶端時間戳 | 阻塞作答卡 |
+| 核心卡是否預留遊戲模式擴充點（`docs/trd-game-modes.md` §2） | **是**：`app-skeleton` 的階段狀態機可插入「判定中」階段、`buzz-answering` 的判定寫成 `ScoringRule` 策略；只留介面不做模式 | 阻塞 `app-skeleton`、`buzz-answering` 的設計 |
 | 同一組多位學生 | 一組一個「組帳號」分頁即可；同組多分頁時，**第一次送出即鎖定**該組該題答案 | 不阻塞 |
 
 ## 4. 功能清單（建議拆卡順序；兩組卡名一致，便於對照）
@@ -41,12 +42,20 @@
 | `results-view` | R-04、R-08 | 老師即時看作答狀況與結果；學生於結束後看結果 | 未開 | 未開 |
 | `guided-notes-export` | R-05 | 把每題搶答成功的答案寫回原檔作答格（題組寫在「（k）」之後），輸出 xlsx | 未開 | 未開 |
 | `csv-export` | X-02 | 題號、組別、答案、搶答順位匯出 CSV | 未開 | 未開 |
-| `fair-ranking` | X-03 | 公平順位機制（候選：已得分組別在下一題延遲生效或降序） | 未開 | 未開 |
+| `fair-ranking` | X-03 | 公平順位機制：已搶答成功的組別下一題延遲計入順位（併入模式框架，見 `docs/trd-game-modes.md`） | 未開 | 未開 |
+| `game-mode-framework` | X-04 | 模式介面、`ScoringRule`、判定階段、伺服器計時；經典搶答改寫為規則之一且行為不變（TRD T-01～T-04、T-06） | 未開 | 未開 |
+| `question-settings` | X-04 | 題目倍率與時限設定；**雙倍分數題**（TRD T-05） | 未開 | 未開 |
+| `mode-buzz-fallback` | X-03、X-04 | 搶答＋錯誤遞補：最先送出者判錯則依順位遞補（TRD M1） | 未開 | 未開 |
+| `mode-timed-scoring` | X-04 | **時間計分**（Kahoot 式公式）與只計對錯兩種模式、每題揭曉後排行榜（TRD M2、M3） | 未開 | 未開 |
+| `team-mode` | X-04 | **組隊模式**：一組多台裝置，組分數合併方式待裁（TRD M4） | 未開 | 未開 |
 
 狀態值：未開／提案中／實作中／已合入。
+
+`game-mode-framework` 以下各卡的技術需求見 `docs/trd-game-modes.md`，競品依據見 `docs/research/competitors.md`；排程在核心五張卡合入之後。
 
 ## 5. 變更紀錄
 
 | 日期 | 卡 | 變更 | 發起組 | 另一組確認 |
 |---|---|---|---|---|
 | 2026-11-11 | — | 建立本協議、共用選型與功能清單初稿 | 兩組（專案建置） | 待確認 |
+| 2026-11-11 | 多卡 | 新增多模式搶答 TRD 與競品探索；功能清單加入 `game-mode-framework`、`question-settings`、`mode-buzz-fallback`、`mode-timed-scoring`、`team-mode` | 兩組（負責人提出） | 待確認 |
