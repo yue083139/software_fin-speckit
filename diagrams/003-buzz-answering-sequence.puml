@@ -1,0 +1,37 @@
+@startuml 003-buzz-answering-sequence
+title 003 buzz-answering：時序圖（兩組搶同一題）
+
+actor "第1組" as A
+actor "第2組" as B
+participant "app.py" as App
+participant "Activity" as Act
+participant "ClassicBuzzRule" as Rule
+participant "views" as V
+
+A -> App : POST /api/student/submit {question: 3, answers}（X-Team-Token）
+App -> Act : team_of(token) = 第1組
+App -> Act : submit(第1組, 3, answers)
+activate Act
+Act -> Act : 檢查階段、題號、未送出過、clean_answers
+Act -> Act : next_seq = seq + 1
+Act -> Act : _checkpoint()（讓出點夾在讀寫之間）
+Act -> Act : seq = next_seq、記錄 Submission、version+1
+deactivate Act
+App --> A : {question: 3, answers}（不含順位）
+App -> V : student_view(第1組)：my_submissions 改變
+App --> A : 推播 {seq: n+1}
+App -> V : student_view(第2組)：內容不變
+note right of App : 第2組連線不推送任何訊息
+
+B -> App : POST /api/student/submit {question: 3, answers}
+App -> Act : submit(第2組, 3, answers)
+Act --> App : Submission(seq 較大)
+App --> B : {question: 3, answers}
+
+== 老師結束搶答 ==
+App -> Act : end()
+App -> V : student_view(第2組) 加上 results
+V -> Rule : rank(第 3 題送出紀錄)
+Rule --> V : 第1組 rank 1 得主、第2組 rank 2
+App --> B : 推播 ended＋results
+@enduml

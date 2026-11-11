@@ -1,0 +1,5 @@
+# 2026-11-11 Google Sheets 匯出端點探針（課程公開範本「題組＋單題」，知道連結者可檢視）
+$ curl -sL -o /dev/null -w '%{http_code} %{content_type} %{num_redirects} %{size_download}' 'https://docs.google.com/spreadsheets/d/1PXXwWiBKJNpPkLRoJLMzZWsAh4Jzn2bThHTeRAiq3Hg/export?format=xlsx'
+200 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet 1 9830
+$ 不存在的試算表 id
+404 text/html; charset=utf-8

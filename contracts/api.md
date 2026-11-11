@@ -18,16 +18,19 @@
 
 ## REST 端點
 
-錯誤回應一律為 `{"detail": "<繁體中文訊息>"}`，訊息不含任何學生答案。
+錯誤回應一律為 `{"detail": "<繁體中文訊息>"}`，訊息不含任何學生答案（請求格式錯誤也不回顯請求本體）。
 
 | 方法與路徑 | 身分 | 本體 | 成功回應 | 錯誤 |
 |---|---|---|---|---|
 | `GET /api/public/info` | 任何人 | — | `{phase, teams: [組名], joined: [已加入組名]}` | — |
 | `POST /api/student/join` | 任何人 | `{team}` | `{team, token}` | 404 組別不存在；409 該組已有裝置 |
+| `POST /api/student/submit` | 學生（`X-Team-Token`） | `{question, answers: [每個子題一個字串]}` | `{question, answers}`（只回本組這筆，不含順位） | 403 憑證無效；404 題號不存在；409 非 answering 或本組已送出此題；422 子題數不符、空白、超過 200 字、含控制字元、格式錯誤 |
 | `GET /api/teacher/state` | 老師 | — | 老師 view（同 WebSocket） | 401 |
 | `POST /api/teacher/teams` | 老師 | `{count}`（2–12） | `{teams}`；撤銷所有組別憑證 | 401；409 非 preparing；422 超出範圍 |
 | `POST /api/teacher/release` | 老師 | `{team}` | `{released}`；撤銷該組憑證 | 401；404 |
-| `POST /api/teacher/start` | 老師 | — | `{phase}` | 401；409 階段不符 |
+| `POST /api/teacher/import` | 老師 | `multipart/form-data`，欄位 `file`（.xlsx，≤5 MB） | `{source, count}`；取代題目並清空作答 | 400 檔案或格式不符；401；409 非 preparing |
+| `POST /api/teacher/import-url` | 老師 | `{url}`（`https://docs.google.com/spreadsheets/d/<id>/…`，知道連結者可檢視） | `{source, count}` | 400 連結或下載不符；401；409 非 preparing |
+| `POST /api/teacher/start` | 老師 | — | `{phase}` | 401；409 階段不符或尚未匯入題目 |
 | `POST /api/teacher/end` | 老師 | — | `{phase}` | 401；409 階段不符 |
 | `POST /api/teacher/reset` | 老師 | — | `{phase}`；清空作答 | 401；409 階段不符 |
 
@@ -41,14 +44,28 @@
 ### 老師 view
 
 ```json
-{"role": "teacher", "phase": "preparing", "teams": ["第1組", "第2組"], "joined": ["第1組"]}
+{"role": "teacher", "phase": "preparing", "teams": ["第1組", "第2組"], "joined": ["第1組"],
+ "source": "group.xlsx", "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
+
+`questions[].labels`：每個子題給學生看的標籤，長度＝子題數；單題為 `[""]`。不含作答格座標（guided-notes-import）。
 
 ### 學生 view
 
 ```json
-{"role": "student", "phase": "preparing", "team": "第1組", "team_valid": true}
+{"role": "student", "phase": "preparing", "team": "第1組", "team_valid": true,
+ "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
+
+搶答中與其他非 `ended` 階段另含 `my_submissions`（只有本組：`[{question, answers}]`，不含順位、序號、他組是否送出）。`ended` 階段另含 `results`：
+
+```json
+{"results": [{"number": 3, "labels": [""], "winner": {"team": "第2組", "answers": ["位址"]},
+              "ranking": [{"team": "第2組", "answers": ["位址"], "rank": 1, "is_winner": true, "score": 1},
+                          {"team": "第1組", "answers": ["地址"], "rank": 2, "is_winner": false, "score": 0}]}]}
+```
+
+順位依伺服器接收序；經典規則得主得 1 分（buzz-answering D2）。
 
 憑證缺、錯或已撤銷：
 

@@ -34,6 +34,16 @@ export async function teacherPost(path: string, key: string, body?: unknown): Pr
   return parse(await fetch(`/api/teacher/${path}`, jsonInit({ "X-Teacher-Key": key }, body)));
 }
 
+export async function teacherUpload(key: string, file: File): Promise<unknown> {
+  const form = new FormData();
+  form.append("file", file);
+  return parse(await fetch("/api/teacher/import", { method: "POST", headers: { "X-Teacher-Key": key }, body: form }));
+}
+
+export async function studentSubmit(token: string, question: number, answers: string[]): Promise<unknown> {
+  return parse(await fetch("/api/student/submit", jsonInit({ "X-Team-Token": token }, { question, answers })));
+}
+
 export async function publicInfo(): Promise<{ phase: string; teams: string[]; joined: string[] }> {
   return (await parse(await fetch("/api/public/info"))) as { phase: string; teams: string[]; joined: string[] };
 }

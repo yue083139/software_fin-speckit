@@ -18,20 +18,20 @@ rows:
   - id: M-003
     需求: R-02
     聲明: 匯入任一份合規 Guided Notes 後題數與原檔一致，不依賴固定座標（至少三份版面不同的夾具）
-    守門: （由 guided-notes-import 卡填）
-    狀態: uncovered
+    守門: server/tests/test_guided_notes_parse.py（single、group、variant 三份夾具）；server/tests/test_api_import.py
+    狀態: covered
     卡: guided-notes-import
   - id: M-004
     需求: R-09
     聲明: 搶答結束前，任何送往學生端的訊息與回應都不含其他組別的答案
-    守門: （由 buzz-answering 卡填）
-    狀態: uncovered
+    守門: server/tests/test_isolation.py（WebSocket、送出成功／錯誤回應、他組送出 0 則推播、冒用組別參數、非 ended 各階段、日誌）
+    狀態: covered
     卡: buzz-answering
   - id: M-005
     需求: R-10
     聲明: 同一題並發送出時恰一組成功，順位依伺服器接收序且無重號
-    守門: （由 buzz-answering 卡填）
-    狀態: uncovered
+    守門: server/tests/test_submit.py::test_concurrent_same_question、test_concurrent_same_team_same_question（拿掉鎖必紅）
+    狀態: covered
     卡: buzz-answering
   - id: M-006
     需求: R-05

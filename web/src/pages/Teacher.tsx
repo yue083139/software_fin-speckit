@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { teacherPost } from "../api";
+import { teacherPost, teacherUpload } from "../api";
+import { ImportPanel } from "./ImportPanel";
 import { useLiveView } from "../live";
 import { PHASE_LABEL, type TeacherView } from "../types";
 
@@ -61,10 +62,13 @@ export function TeamSettings({ view, act }: { view: TeacherView; act: Act }) {
   );
 }
 
-export function TeacherPanel({ view, act }: { view: TeacherView; act: Act }) {
+type Upload = (file: File) => void;
+
+export function TeacherPanel({ view, act, upload }: { view: TeacherView; act: Act; upload: Upload }) {
   return (
     <>
       <PhaseControls view={view} act={act} />
+      <ImportPanel view={view} onUpload={upload} onUrl={(url) => act("import-url", { url })} />
       <TeamSettings view={view} act={act} />
     </>
   );
@@ -77,6 +81,10 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     setError("");
     teacherPost(path, teacherKey, body).catch((e: Error) => setError(e.message));
   };
+  const upload: Upload = (file) => {
+    setError("");
+    teacherUpload(teacherKey, file).catch((e: Error) => setError(e.message));
+  };
   if (closedCode === 4401)
     return (
       <main className="page">
@@ -87,7 +95,7 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     <main className="page">
       <h1>老師頁</h1>
       {error && <p className="error">{error}</p>}
-      {view?.role === "teacher" ? <TeacherPanel view={view} act={act} /> : <p>連線中…</p>}
+      {view?.role === "teacher" ? <TeacherPanel view={view} act={act} upload={upload} /> : <p>連線中…</p>}
     </main>
   );
 }

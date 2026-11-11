@@ -1,0 +1,57 @@
+@startuml 003-buzz-answering-class
+title 003 buzz-answering：類別圖
+
+class Submission <<frozen dataclass>> {
+  + team : str
+  + question : int
+  + answers : tuple[str, ...]
+  + seq : int  ' 伺服器接收序
+  + elapsed_ms : int  ' 時間計分預留
+}
+
+class Ranked <<frozen dataclass>> {
+  + team : str
+  + answers : tuple[str, ...]
+  + seq : int
+  + rank : int
+  + is_winner : bool
+  + score : int
+}
+
+interface ScoringRule {
+  + name : str
+  + rank(submissions, judgments=None, attrs=None) : list[Ranked]
+  + team_scores(teams, ranked) : dict[str, int]
+}
+
+class ClassicBuzzRule {
+  + name = "classic"
+  + rank(...)  ' 依 seq 排序，第一名得 1 分
+  + team_scores(...)
+}
+
+class AlreadySubmittedError <<Exception>>
+class AnswerError <<ValueError>>
+
+class Activity {
+  + rule : ScoringRule
+  + submissions : dict[int, list[Submission]]
+  - _seq : int
+  - _started_at : float
+  + submit(team, number, answers) : Submission
+  + own_submissions(team) : list[Submission]
+  + question(number) : Question
+  + start()  ' 須已匯入題目
+}
+
+class activity_module <<module>> {
+  + clean_answers(answers, expected) : tuple[str, ...]
+}
+
+ScoringRule <|.. ClassicBuzzRule
+Activity --> ScoringRule
+Activity "1" *-- "many" Submission
+ScoringRule ..> Ranked
+Activity ..> AlreadySubmittedError
+activity_module ..> AnswerError
+@enduml
