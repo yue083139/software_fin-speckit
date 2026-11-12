@@ -22,8 +22,8 @@
 
 ## Phase 3: User Story 3 - 揭曉後公開排行榜，答案仍隔離 (P1)
 
-- [ ] T008 [P] [US3] `server/tests/test_isolation.py`：三種回合狀態負例、他組送出 0 則推播、排行榜只計已揭曉
-- [ ] T009 [US3] `views.py` `revealed`、`leaderboard`
+- [ ] T008 [P] [US3] `server/tests/test_isolation.py`：三種回合狀態負例、他組送出 0 則推播、名次只計已揭曉、學生名次不含分數
+- [ ] T009 [US3] `views.py` `revealed`、`my_total`、`leaderboard`（學生只有名次）
 - [ ] T010 [US3] web：老師逐題控制、倒數、時限設定、排行榜；學生進行中題目、倒數、揭曉結果；`web/src/pages/timed.test.tsx`
 
 ## Phase N: Polish

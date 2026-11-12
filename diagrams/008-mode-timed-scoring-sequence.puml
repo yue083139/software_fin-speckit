@@ -35,8 +35,8 @@ App --> B : 409 本題作答時間已到
 T -> App : POST /api/teacher/judge {question: 1, team: 第1組, correct: true}
 T -> App : POST /api/teacher/reveal-question
 App -> Act : reveal_question()（已關閉且無未判定）
-App -> V : student_view：revealed（本組）＋ leaderboard（已揭曉題）
+App -> V : student_view：revealed（本組）＋ my_total ＋ leaderboard（名次，不含他組分數）
 V -> V : TimedRule：timed_points(elapsed_ms, limit, multiplier)
-App --> A : 推播 本組 +分數、排行榜
-App --> B : 推播 本組未作答 0 分、排行榜（不含第1組答案）
+App --> A : 推播 本組 +分數、各組名次
+App --> B : 推播 本組未作答 0 分、各組名次（不含第1組答案與分數）
 @enduml

@@ -12,9 +12,9 @@ package "server/quiz_server" {
   [app.py\nPOST open-next・close-question\nreveal-question・question-settings(time_limit)] as App
   [modes\nMode.sequential・timed] as Modes
   [activity.Activity\nrounds・open_next・close_due\nreveal_question・可注入 clock] as Act
-  [計時器任務\nsleep 到截止 -> close_due()] as Timer
+  [計時器任務\n迴圈：sleep 剩餘時間 -> close_due()\n直到該回合關閉] as Timer
   [scoring\nTimedRule・timed_points] as Scoring
-  [views\nround・revealed（本組）・leaderboard] as Views
+  [views\nround・revealed（本組）・leaderboard（學生只有名次）] as Views
 }
 
 TRound --> Api

@@ -20,5 +20,6 @@
 ## view 增欄位
 
 - 老師與學生：`round: {question, state: "open"|"closed", deadline_epoch_ms} | null`；`questions[].time_limit`。
-- 學生（逐題模式、非 ended）：`revealed: [{question, submitted, correct, score}]`（只有本組）、`leaderboard: [{team, score}]`（已揭曉題）。
-- 老師：`leaderboard`（同格式）。
+- 老師與學生：`mode.sequential`。
+- 學生（逐題模式、非 ended）：`revealed: [{question, submitted, correct, score}]`（只有本組）、`my_total`（本組累積）、`leaderboard: [{team, rank}]`（依已揭曉題累積分數的名次，不含分數）。
+- 老師：`leaderboard: [{team, rank, score}]`。

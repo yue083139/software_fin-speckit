@@ -47,7 +47,7 @@ class Activity {
 
 class views_module <<module>> {
   + round_view(activity) : dict | None
-  + leaderboard(activity) : list[dict]  ' 只計已揭曉題
+  + leaderboard(activity, with_scores) : list[dict]  ' 只計已揭曉題；學生只有名次
 }
 
 TimedRule ..> scoring_module
