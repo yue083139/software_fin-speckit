@@ -21,6 +21,7 @@ class QuestionAttrs:
     """題目屬性（question-settings D1；TRD T-05）：老師在準備階段設定，不寫回 Guided Notes。"""
 
     multiplier: int = 1  # 1 或 2（雙倍分數題）
+    time_limit: int = 20  # 秒，5–120；只有時間計分模式使用（mode-timed-scoring D2）
 
 
 DEFAULT_ATTRS = QuestionAttrs()
@@ -91,6 +92,41 @@ class AccuracyRule:
             is_winner = correct is True and not winner_found
             winner_found = winner_found or is_winner
             out.append(Ranked(s.team, s.answers, s.seq, i, is_winner, m if correct is True else 0, correct))
+        return out
+
+    def team_scores(self, teams: Sequence[str], ranked: Sequence[Sequence[Ranked]]) -> dict[str, int]:
+        return _sum_scores(teams, ranked)
+
+
+def timed_points(elapsed_ms: int, limit: int, multiplier: int) -> int:
+    """Kahoot 式時間計分（mode-timed-scoring D4）。
+
+    floor(1000 × (1 − t ÷ T ÷ 2) + 0.5) × 倍率，t ≤ 0.5 秒滿分。
+
+    以整數運算 (2001T − ms) // (2T) 實作：與上式代數相等，浮點寫法在 T＝5–120 秒間有 5129 例少 1 分。
+    """
+    ms = min(max(elapsed_ms, 0), limit * 1000)
+    base = 1000 if ms <= 500 else (2001 * limit - ms) // (2 * limit)
+    return base * multiplier
+
+
+class TimedRule:
+    """時間計分（TRD M2）：判定正確者依伺服器量得的作答毫秒計分；得主＝依 seq 最早的正確送出。"""
+
+    name = "timed"
+
+    def rank(self, submissions: Sequence[Submission], judgments: Mapping[str, bool] | None = None,
+             attrs: QuestionAttrs | None = None) -> list[Ranked]:
+        judged = judgments or {}
+        a = attrs or DEFAULT_ATTRS
+        out: list[Ranked] = []
+        winner_found = False
+        for i, s in enumerate(sorted(submissions, key=lambda s: s.seq), 1):
+            correct = judged.get(s.team)
+            is_winner = correct is True and not winner_found
+            winner_found = winner_found or is_winner
+            score = timed_points(s.elapsed_ms, a.time_limit, a.multiplier) if correct is True else 0
+            out.append(Ranked(s.team, s.answers, s.seq, i, is_winner, score, correct))
         return out
 
     def team_scores(self, teams: Sequence[str], ranked: Sequence[Sequence[Ranked]]) -> dict[str, int]:

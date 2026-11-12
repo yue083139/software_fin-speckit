@@ -1,0 +1,68 @@
+@startuml 008-mode-timed-scoring-class
+title 008 mode-timed-scoring：類別圖
+
+class Mode <<frozen dataclass>> {
+  + key : str  ' classic | accuracy | timed
+  + label : str
+  + judged : bool
+  + sequential : bool  ' 新增
+  + rule : ScoringRule
+}
+
+class QuestionAttrs <<frozen dataclass>> {
+  + multiplier : int = 1
+  + time_limit : int = 20  ' 新增，5–120 秒
+}
+
+class Round <<dataclass>> {
+  + number : int
+  + opened_at : float  ' 伺服器單調時鐘
+  + deadline_epoch_ms : int  ' 僅供前端倒數
+  + limit : int
+  + closed : bool
+  + revealed : bool
+}
+
+class TimedRule {
+  + name = "timed"
+  + rank(...)  ' 正確者 timed_points；得主＝最早正確者
+}
+
+class scoring_module <<module>> {
+  + timed_points(elapsed_ms, limit, multiplier) : int
+}
+
+class Activity {
+  + rounds : dict[int, Round]
+  + current : Round | None
+  - _clock : () -> float
+  - _wall : () -> float
+  - _sleep : (float) -> Awaitable
+  + open_next() : int
+  + close_question() : int
+  + close_due()
+  + reveal_question() : int
+  + submit(...)  ' 逐題：只收 current、未逾時
+  + end()  ' 逐題：current 須為 None
+}
+
+class views_module <<module>> {
+  + round_view(activity) : dict | None
+  + mode_info(activity, teacher) : dict  ' 含 sequential
+}
+
+class results_module <<module>> {
+  + revealed_scores(activity) : dict[str, int]  ' 只計已揭曉題
+  + leaderboard(activity, with_scores) : list[dict]  ' 學生 with_scores=False
+  + own_revealed(activity, team) : list[dict]  ' 只有本組
+}
+
+TimedRule ..> scoring_module
+Activity "1" *-- "many" Round
+Activity --> Mode
+Mode --> TimedRule
+TimedRule ..> QuestionAttrs
+views_module ..> Activity
+views_module ..> results_module
+results_module ..> TimedRule
+@enduml

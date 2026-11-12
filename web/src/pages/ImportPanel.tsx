@@ -7,11 +7,13 @@ export function ImportPanel({
   onUpload,
   onUrl,
   onSettings,
+  onTimeLimit,
 }: {
   view: TeacherView;
   onUpload: (file: File) => void;
   onUrl: (url: string) => void;
   onSettings?: (question: number, multiplier: number) => void;
+  onTimeLimit?: (question: number, seconds: number) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
@@ -51,6 +53,7 @@ export function ImportPanel({
       <QuestionList
         questions={view.questions}
         onDouble={locked ? undefined : (question, on) => onSettings?.(question, on ? 2 : 1)}
+        onTimeLimit={locked ? undefined : onTimeLimit}
       />
     </section>
   );
@@ -64,9 +67,11 @@ export function DoubleTag({ multiplier }: { multiplier?: number }) {
 export function QuestionList({
   questions,
   onDouble,
+  onTimeLimit,
 }: {
   questions: QuestionOutline[];
   onDouble?: (question: number, on: boolean) => void;
+  onTimeLimit?: (question: number, seconds: number) => void;
 }) {
   if (questions.length === 0) return <p className="muted">尚未匯入題目。</p>;
   return (
@@ -86,6 +91,21 @@ export function QuestionList({
             </label>
           ) : (
             <DoubleTag multiplier={q.multiplier} />
+          )}
+          {onTimeLimit && (
+            <label className="inline">
+              時限
+              <input
+                type="number"
+                min={5}
+                max={120}
+                aria-label={`第 ${q.number} 題時限`}
+                defaultValue={q.time_limit ?? 20}
+                onBlur={(e) => onTimeLimit(q.number, Number(e.target.value))}
+                style={{ width: 64 }}
+              />
+              秒
+            </label>
           )}
         </li>
       ))}

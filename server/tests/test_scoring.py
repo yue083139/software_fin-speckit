@@ -1,7 +1,14 @@
 """經典搶答規則（buzz-answering D2）。"""
 import pytest
 
-from quiz_server.scoring import AccuracyRule, ClassicBuzzRule, QuestionAttrs, Submission
+from quiz_server.scoring import (
+    AccuracyRule,
+    ClassicBuzzRule,
+    QuestionAttrs,
+    Submission,
+    TimedRule,
+    timed_points,
+)
 
 
 def sub(team: str, seq: int) -> Submission:
@@ -69,3 +76,27 @@ def test_accuracy_no_submissions():
 
 def test_classic_correct_is_none():
     assert all(r.correct is None for r in ClassicBuzzRule().rank([sub("第1組", 1)], {"第1組": False}))
+
+
+@pytest.mark.parametrize(("elapsed_ms", "limit", "multiplier", "expected"), [
+    (400, 20, 1, 1000),      # 0.5 秒內滿分
+    (500, 20, 1, 1000),
+    (20000, 20, 1, 500),     # t = T
+    (2000, 30, 1, 967),      # Kahoot 官方範例
+    (1285, 5, 1, 872),       # 剛好點五：浮點寫法會得 871
+    (400, 20, 2, 2000),      # 雙倍
+    (25000, 20, 1, 500),     # 超過時限夾在 T（送出路徑已擋，防禦用）
+])
+def test_timed_points(elapsed_ms, limit, multiplier, expected):
+    assert timed_points(elapsed_ms, limit, multiplier) == expected
+
+
+def test_timed_rule():
+    subs = [Submission("第2組", 1, ("乙",), 2, 3000), Submission("第1組", 1, ("甲",), 1, 1000),
+            Submission("第3組", 1, ("丙",), 3, 9000)]
+    ranked = TimedRule().rank(subs, {"第1組": False, "第2組": True, "第3組": True}, QuestionAttrs(1, 20))
+    assert [(r.team, r.rank, r.is_winner, r.score) for r in ranked] == [
+        ("第1組", 1, False, 0),
+        ("第2組", 2, True, timed_points(3000, 20, 1)),
+        ("第3組", 3, False, timed_points(9000, 20, 1)),
+    ]

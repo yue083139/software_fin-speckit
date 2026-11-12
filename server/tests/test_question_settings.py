@@ -24,7 +24,7 @@ def multipliers(view) -> dict[int, int]:
 
 def test_set_double(loaded_client, teacher_headers):
     r = setq(loaded_client, teacher_headers, 3, 2)
-    assert r.status_code == 200 and r.json() == {"question": 3, "multiplier": 2}
+    assert r.status_code == 200 and r.json() == {"question": 3, "multiplier": 2, "time_limit": 20}
     view = loaded_client.get("/api/teacher/state", headers=teacher_headers).json()
     assert multipliers(view) == {1: 1, 2: 1, 3: 2, 4: 1}
 
