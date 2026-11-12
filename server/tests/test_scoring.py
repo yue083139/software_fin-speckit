@@ -1,7 +1,7 @@
 """經典搶答規則（buzz-answering D2）。"""
 import pytest
 
-from quiz_server.scoring import AccuracyRule, ClassicBuzzRule, Submission
+from quiz_server.scoring import AccuracyRule, ClassicBuzzRule, QuestionAttrs, Submission
 
 
 def sub(team: str, seq: int) -> Submission:
@@ -19,10 +19,25 @@ def test_no_submissions_no_winner():
     assert ClassicBuzzRule().rank([]) == []
 
 
-def test_reserved_inputs_do_not_change_classic():
+def test_judgments_do_not_change_classic():
+    """經典規則不判對錯；倍率則乘進得主分數（question-settings 改寫第一期的預留輸入測試）。"""
     rule = ClassicBuzzRule()
     subs = [sub("第2組", 1), sub("第1組", 2)]
-    assert rule.rank(subs) == rule.rank(subs, judgments={"第2組": False}, attrs={"points_multiplier": 2})
+    assert rule.rank(subs) == rule.rank(subs, judgments={"第2組": False})
+    doubled = rule.rank(subs, judgments={"第2組": False}, attrs=QuestionAttrs(2))
+    assert [(r.team, r.is_winner, r.score) for r in doubled] == [("第2組", True, 2), ("第1組", False, 0)]
+
+
+@pytest.mark.parametrize("rule", [ClassicBuzzRule(), AccuracyRule()], ids=["classic", "accuracy"])
+def test_multiplier_doubles(rule):
+    """同一組送出紀錄在倍率 1 與 2 下每筆分數恰為兩倍、得主不變（TRD §4）。"""
+    subs = [sub("第3組", 3), sub("第1組", 1), sub("第2組", 2)]
+    judged = {"第1組": False, "第2組": True, "第3組": True}
+    single = rule.rank(subs, judged, QuestionAttrs(1))
+    double = rule.rank(subs, judged, QuestionAttrs(2))
+    assert [r.score * 2 for r in single] == [r.score for r in double]
+    assert [r.is_winner for r in single] == [r.is_winner for r in double]
+    assert sum(r.score for r in double) > 0
 
 
 def test_team_scores_count_wins():

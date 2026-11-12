@@ -13,11 +13,14 @@ from .phases import Phase
 
 def question_outline(a: Activity) -> list[dict[str, Any]]:
     """題號與子題標籤；不含作答格座標與原檔內容（guided-notes-import D7）。"""
-    return [{"number": q.number, "labels": [s.display for s in q.slots]} for q in a.questions]
+    # 倍率不是他組資訊，學生也看得到（question-settings D3）
+    return [{"number": q.number, "labels": [s.display for s in q.slots],
+             "multiplier": a.attrs_of(q.number).multiplier} for q in a.questions]
 
 
 def score_label(a: Activity) -> str:
-    return "得題數" if a.mode.key == "classic" else "得分"
+    plain = a.mode.key == "classic" and all(a.attrs_of(q.number).multiplier == 1 for q in a.questions)
+    return "得題數" if plain else "得分"
 
 
 def teacher_view(a: Activity) -> dict[str, Any]:

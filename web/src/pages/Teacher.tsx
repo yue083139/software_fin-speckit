@@ -150,7 +150,12 @@ export function TeacherPanel({
           onJudge={view.phase === "judging" ? judge : undefined}
         />
       </section>
-      <ImportPanel view={view} onUpload={upload} onUrl={(url) => act("import-url", { url })} />
+      <ImportPanel
+        view={view}
+        onUpload={upload}
+        onUrl={(url) => act("import-url", { url })}
+        onSettings={(question, multiplier) => act("question-settings", { question, multiplier })}
+      />
       <TeamSettings view={view} act={act} />
     </>
   );

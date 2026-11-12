@@ -11,6 +11,7 @@ export interface ModeInfo {
 export interface QuestionOutline {
   number: number;
   labels: string[];
+  multiplier?: number; // question-settings：1 或 2
 }
 
 export interface TeacherView {
@@ -56,6 +57,7 @@ export interface QuestionResult {
   labels: string[];
   ranking: RankedAnswer[];
   winner: { team: string; answers: string[] } | null;
+  multiplier?: number;
   reference?: (string | null)[]; // 只在老師 view
 }
 

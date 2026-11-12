@@ -9,7 +9,7 @@ from .scoring import Ranked
 
 
 def _ranked(a: Activity, number: int) -> list[Ranked]:
-    return a.rule.rank(a.submissions.get(number, []), a.judgments.get(number, {}))
+    return a.rule.rank(a.submissions.get(number, []), a.judgments.get(number, {}), a.attrs_of(number))
 
 
 def build(a: Activity, teacher: bool = False) -> list[dict[str, Any]]:
@@ -27,6 +27,7 @@ def build(a: Activity, teacher: bool = False) -> list[dict[str, Any]]:
         entry: dict[str, Any] = {
             "number": q.number,
             "labels": [s.display for s in q.slots],
+            "multiplier": a.attrs_of(q.number).multiplier,
             "ranking": ranking,
             "winner": None if winner is None else {"team": winner.team, "answers": list(winner.answers)},
         }

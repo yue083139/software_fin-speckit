@@ -70,6 +70,7 @@ export function Board({
               <th>
                 {q.number}
                 {q.labels.length > 1 && <span className="muted">（題組）</span>}
+                {q.multiplier === 2 && <span className="tag">×2</span>}
                 {q.reference?.some((x) => x != null) && (
                   <div className="muted">參考答案：{q.reference.map((x) => x ?? "—").join(" ／ ")}</div>
                 )}
@@ -149,7 +150,9 @@ export function StudentResults({
         const mine = q.ranking.find((r) => r.team === team);
         return (
           <section className="card" key={q.number}>
-            <h3>第 {q.number} 題</h3>
+            <h3>
+              第 {q.number} 題{q.multiplier === 2 && <span className="tag">雙倍分數</span>}
+            </h3>
             {q.winner ? (
               <p className={q.winner.team === team ? "ok" : undefined}>
                 {winnerTag}：{q.winner.team}（{formatAnswers(q.labels, q.winner.answers)}）

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { QuestionOutline } from "../types";
+import { DoubleTag } from "./ImportPanel";
 
 export type Submit = (question: number, answers: string[]) => Promise<unknown>;
 
@@ -50,6 +51,7 @@ function QuestionCard({
     <section className="card">
       <h3>
         第 {question.number} 題{question.labels.length > 1 ? "（題組）" : ""}
+        <DoubleTag multiplier={question.multiplier} />
       </h3>
       {submitted ? (
         <p className="ok">

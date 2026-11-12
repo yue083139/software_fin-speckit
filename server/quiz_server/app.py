@@ -53,6 +53,11 @@ class SubmitBody(BaseModel):
     answers: list[str]
 
 
+class QuestionSettingsBody(BaseModel):
+    question: int
+    multiplier: int
+
+
 class ModeBody(BaseModel):
     mode: str
 
@@ -192,6 +197,11 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
         await act.end()
         log.info("活動 v%s 結束搶答", act.version)
         return {"phase": act.phase.value}
+
+    @app.post("/api/teacher/question-settings", dependencies=teacher)
+    async def question_settings(body: QuestionSettingsBody) -> dict[str, int]:
+        attrs = await act.set_question(body.question, body.multiplier)
+        return {"question": body.question, "multiplier": attrs.multiplier}
 
     @app.post("/api/teacher/mode", dependencies=teacher)
     async def set_mode(body: ModeBody) -> dict[str, str]:
