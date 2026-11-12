@@ -2,7 +2,7 @@
 
 **Feature Branch**: `006-game-mode-framework`
 **Created**: 2026-11-12
-**Status**: Draft
+**Status**: Draft（v1.1，提案輪評審後）
 **Input**: User description: "參考 Kahoot 等成熟搶答軟體做多種模式；老師判定對錯，匯入檔有參考答案欄時預填建議（負責人 2026-11-12 裁定 TRD §6）"
 **需求編號**：X-04（`docs/trd-game-modes.md` T-01～T-04、T-06、M3）｜**parity**：`docs/parity.md` §4 `game-mode-framework`｜**檔位**：S（活動階段狀態機、作答隔離、Guided Notes 解析口徑、`contracts/`）
 **圖表**：`diagrams/006-game-mode-framework-{component,class,sequence}.puml`
@@ -74,7 +74,7 @@
 - **FR-002**: 經典模式的送出、順位、結果、匯出 MUST 與 001–005 行為相同。
 - **FR-003**: 結束搶答 MUST 只在 `answering` 允許；判定模式 MUST 轉 `judging`，經典模式轉 `ended`。
 - **FR-004**: `judging` MUST 只能經揭曉轉 `ended`，且揭曉 MUST 要求沒有未判定的送出。
-- **FR-005**: 只計對錯模式 MUST 正確 1 分、錯誤 0 分；得主 MUST 為依伺服器接收序最早的正確送出，無人答對無得主。
+- **FR-005**: 只計對錯模式 MUST 正確 1 分、錯誤 0 分；得主 MUST 為依伺服器接收序最早的正確送出，無人答對無得主。003 的「順位 1 的組別為搶答成功者」自本功能起只適用經典模式（v1.1）。
 - **FR-006**: 系統 MUST 可選讀取參考答案欄並產生判定建議；建議 MUST NOT 自動成為判定。
 - **FR-007**: 在 `ended` 前（含 `judging`），學生 MUST NOT 收到他組答案、是否送出、順位或判定結果；任何階段學生 MUST NOT 收到參考答案或建議。
 - **FR-008**: 老師結果與學生結果 MUST 由同一函式產生，老師版只多老師專屬欄位。

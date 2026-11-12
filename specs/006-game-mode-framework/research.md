@@ -11,7 +11,7 @@
 ## R2 規則與得主
 
 - **Decision**：`Ranked.correct: bool | None`；`AccuracyRule`：正確 1 分；得主＝依 `seq` 第一個 `correct is True`。
-- **Rationale**：匯出只取 `is_winner` 的答案，得主定義放在規則裡，匯出不改。
+- **Rationale**：匯出只取 `is_winner` 的答案，得主定義放在規則裡，匯出不改。003 spec「順位 1 為搶答成功者」只對經典模式成立，判定模式以本條為準（v1.1，架構通道）。
 - **證偽欄｜可證偽**：`test_scoring.py` 表格式：全對、全錯、先錯後對、部分未判定、無人作答。屬取捨：多組答對只寫回最早者。
 
 ## R3 判定階段與狀態機
