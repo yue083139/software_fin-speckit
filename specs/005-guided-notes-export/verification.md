@@ -121,6 +121,6 @@ $ diff software_fin-openspec/contracts/api.md software_fin-speckit/contracts/api
 
 ## 人工驗證（需求 P-05）
 
-狀態：**待負責人執行**。步驟同 OpenSpec 組 `openspec/changes/guided-notes-export/verification.md`：匯出檔名、Excel 開啟確認作答格與框線、上傳回 Google 試算表確認答案在原填空格。
+狀態：**待負責人執行**。步驟同 OpenSpec 組 `openspec/changes/archive/2026-11-12-guided-notes-export/verification.md`：匯出檔名、Excel 開啟確認作答格與框線、上傳回 Google 試算表確認答案在原填空格。
 
 結果：＿＿＿（執行人／日期／看到什麼）

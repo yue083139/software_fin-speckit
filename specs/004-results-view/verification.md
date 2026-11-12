@@ -33,6 +33,6 @@ gate-agents: 0 處漂移
 
 ## 人工驗證（需求 P-05）
 
-狀態：**待負責人執行**。步驟同 OpenSpec 組 `openspec/changes/results-view/verification.md`：三組各搶不同題，老師表即時更新、得主格變色；搶答中學生頁無結果；結束後三個學生頁與老師表一致。
+狀態：**待負責人執行**。步驟同 OpenSpec 組 `openspec/changes/archive/2026-11-12-results-view/verification.md`：三組各搶不同題，老師表即時更新、得主格變色；搶答中學生頁無結果；結束後三個學生頁與老師表一致。
 
 結果：＿＿＿（執行人／日期／看到什麼）

@@ -51,7 +51,7 @@ FAILED server\tests\test_phases.py::test_concurrent_join_same_team_once - ass...
 
 ## 人工驗證（需求 P-05）
 
-狀態：**待負責人執行**。步驟同 OpenSpec 組 `openspec/changes/app-skeleton/verification.md`：
+狀態：**待負責人執行**。步驟同 OpenSpec 組 `openspec/changes/archive/2026-11-12-app-skeleton/verification.md`：
 
 1. `make web-install` 後 `make dev`，記下終端機印出的老師頁網址。
 2. 三個分頁：老師頁、首頁選第1組、首頁選第2組；第四個分頁再選第1組應顯示「此組已有裝置加入」。
