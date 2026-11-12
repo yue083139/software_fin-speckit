@@ -1,0 +1,42 @@
+@startuml 008-mode-timed-scoring-sequence
+title 008 mode-timed-scoring：時序圖（一題的完整回合）
+
+actor "老師" as T
+actor "第1組" as A
+actor "第2組" as B
+participant "app.py" as App
+participant "Activity" as Act
+participant "計時器任務" as Timer
+participant "views" as V
+
+T -> App : POST /api/teacher/open-next
+App -> Act : open_next()
+Act -> Act : 檢查 answering、sequential、current 為 None
+Act -> Act : rounds[1] = Round(opened_at = clock())
+Act -> Timer : create_task(睡 time_limit 秒)
+App --> A : 推播 round{question: 1, state: open, deadline_epoch_ms}
+App --> B : 推播（同上）
+
+A -> App : POST /api/student/submit {question: 1, answers}
+App -> Act : submit(第1組, 1, answers)
+Act -> Act : 題號 = current、未關閉、clock() - opened_at <= limit
+Act -> Act : elapsed_ms = (clock() - opened_at) × 1000
+App --> A : {question, answers}
+note right of App : 第2組 view 不變，不推送
+
+Timer -> Act : close_due()
+Act -> Act : clock() - opened_at >= limit -> closed
+App --> A : 推播 round.state = closed
+App --> B : 推播 round.state = closed
+
+B -> App : POST /api/student/submit {question: 1, …}（太晚）
+App --> B : 409 本題作答時間已到
+
+T -> App : POST /api/teacher/judge {question: 1, team: 第1組, correct: true}
+T -> App : POST /api/teacher/reveal-question
+App -> Act : reveal_question()（已關閉且無未判定）
+App -> V : student_view：revealed（本組）＋ leaderboard（已揭曉題）
+V -> V : TimedRule：timed_points(elapsed_ms, limit, multiplier)
+App --> A : 推播 本組 +分數、排行榜
+App --> B : 推播 本組未作答 0 分、排行榜（不含第1組答案）
+@enduml
