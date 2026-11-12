@@ -4,7 +4,7 @@
 """
 from dataclasses import dataclass
 
-from .scoring import AccuracyRule, ClassicBuzzRule, ScoringRule
+from .scoring import AccuracyRule, ClassicBuzzRule, ScoringRule, TimedRule
 
 
 @dataclass(frozen=True)
@@ -13,12 +13,14 @@ class Mode:
     label: str
     judged: bool  # 結束搶答後是否進入 judging
     rule: ScoringRule
+    sequential: bool = False  # 逐題開放；判定在每題關閉後、仍在 answering 內（mode-timed-scoring D1）
 
 
 MODES: dict[str, Mode] = {
     m.key: m for m in (
         Mode("classic", "經典搶答", False, ClassicBuzzRule()),
         Mode("accuracy", "只計對錯", True, AccuracyRule()),
+        Mode("timed", "時間計分", False, TimedRule(), sequential=True),
     )
 }
 DEFAULT_MODE = "classic"

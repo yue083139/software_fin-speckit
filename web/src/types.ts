@@ -6,12 +6,28 @@ export interface ModeInfo {
   key: string;
   label: string;
   judged?: boolean;
+  sequential?: boolean; // 逐題開放（時間計分）
+}
+
+// 目前回合（mode-timed-scoring）：同一時間對所有人相同
+export interface RoundInfo {
+  question: number;
+  state: "open" | "closed";
+  deadline_epoch_ms: number;
+}
+
+// 名次：學生版沒有 score
+export interface LeaderRow {
+  team: string;
+  rank: number;
+  score?: number;
 }
 
 export interface QuestionOutline {
   number: number;
   labels: string[];
   multiplier?: number; // question-settings：1 或 2
+  time_limit?: number; // 秒，時間計分模式使用
 }
 
 export interface TeacherView {
@@ -27,6 +43,8 @@ export interface TeacherView {
   modes?: ModeInfo[];
   score_label?: string;
   pending_judgments?: number;
+  round?: RoundInfo | null;
+  leaderboard?: LeaderRow[];
 }
 
 export interface StudentView {
@@ -40,6 +58,10 @@ export interface StudentView {
   team_scores?: Record<string, number>;
   mode?: ModeInfo;
   score_label?: string;
+  round?: RoundInfo | null;
+  revealed?: { question: number; submitted: boolean; correct: boolean | null; score: number }[];
+  my_total?: number;
+  leaderboard?: LeaderRow[];
 }
 
 export interface RankedAnswer {

@@ -55,7 +55,8 @@ class SubmitBody(BaseModel):
 
 class QuestionSettingsBody(BaseModel):
     question: int
-    multiplier: int
+    multiplier: int | None = None
+    time_limit: int | None = None  # mode-timed-scoring：兩欄皆可選、至少一欄
 
 
 class ModeBody(BaseModel):
@@ -200,8 +201,24 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
 
     @app.post("/api/teacher/question-settings", dependencies=teacher)
     async def question_settings(body: QuestionSettingsBody) -> dict[str, int]:
-        attrs = await act.set_question(body.question, body.multiplier)
-        return {"question": body.question, "multiplier": attrs.multiplier}
+        attrs = await act.set_question(body.question, body.multiplier, body.time_limit)
+        return {"question": body.question, "multiplier": attrs.multiplier, "time_limit": attrs.time_limit}
+
+    @app.post("/api/teacher/open-next", dependencies=teacher)
+    async def open_next() -> dict[str, int]:
+        number = await act.open_next()
+        log.info("開放第 %s 題", number)
+        return {"question": number}
+
+    @app.post("/api/teacher/close-question", dependencies=teacher)
+    async def close_question() -> dict[str, int]:
+        return {"question": await act.close_question()}
+
+    @app.post("/api/teacher/reveal-question", dependencies=teacher)
+    async def reveal_question() -> dict[str, int]:
+        number = await act.reveal_question()
+        log.info("揭曉第 %s 題", number)
+        return {"question": number}
 
     @app.post("/api/teacher/mode", dependencies=teacher)
     async def set_mode(body: ModeBody) -> dict[str, str]:

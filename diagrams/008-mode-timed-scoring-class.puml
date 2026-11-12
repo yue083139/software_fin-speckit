@@ -37,6 +37,7 @@ class Activity {
   + current : Round | None
   - _clock : () -> float
   - _wall : () -> float
+  - _sleep : (float) -> Awaitable
   + open_next() : int
   + close_question() : int
   + close_due()
@@ -47,7 +48,13 @@ class Activity {
 
 class views_module <<module>> {
   + round_view(activity) : dict | None
-  + leaderboard(activity, with_scores) : list[dict]  ' 只計已揭曉題；學生只有名次
+  + mode_info(activity, teacher) : dict  ' 含 sequential
+}
+
+class results_module <<module>> {
+  + revealed_scores(activity) : dict[str, int]  ' 只計已揭曉題
+  + leaderboard(activity, with_scores) : list[dict]  ' 學生 with_scores=False
+  + own_revealed(activity, team) : list[dict]  ' 只有本組
 }
 
 TimedRule ..> scoring_module
@@ -56,4 +63,6 @@ Activity --> Mode
 Mode --> TimedRule
 TimedRule ..> QuestionAttrs
 views_module ..> Activity
+views_module ..> results_module
+results_module ..> TimedRule
 @enduml

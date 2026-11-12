@@ -50,3 +50,40 @@ def winning_answers(a: Activity) -> dict[int, tuple[str, ...]]:
         if winner is not None:
             out[q.number] = winner.answers
     return out
+
+
+# ---- 時間計分：每題揭曉後的本組結果與名次（mode-timed-scoring D5） ----
+def revealed_numbers(a: Activity) -> list[int]:
+    return [q.number for q in a.questions if (r := a.rounds.get(q.number)) is not None and r.revealed]
+
+
+def revealed_scores(a: Activity) -> dict[str, int]:
+    """各組在**已揭曉題**的累積分數；關閉但未揭曉的題目不計入。"""
+    return a.rule.team_scores(a.teams, [_ranked(a, n) for n in revealed_numbers(a)])
+
+
+def leaderboard(a: Activity, with_scores: bool) -> list[dict[str, Any]]:
+    """名次：同分同名次、下一名跳號（1、1、3），依名次再依組別順序。
+
+    學生版不帶分數（with_scores=False）：分數是作答秒數的單調函數，公開他組分數即可反推秒數（v1.1）。
+    """
+    scores = revealed_scores(a)
+    rows = []
+    for team in sorted(a.teams, key=lambda t: (-scores[t], a.teams.index(t))):
+        row: dict[str, Any] = {"team": team, "rank": 1 + sum(1 for s in scores.values() if s > scores[team])}
+        if with_scores:
+            row["score"] = scores[team]
+        rows.append(row)
+    return rows
+
+
+def own_revealed(a: Activity, team: str) -> list[dict[str, Any]]:
+    """只有本組：每個已揭曉題的是否送出、對錯與得分。"""
+    out = []
+    for n in revealed_numbers(a):
+        mine = next((r for r in _ranked(a, n) if r.team == team), None)
+        if mine is None:
+            out.append({"question": n, "submitted": False, "correct": None, "score": 0})
+        else:
+            out.append({"question": n, "submitted": True, "correct": mine.correct, "score": mine.score})
+    return out

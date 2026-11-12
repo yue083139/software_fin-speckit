@@ -43,6 +43,7 @@ export function Board({
   scoreLabel = "得題數",
   winnerTag = "搶答成功",
   onJudge,
+  judgeQuestion,
 }: {
   board: QuestionResult[];
   teams: string[];
@@ -50,6 +51,7 @@ export function Board({
   scoreLabel?: string;
   winnerTag?: string;
   onJudge?: Judge;
+  judgeQuestion?: number; // 逐題模式只能判定目前那一題
 }) {
   if (board.length === 0) return <p className="muted">尚未匯入題目。</p>;
   return (
@@ -88,7 +90,7 @@ export function Board({
                     <div>{formatAnswers(q.labels, r.answers)}</div>
                     <div className="muted">第 {r.rank} 順位</div>
                     {r.is_winner && <div className="tag">{winnerTag}</div>}
-                    {onJudge ? (
+                    {onJudge && (judgeQuestion === undefined || judgeQuestion === q.number) ? (
                       <JudgeCell question={q.number} r={r} onJudge={onJudge} />
                     ) : (
                       r.correct != null && <div>{verdict(r.correct)}</div>

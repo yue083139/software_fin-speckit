@@ -8,6 +8,8 @@ import asyncio
 import secrets
 import time
 import unicodedata
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 
 from .guided_notes import ParsedNotes, Question, parse_workbook
 from .judging import suggest
@@ -32,6 +34,22 @@ class SettingsError(ValueError):
 
 
 MULTIPLIERS = (1, 2)
+TIME_LIMIT_RANGE = (5, 120)
+
+
+@dataclass
+class Round:
+    """時間計分的一個回合（mode-timed-scoring D3）。
+
+    `opened_at` 為伺服器單調時鐘；`deadline_epoch_ms` 只供前端倒數。
+    """
+
+    number: int
+    opened_at: float
+    deadline_epoch_ms: int
+    limit: int
+    closed: bool = False
+    revealed: bool = False
 
 
 class AnswerError(ValueError):
@@ -59,7 +77,9 @@ def team_names(n: int) -> list[str]:
 
 
 class Activity:
-    def __init__(self, team_count: int = DEFAULT_TEAMS) -> None:
+    def __init__(self, team_count: int = DEFAULT_TEAMS, clock: Callable[[], float] = time.monotonic,
+                 wall: Callable[[], float] = time.time,
+                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
         self._lock = asyncio.Lock()
         self.changed = asyncio.Condition()
         self.phase = Phase.PREPARING
@@ -75,6 +95,9 @@ class Activity:
         self.attrs: dict[int, QuestionAttrs] = {}  # 題號 → 題目屬性（question-settings D2）
         self._seq = 0
         self._started_at = 0.0
+        self.rounds: dict[int, Round] = {}  # 題號 → 回合（只有逐題模式）
+        self._timer: asyncio.Task | None = None
+        self._clock, self._wall, self._sleep = clock, wall, sleep
 
     @property
     def rule(self) -> ScoringRule:
@@ -169,19 +192,36 @@ class Activity:
         self.submissions = {q.number: [] for q in self.questions}
         self.judgments = {q.number: {} for q in self.questions}
         self._seq = 0
+        self.rounds = {}
+        if self._timer is not None:
+            self._timer.cancel()
+            self._timer = None
 
     def attrs_of(self, number: int) -> QuestionAttrs:
         return self.attrs.get(number, QuestionAttrs())
 
-    async def set_question(self, number: int, multiplier: int) -> QuestionAttrs:
-        """只在準備階段（question-settings D2）：搶答中改倍率會改變已作答組別的期望分數。"""
-        if multiplier not in MULTIPLIERS:
+    async def set_question(self, number: int, multiplier: int | None = None,
+                           time_limit: int | None = None) -> QuestionAttrs:
+        """只在準備階段（question-settings D2）：搶答中改設定會改變已作答組別的期望分數。
+
+        兩欄皆可選、至少一欄（mode-timed-scoring D2）；只給一欄時另一欄不動。
+        """
+        if multiplier is None and time_limit is None:
+            raise SettingsError("至少要設定倍率或時限其中一項")
+        if multiplier is not None and multiplier not in MULTIPLIERS:
             raise SettingsError("倍率只能是 1 或 2")
+        low, high = TIME_LIMIT_RANGE
+        if time_limit is not None and not low <= time_limit <= high:
+            raise SettingsError(f"時限須介於 {low} 到 {high} 秒")
         async with self._lock:
             self._require(Phase.PREPARING)
             self.question(number)
+            old = self.attrs_of(number)
             await self._checkpoint()
-            self.attrs[number] = QuestionAttrs(multiplier)
+            self.attrs[number] = QuestionAttrs(
+                old.multiplier if multiplier is None else multiplier,
+                old.time_limit if time_limit is None else time_limit,
+            )
             await self._bump()
             return self.attrs[number]
 
@@ -196,6 +236,16 @@ class Activity:
         async with self._lock:
             self._require(Phase.ANSWERING)
             q = self.question(number)
+            # 只讀一次時鐘：截止比對與作答毫秒用同一個值，且在讓出點之前（mode-timed-scoring D3）
+            now = self._clock()
+            opened_at = self._started_at
+            if self.mode.sequential:
+                rnd = self.current
+                if rnd is None or rnd.number != number or rnd.closed:
+                    raise PhaseError("這一題目前沒有開放作答")
+                if now - rnd.opened_at > rnd.limit:
+                    raise PhaseError("本題作答時間已到")
+                opened_at = rnd.opened_at
             if any(s.team == team for s in self.submissions[number]):
                 raise AlreadySubmittedError("本組已送出這一題，不可修改")
             cleaned = clean_answers(answers, len(q.slots))
@@ -203,7 +253,7 @@ class Activity:
             # 讓出點夾在「讀序號」與「寫序號／寫紀錄」之間：拿掉鎖時並發測試必紅（buzz-answering v1.1 D1）
             await self._checkpoint()
             self._seq = next_seq
-            elapsed = int((time.monotonic() - self._started_at) * 1000)
+            elapsed = int((now - opened_at) * 1000)
             sub = Submission(team, number, cleaned, next_seq, elapsed)
             self.submissions[number].append(sub)
             await self._bump()
@@ -223,13 +273,15 @@ class Activity:
             if not self.questions:
                 raise PhaseError("尚未匯入題目，不能開始搶答")
             await self._transition(Phase.ANSWERING)
-            self._started_at = time.monotonic()
+            self._started_at = self._clock()
             await self._bump()
 
     async def end(self) -> None:
         async with self._lock:
-            # 轉移表允許 judging → ended；不先擋住，「結束搶答」就能繞過 reveal 的未判定檢查
+            # 明寫「結束搶答只在搶答中」；判定模式另由轉移表擋 judging → judging（game-mode-framework v1.2）
             self._require(Phase.ANSWERING)
+            if self.mode.sequential and self.current is not None:
+                raise PhaseError("請先揭曉目前這一題，再結束活動")
             await self._transition(Phase.JUDGING if self.mode.judged else Phase.ENDED)
             await self._bump()
 
@@ -248,9 +300,23 @@ class Activity:
         return sum(1 for n, subs in self.submissions.items() for s in subs
                    if s.team not in self.judgments.get(n, {}))
 
+    def _require_judgeable(self, number: int) -> None:
+        """全部同時開放的模式在 judging 判定；逐題模式只能判定已關閉、尚未揭曉的那一題。"""
+        if not self.mode.sequential:
+            self._require(Phase.JUDGING)
+            return
+        self._require(Phase.ANSWERING)
+        rnd = self.rounds.get(number)
+        if rnd is None or not rnd.closed or rnd.revealed:
+            raise PhaseError("只能判定已關閉、尚未揭曉的題目")
+
+    def pending_for(self, number: int) -> int:
+        judged = self.judgments.get(number, {})
+        return sum(1 for s in self.submissions.get(number, []) if s.team not in judged)
+
     async def judge(self, number: int, team: str, correct: bool) -> None:
         async with self._lock:
-            self._require(Phase.JUDGING)
+            self._require_judgeable(number)
             self._submission(number, team)
             await self._checkpoint()
             self.judgments.setdefault(number, {})[team] = correct
@@ -259,9 +325,17 @@ class Activity:
     async def accept_suggestions(self) -> int:
         """只寫入「尚未判定且有建議」者；老師已判定的不覆蓋。"""
         async with self._lock:
-            self._require(Phase.JUDGING)
+            if self.mode.sequential:
+                rnd = self.current
+                if rnd is None:
+                    raise PhaseError("沒有可判定的題目")
+                self._require_judgeable(rnd.number)
+                targets = {rnd.number: self.submissions.get(rnd.number, [])}
+            else:
+                self._require(Phase.JUDGING)
+                targets = self.submissions
             todo = []
-            for number, subs in self.submissions.items():
+            for number, subs in targets.items():
                 for s in subs:
                     if s.team in self.judgments.get(number, {}):
                         continue
@@ -283,6 +357,74 @@ class Activity:
                 raise PhaseError(f"尚有 {pending} 筆未判定，全部判定後才能揭曉")
             await self._transition(Phase.ENDED)
             await self._bump()
+
+    # ---- 逐題回合（mode-timed-scoring D3） ----
+    @property
+    def current(self) -> Round | None:
+        """唯一一個尚未揭曉的回合。"""
+        return next((r for r in self.rounds.values() if not r.revealed), None)
+
+    async def open_next(self) -> int:
+        async with self._lock:
+            self._require(Phase.ANSWERING)
+            if not self.mode.sequential:
+                raise PhaseError("此模式不逐題開放")
+            if self.current is not None:
+                raise PhaseError("請先揭曉目前這一題")
+            number = next((q.number for q in self.questions if q.number not in self.rounds), None)
+            if number is None:
+                raise PhaseError("所有題目都已開放過")
+            limit = self.attrs_of(number).time_limit
+            await self._checkpoint()
+            rnd = Round(number, self._clock(), int((self._wall() + limit) * 1000), limit)
+            self.rounds[number] = rnd
+            self._timer = asyncio.create_task(self._run_timer(rnd))
+            await self._bump()
+            return number
+
+    async def _run_timer(self, rnd: Round) -> None:
+        # 迴圈直到關閉：Windows 上 asyncio 計時可能提早約一個解析度（15.6 毫秒）醒來，單次睡眠會漏關
+        while not rnd.closed and self.rounds.get(rnd.number) is rnd:
+            remaining = rnd.opened_at + rnd.limit - self._clock()
+            if remaining > 0:
+                await self._sleep(remaining)
+            await self.close_due()
+
+    async def close_due(self) -> None:
+        """計時器呼叫：目前回合已到時限才關閉（可重入；送出路徑另有自己的截止比對）。"""
+        async with self._lock:
+            rnd = self.current
+            if rnd is None or rnd.closed or self._clock() - rnd.opened_at < rnd.limit:
+                return
+            await self._checkpoint()
+            rnd.closed = True
+            await self._bump()
+
+    async def close_question(self) -> int:
+        async with self._lock:
+            rnd = self.current
+            if rnd is None or rnd.closed:
+                raise PhaseError("沒有進行中的題目")
+            await self._checkpoint()
+            rnd.closed = True
+            if self._timer is not None:
+                self._timer.cancel()
+                self._timer = None
+            await self._bump()
+            return rnd.number
+
+    async def reveal_question(self) -> int:
+        async with self._lock:
+            rnd = self.current
+            if rnd is None or not rnd.closed:
+                raise PhaseError("本題尚未關閉")
+            pending = self.pending_for(rnd.number)
+            if pending:
+                raise PhaseError(f"尚有 {pending} 筆未判定，全部判定後才能揭曉")
+            await self._checkpoint()
+            rnd.revealed = True
+            await self._bump()
+            return rnd.number
 
     async def reset(self) -> None:
         async with self._lock:

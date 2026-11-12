@@ -15,7 +15,24 @@ def question_outline(a: Activity) -> list[dict[str, Any]]:
     """題號與子題標籤；不含作答格座標與原檔內容（guided-notes-import D7）。"""
     # 倍率不是他組資訊，學生也看得到（question-settings D3）
     return [{"number": q.number, "labels": [s.display for s in q.slots],
-             "multiplier": a.attrs_of(q.number).multiplier} for q in a.questions]
+             "multiplier": a.attrs_of(q.number).multiplier,
+             "time_limit": a.attrs_of(q.number).time_limit} for q in a.questions]
+
+
+def round_view(a: Activity) -> dict[str, Any] | None:
+    """目前回合的公開狀態：同一時間對所有人相同，不含任何組別資訊（mode-timed-scoring D5）。"""
+    rnd = a.current
+    if rnd is None:
+        return None
+    return {"question": rnd.number, "state": "closed" if rnd.closed else "open",
+            "deadline_epoch_ms": rnd.deadline_epoch_ms}
+
+
+def mode_info(a: Activity, teacher: bool) -> dict[str, Any]:
+    info: dict[str, Any] = {"key": a.mode.key, "label": a.mode.label, "sequential": a.mode.sequential}
+    if teacher:
+        info["judged"] = a.mode.judged
+    return info
 
 
 def score_label(a: Activity) -> str:
@@ -24,14 +41,15 @@ def score_label(a: Activity) -> str:
 
 
 def teacher_view(a: Activity) -> dict[str, Any]:
-    return {
+    view: dict[str, Any] = {
         "role": "teacher",
         "phase": a.phase.value,
         "teams": list(a.teams),
         "joined": a.joined_teams(),
         "source": a.source_name,
         "questions": question_outline(a),
-        "mode": {"key": a.mode.key, "label": a.mode.label, "judged": a.mode.judged},
+        "mode": mode_info(a, teacher=True),
+        "round": round_view(a),
         "modes": [{"key": m.key, "label": m.label} for m in MODES.values()],
         "score_label": score_label(a),
         "pending_judgments": a.pending_judgments(),
@@ -39,6 +57,9 @@ def teacher_view(a: Activity) -> dict[str, Any]:
         "board": results.build(a, teacher=True),
         "team_scores": results.team_scores(a),
     }
+    if a.mode.sequential:
+        view["leaderboard"] = results.leaderboard(a, with_scores=True)
+    return view
 
 
 def student_view(a: Activity, team: str | None) -> dict[str, Any]:
@@ -51,14 +72,21 @@ def student_view(a: Activity, team: str | None) -> dict[str, Any]:
         "team": team,
         "team_valid": True,
         "questions": question_outline(a),
-        "mode": {"key": a.mode.key, "label": a.mode.label},
+        "mode": mode_info(a, teacher=False),
+        "round": round_view(a),
         "score_label": score_label(a),
         # 只含本組；不含順位、序號與他組是否送出（buzz-answering D3）
         "my_submissions": [
             {"question": s.question, "answers": list(s.answers)} for s in a.own_submissions(team)
         ],
     }
-    # 只有 ended 才揭曉；其餘階段（含 judging 與日後新增者）一律不帶他組資料與判定結果
+    # 時間計分的例外（負責人 2026-11-12 裁定）：已揭曉題只給本組結果與各組名次，不給他組答案與分數
+    if a.mode.sequential and a.phase is not Phase.ENDED:
+        mine = results.own_revealed(a, team)
+        view["revealed"] = mine
+        view["my_total"] = sum(r["score"] for r in mine)
+        view["leaderboard"] = results.leaderboard(a, with_scores=False)
+    # 只有 ended 才揭曉完整結果；其餘階段（含 judging 與日後新增者）一律不帶他組資料與判定結果
     if a.phase is Phase.ENDED:
         view["results"] = results.build(a)
         view["team_scores"] = results.team_scores(a)

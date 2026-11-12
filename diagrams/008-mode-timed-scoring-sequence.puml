@@ -8,6 +8,7 @@ participant "app.py" as App
 participant "Activity" as Act
 participant "計時器任務" as Timer
 participant "views" as V
+participant "results" as R
 
 T -> App : POST /api/teacher/open-next
 App -> Act : open_next()
@@ -36,7 +37,8 @@ T -> App : POST /api/teacher/judge {question: 1, team: 第1組, correct: true}
 T -> App : POST /api/teacher/reveal-question
 App -> Act : reveal_question()（已關閉且無未判定）
 App -> V : student_view：revealed（本組）＋ my_total ＋ leaderboard（名次，不含他組分數）
-V -> V : TimedRule：timed_points(elapsed_ms, limit, multiplier)
+V -> R : own_revealed、leaderboard(with_scores=False)
+R -> R : TimedRule：timed_points(elapsed_ms, limit, multiplier)
 App --> A : 推播 本組 +分數、各組名次
 App --> B : 推播 本組未作答 0 分、各組名次（不含第1組答案與分數）
 @enduml

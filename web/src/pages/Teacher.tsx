@@ -2,6 +2,7 @@ import { useState } from "react";
 import { teacherDownload, teacherPost, teacherUpload } from "../api";
 import { ImportPanel } from "./ImportPanel";
 import { Board, type Judge } from "./Results";
+import { Leaderboard, RoundStatus } from "./Round";
 import { useLiveView } from "../live";
 import { PHASE_LABEL, type TeacherView } from "../types";
 
@@ -17,8 +18,27 @@ export function PhaseControls({ view, act, download }: { view: TeacherView; act:
         <button disabled={view.phase !== "preparing"} onClick={() => act("start")}>
           開始搶答
         </button>
-        <button disabled={view.phase !== "answering"} onClick={() => act("end")}>
-          結束搶答
+        {view.mode?.sequential && (
+          <>
+            <button disabled={view.phase !== "answering" || !!view.round} onClick={() => act("open-next")}>
+              開放下一題
+            </button>
+            <button disabled={view.round?.state !== "open"} onClick={() => act("close-question")}>
+              提早結束本題
+            </button>
+            <button disabled={view.round?.state !== "closed"} onClick={() => act("accept-suggestions")}>
+              採用全部建議
+            </button>
+            <button
+              disabled={view.round?.state !== "closed" || (view.pending_judgments ?? 0) > 0}
+              onClick={() => act("reveal-question")}
+            >
+              揭曉本題
+            </button>
+          </>
+        )}
+        <button disabled={view.phase !== "answering" || !!view.round} onClick={() => act("end")}>
+          {view.mode?.sequential ? "結束活動" : "結束搶答"}
         </button>
         {view.mode?.judged && (
           <>
@@ -40,6 +60,17 @@ export function PhaseControls({ view, act, download }: { view: TeacherView; act:
           匯出 Guided Notes
         </button>
       </div>
+      {view.mode?.sequential && view.phase === "answering" && (
+        <>
+          <RoundStatus round={view.round} />
+          {view.round?.state === "closed" && (
+            <p>
+              尚有 <strong>{view.pending_judgments ?? 0}</strong> 筆未判定，全部判定後才能揭曉本題。
+            </p>
+          )}
+          <Leaderboard rows={view.leaderboard ?? []} />
+        </>
+      )}
       {view.phase === "judging" && (
         <p>
           判定中：尚有 <strong>{view.pending_judgments ?? 0}</strong> 筆未判定，全部判定後才能揭曉。
@@ -84,6 +115,8 @@ export function ModeSelector({ view, act }: { view: TeacherView; act: Act }) {
 export const MODE_HINT: Record<string, string> = {
   classic: "每題最先送出的組別搶答成功，得 1 分。",
   accuracy: "每組每題都可作答；結束後老師判定對錯，答對各得 1 分，最早答對者的答案寫回 Guided Notes。",
+  timed:
+    "老師逐題開放，每題有時限；答對越快分數越高（最高 1000 分），老師判定後揭曉本題並公布各組名次。",
 };
 
 export function TeamSettings({ view, act }: { view: TeacherView; act: Act }) {
@@ -147,7 +180,8 @@ export function TeacherPanel({
           scores={view.team_scores}
           scoreLabel={view.score_label}
           winnerTag={view.mode?.judged ? "最早答對" : "搶答成功"}
-          onJudge={view.phase === "judging" ? judge : undefined}
+          onJudge={view.phase === "judging" || view.round?.state === "closed" ? judge : undefined}
+          judgeQuestion={view.mode?.sequential ? view.round?.question : undefined}
         />
       </section>
       <ImportPanel
@@ -155,6 +189,9 @@ export function TeacherPanel({
         onUpload={upload}
         onUrl={(url) => act("import-url", { url })}
         onSettings={(question, multiplier) => act("question-settings", { question, multiplier })}
+        onTimeLimit={
+          view.mode?.sequential ? (question, time_limit) => act("question-settings", { question, time_limit }) : undefined
+        }
       />
       <TeamSettings view={view} act={act} />
     </>

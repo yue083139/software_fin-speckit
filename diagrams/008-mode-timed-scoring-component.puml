@@ -15,6 +15,7 @@ package "server/quiz_server" {
   [計時器任務\n迴圈：sleep 剩餘時間 -> close_due()\n直到該回合關閉] as Timer
   [scoring\nTimedRule・timed_points] as Scoring
   [views\nround・revealed（本組）・leaderboard（學生只有名次）] as Views
+  [results\nrevealed_scores・leaderboard・own_revealed] as Results
 }
 
 TRound --> Api
@@ -25,7 +26,8 @@ App --> Act
 Act --> Modes
 Act --> Timer : open_next 時排程
 Timer --> Act : close_due()
-Views --> Scoring : 只計已揭曉題
+Views --> Results
+Results --> Scoring : 只計已揭曉題
 App --> Views
 
 note right of Act

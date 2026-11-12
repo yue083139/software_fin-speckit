@@ -1,12 +1,12 @@
 # Research: 008 mode-timed-scoring
 
-知識時點：2026-11-12。對標：Kahoot!「How points work」：答對得分隨作答時間遞減、0.5 秒內滿分、答錯 0 分；主持人逐題推進，每題結束顯示排行榜（`docs/research/competitors.md`）。裁剪：沒有標準答案 ⇒ 每題多一步老師判定；排行榜只公開分數。
+知識時點：2026-11-12。對標：Kahoot!「How points work」：答對得分隨作答時間遞減、0.5 秒內滿分、答錯 0 分；主持人逐題推進，每題結束顯示排行榜（`docs/research/competitors.md`）。裁剪：沒有標準答案 ⇒ 每題多一步老師判定；學生端排行榜只公開名次，不公開他組分數與答案。
 
 ## R1 回合與截止
 
 - **Decision**：`Round(number, opened_at, deadline_epoch_ms, limit, closed, revealed)`；`open_next` 依題號順序、`current is None` 才可開；送出檢查「題號＝current、未關閉、`clock() − opened_at ≤ limit`」；`close_due()` 由計時器任務呼叫、可重入；`Activity(clock=time.monotonic, wall=time.time)` 可注入。
 - **Rationale**：截止寫在送出路徑，計時器排程誤差不影響公平；送出路徑在讓出點之前讀一次 `now = clock()`，截止比對與 `elapsed_ms` 共用（v1.1）；計時器任務迴圈「睡剩餘時間 → `close_due()`」直到該回合已關閉或不是 `current`（v1.1 紅隊實測 Windows asyncio 計時解析度 15.6 毫秒，60 次有 1 次提早約 3 毫秒醒來，單次睡眠會漏關）；`deadline_epoch_ms` 是靜態值，view 不會每秒變動、不破壞「view 改變才推送」。
-- **證偽欄｜可證偽**：`test_timed_mode.py`（假時鐘：`limit` 時成功、`limit + 0.001` 時 409；`close_due` 前後；`test_timer_retries_after_early_wake`；`test_concurrent_close_and_submit` 20 輪）；變異實錄：拿掉截止比對必紅。
+- **證偽欄｜可證偽**：`test_timed_mode.py`（假時鐘：`limit` 時成功、`limit + 0.001` 時 409——v1.2：兩情況各用新活動，否則計時器會先在送出的讓出點關閉回合，測不到送出路徑本身的比對；`close_due` 前後；`test_timer_retries_after_early_wake`；`test_concurrent_close_and_submit` 20 輪：v1.2 改為「先開始的提早結束生效後，送出必被拒」——原斷言「被接受者 elapsed ≤ 時限」在假時鐘下恆真、測不到鎖）；變異實錄：拿掉截止比對必紅。
 
 ## R2 計分
 
