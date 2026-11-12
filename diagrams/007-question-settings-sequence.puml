@@ -1,0 +1,27 @@
+@startuml 007-question-settings-sequence
+title 007 question-settings：時序圖（設定雙倍並計分）
+
+actor "老師" as T
+actor "第1組" as A
+participant "app.py" as App
+participant "Activity" as Act
+participant "views" as V
+participant "results" as R
+participant "ClassicBuzzRule" as Rule
+
+T -> App : POST /api/teacher/question-settings {question: 2, multiplier: 2}
+App -> Act : set_question(2, 2)
+Act -> Act : 檢查 preparing、題號、倍率 in {1, 2}
+Act -> Act : attrs[2] = QuestionAttrs(2)、version+1
+App --> T : {question: 2, multiplier: 2}
+App -> V : 所有連線 view：questions[2].multiplier = 2、score_label = 得分
+App --> A : 推播（第 2 題標「雙倍分數」）
+
+== 搶答與結束（同 003） ==
+App -> V : student_view(第1組) 加 results
+V -> R : build(activity)
+R -> Rule : rank(第 2 題送出, judgments, attrs[2])
+Rule --> R : 得主 score = 2
+R --> V : results、team_scores
+App --> A : 推播 ended
+@enduml
