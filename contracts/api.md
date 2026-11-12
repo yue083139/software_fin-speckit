@@ -35,6 +35,7 @@
 | `GET /api/teacher/export` | 老師 | — | xlsx 檔（原 Guided Notes，得主答案寫入作答格、一律為文字）；`Content-Disposition` 含 `filename*=UTF-8''<原檔名>-搶答結果.xlsx` | 401；409 非 ended 或尚未匯入 |
 | `POST /api/teacher/start` | 老師 | — | `{phase}` | 401；409 階段不符或尚未匯入題目 |
 | `POST /api/teacher/end` | 老師 | — | `{phase}`（判定模式為 `judging`，經典為 `ended`） | 401；409 非 answering |
+| `POST /api/teacher/question-settings` | 老師 | `{question, multiplier}`（1 或 2） | `{question, multiplier}`；重新匯入清除、重置保留 | 401；404 題號不存在；409 非 preparing；422 倍率不是 1 或 2 |
 | `POST /api/teacher/mode` | 老師 | `{mode}` | `{mode}` | 401；409 非 preparing；422 未知模式 |
 | `POST /api/teacher/judge` | 老師 | `{question, team, correct}` | `{question, team, correct}`；可改判 | 401；404 該組沒有送出此題；409 非 judging |
 | `POST /api/teacher/accept-suggestions` | 老師 | — | `{applied}`：只寫入尚未判定且有建議者 | 401；409 非 judging |
@@ -55,11 +56,11 @@
  "source": "group.xlsx", "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
 
-`questions[].labels`：每個子題給學生看的標籤，長度＝子題數；單題為 `[""]`。不含作答格座標（guided-notes-import）。
+`questions[].labels`：每個子題給學生看的標籤，長度＝子題數；單題為 `[""]`。不含作答格座標（guided-notes-import）。`questions[].multiplier`：該題倍率（1 或 2，老師與學生皆有；question-settings）。
 
-老師 view 另含（game-mode-framework）：`mode: {key, label, judged}`、`modes: [{key, label}]`、`score_label`（經典「得題數」，其餘「得分」）、`pending_judgments`（未判定筆數）；`board[]` 另含 `reference: [每個子題的參考答案或 null]`，`board[].ranking[]` 另含 `suggestion`（`true`／`false`／`null`）。參考答案與建議**只在老師 view**。
+老師 view 另含（game-mode-framework）：`mode: {key, label, judged}`、`modes: [{key, label}]`、`score_label`（經典模式且全部倍率為 1 時「得題數」，其餘「得分」）、`pending_judgments`（未判定筆數）；`board[]` 另含 `reference: [每個子題的參考答案或 null]`，`board[].ranking[]` 另含 `suggestion`（`true`／`false`／`null`）。參考答案與建議**只在老師 view**。
 
-老師 view 另含（results-view）：`board`（格式同學生 view 的 `results`，任何階段即時更新）與 `team_scores`（`{組名: 分數}`，經典規則＝得題數）。
+老師 view 另含（results-view）：`board`（格式同學生 view 的 `results`，任何階段即時更新）與 `team_scores`（`{組名: 分數}`；欄名見 `score_label`，經典模式且全部倍率為 1 時等於得題數——question-settings 語意補充）。
 
 ### 學生 view
 
@@ -76,7 +77,7 @@
                           {"team": "第1組", "answers": ["地址"], "rank": 2, "is_winner": false, "score": 0}]}]}
 ```
 
-順位依伺服器接收序；經典規則得主得 1 分（buzz-answering D2）。`ranking[]` 另含 `correct`（經典為 `null`；只計對錯為老師判定），只計對錯的得主＝最早送出的正確答案，正確者各得 1 分（game-mode-framework）。`ended` 另含 `team_scores`。老師的 `board` 與學生的 `results` 由同一函式產生，內容一致（results-view D1）。
+順位依伺服器接收序；經典規則得主得 1 × 該題倍率分（buzz-answering D2；question-settings 語意補充）。`results[]` 另含 `multiplier`。`ranking[]` 另含 `correct`（經典為 `null`；只計對錯為老師判定），只計對錯的得主＝最早送出的正確答案，正確者各得 1 × 倍率分（game-mode-framework、question-settings）。`ended` 另含 `team_scores`。老師的 `board` 與學生的 `results` 由同一函式產生，內容一致（results-view D1）。
 
 憑證缺、錯或已撤銷：
 

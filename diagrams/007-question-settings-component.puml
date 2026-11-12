@@ -1,0 +1,27 @@
+@startuml 007-question-settings-component
+title 007 question-settings：組件圖
+
+package "web" {
+  [Teacher QuestionList\n每題「雙倍分數」勾選（preparing）] as TList
+  [Student QuestionList・AnswerForm\n「雙倍分數」標記] as SList
+  [Board・StudentResults\n欄名 score_label] as Board
+  [api.ts\nteacherPost(question-settings)] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\nPOST /api/teacher/question-settings] as App
+  [activity.Activity\nattrs・set_question] as Act
+  [scoring\nQuestionAttrs・規則乘倍率] as Scoring
+  [results\n每題傳入 attrs] as Results
+  [views\n每題 multiplier・score_label] as Views
+}
+
+TList --> Api
+Api --> App : X-Teacher-Key
+App --> Act : set_question(number, multiplier)
+Results --> Scoring : rank(..., attrs)
+Results --> Act : attrs[題號]
+Views --> Results
+SList ..> Views : 倍率非他組資訊
+Board ..> Views
+@enduml

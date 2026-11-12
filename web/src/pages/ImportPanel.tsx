@@ -6,10 +6,12 @@ export function ImportPanel({
   view,
   onUpload,
   onUrl,
+  onSettings,
 }: {
   view: TeacherView;
   onUpload: (file: File) => void;
   onUrl: (url: string) => void;
+  onSettings?: (question: number, multiplier: number) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
@@ -46,18 +48,45 @@ export function ImportPanel({
           目前題目來源：<strong>{view.source}</strong>，共 {view.questions.length} 題
         </p>
       )}
-      <QuestionList questions={view.questions} />
+      <QuestionList
+        questions={view.questions}
+        onDouble={locked ? undefined : (question, on) => onSettings?.(question, on ? 2 : 1)}
+      />
     </section>
   );
 }
 
-export function QuestionList({ questions }: { questions: QuestionOutline[] }) {
+export function DoubleTag({ multiplier }: { multiplier?: number }) {
+  return multiplier === 2 ? <span className="tag">雙倍分數</span> : null;
+}
+
+// 題目清單；老師在準備階段可勾「雙倍分數」（question-settings D4），學生只看標記
+export function QuestionList({
+  questions,
+  onDouble,
+}: {
+  questions: QuestionOutline[];
+  onDouble?: (question: number, on: boolean) => void;
+}) {
   if (questions.length === 0) return <p className="muted">尚未匯入題目。</p>;
   return (
     <ol className="question-list">
       {questions.map((q) => (
         <li key={q.number} value={q.number}>
           第 {q.number} 題{q.labels.length > 1 ? `（題組，${q.labels.length} 個子題：${q.labels.join("、")}）` : ""}
+          {onDouble ? (
+            <label className="inline">
+              <input
+                type="checkbox"
+                aria-label={`第 ${q.number} 題雙倍分數`}
+                checked={q.multiplier === 2}
+                onChange={(e) => onDouble(q.number, e.target.checked)}
+              />
+              雙倍分數
+            </label>
+          ) : (
+            <DoubleTag multiplier={q.multiplier} />
+          )}
         </li>
       ))}
     </ol>

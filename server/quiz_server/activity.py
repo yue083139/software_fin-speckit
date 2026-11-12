@@ -13,7 +13,7 @@ from .guided_notes import ParsedNotes, Question, parse_workbook
 from .judging import suggest
 from .modes import DEFAULT_MODE, MODES, Mode, ModeError
 from .phases import Phase, PhaseError, check_transition
-from .scoring import ScoringRule, Submission
+from .scoring import QuestionAttrs, ScoringRule, Submission
 
 MIN_TEAMS, MAX_TEAMS, DEFAULT_TEAMS = 2, 12, 4
 MAX_ANSWER_CHARS = 200
@@ -25,6 +25,13 @@ class TeamTakenError(Exception):
 
 class AlreadySubmittedError(Exception):
     """本組本題已送出，不可修改；API 層轉成 409。"""
+
+
+class SettingsError(ValueError):
+    """題目設定值不合規；API 層轉成 422。"""
+
+
+MULTIPLIERS = (1, 2)
 
 
 class AnswerError(ValueError):
@@ -65,6 +72,7 @@ class Activity:
         self.mode: Mode = MODES[DEFAULT_MODE]
         self.submissions: dict[int, list[Submission]] = {}
         self.judgments: dict[int, dict[str, bool]] = {}  # 題號 → 組別 → 正確否（game-mode-framework D3）
+        self.attrs: dict[int, QuestionAttrs] = {}  # 題號 → 題目屬性（question-settings D2）
         self._seq = 0
         self._started_at = 0.0
 
@@ -153,6 +161,7 @@ class Activity:
             notes = parse_workbook(data)  # 解析失敗拋 GuidedNotesError，狀態不變
             await self._checkpoint()
             self.notes, self.source_bytes, self.source_name = notes, data, name
+            self.attrs = {q.number: QuestionAttrs() for q in notes.questions}  # 新題目清單：設定歸零
             self._clear_answers()
             await self._bump()
 
@@ -160,6 +169,21 @@ class Activity:
         self.submissions = {q.number: [] for q in self.questions}
         self.judgments = {q.number: {} for q in self.questions}
         self._seq = 0
+
+    def attrs_of(self, number: int) -> QuestionAttrs:
+        return self.attrs.get(number, QuestionAttrs())
+
+    async def set_question(self, number: int, multiplier: int) -> QuestionAttrs:
+        """只在準備階段（question-settings D2）：搶答中改倍率會改變已作答組別的期望分數。"""
+        if multiplier not in MULTIPLIERS:
+            raise SettingsError("倍率只能是 1 或 2")
+        async with self._lock:
+            self._require(Phase.PREPARING)
+            self.question(number)
+            await self._checkpoint()
+            self.attrs[number] = QuestionAttrs(multiplier)
+            await self._bump()
+            return self.attrs[number]
 
     def question(self, number: int) -> Question:
         for q in self.questions:

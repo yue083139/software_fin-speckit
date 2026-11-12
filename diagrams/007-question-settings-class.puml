@@ -1,0 +1,39 @@
+@startuml 007-question-settings-class
+title 007 question-settings：類別圖
+
+class QuestionAttrs <<frozen dataclass>> {
+  + multiplier : int = 1  ' 1 或 2
+}
+
+interface ScoringRule {
+  + rank(submissions, judgments=None, attrs: QuestionAttrs | None = None) : list[Ranked]
+}
+
+class ClassicBuzzRule {
+  + rank(...)  ' 得主 score = 1 × multiplier
+}
+
+class AccuracyRule {
+  + rank(...)  ' 正確 score = 1 × multiplier
+}
+
+class SettingsError <<ValueError>>
+
+class Activity {
+  + attrs : dict[int, QuestionAttrs]
+  + set_question(number, multiplier)  ' 只在 preparing
+  + load_questions(...)  ' 重建 attrs
+  + reset()  ' 保留 attrs
+}
+
+class views_module <<module>> {
+  + score_label(activity) : str  ' 得題數 | 得分
+}
+
+ScoringRule <|.. ClassicBuzzRule
+ScoringRule <|.. AccuracyRule
+ScoringRule ..> QuestionAttrs
+Activity "1" *-- "many" QuestionAttrs
+Activity ..> SettingsError
+views_module ..> Activity
+@enduml

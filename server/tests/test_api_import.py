@@ -23,11 +23,12 @@ def test_upload_broadcasts_questions(client, fixture_bytes):
         r = upload(client, fixture_bytes("group.xlsx"))
         assert r.status_code == 200 and r.json()["count"] == 4
         view = ws.receive_json()["view"]
+    # question-settings 起每題另帶 multiplier（只增欄位）
     assert view["questions"] == [
-        {"number": 1, "labels": ["（1）", "（2）"]},
-        {"number": 2, "labels": ["（1）", "（2）"]},
-        {"number": 3, "labels": [""]},
-        {"number": 4, "labels": [""]},
+        {"number": 1, "labels": ["（1）", "（2）"], "multiplier": 1},
+        {"number": 2, "labels": ["（1）", "（2）"], "multiplier": 1},
+        {"number": 3, "labels": [""], "multiplier": 1},
+        {"number": 4, "labels": [""], "multiplier": 1},
     ]
 
 
