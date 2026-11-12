@@ -17,7 +17,7 @@
 
 ## Phase 2: User Story 2 - 雙倍題得分加倍 (P1)
 
-- [ ] T006 [P] [US2] `server/tests/test_scoring.py::test_multiplier_doubles`；`test_score_label`
+- [ ] T006 [P] [US2] `server/tests/test_scoring.py::test_multiplier_doubles`；改寫 `test_reserved_inputs_do_not_change_classic`；`test_score_label`
 - [ ] T007 [US2] 兩種規則乘倍率；`results.py` 傳入 attrs；`score_label`
 - [ ] T008 [US2] web：結果畫面每題標倍率、欄名用 `score_label`
 

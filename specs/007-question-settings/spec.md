@@ -2,7 +2,7 @@
 
 **Feature Branch**: `007-question-settings`
 **Created**: 2026-11-12
-**Status**: Draft
+**Status**: Draft（v1.1，提案輪評審後）
 **Input**: User description: "可選擇加入 double point question（負責人 2026-11-12 裁定列入第二期）"
 **需求編號**：X-04（`docs/trd-game-modes.md` T-05 倍率）｜**parity**：`docs/parity.md` §4 `question-settings`｜**檔位**：S（`contracts/` 增端點；TRD §5 原建議 B，依分檔表「命中任一取最高」改 S）
 **圖表**：`diagrams/007-question-settings-{component,class,sequence}.puml`
