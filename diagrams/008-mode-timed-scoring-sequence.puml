@@ -31,7 +31,7 @@ App --> A : 推播 round.state = closed
 App --> B : 推播 round.state = closed
 
 B -> App : POST /api/student/submit {question: 1, …}（太晚）
-App --> B : 409 本題作答時間已到
+App --> B : 409 這一題目前沒有開放作答（已關閉）
 
 T -> App : POST /api/teacher/judge {question: 1, team: 第1組, correct: true}
 T -> App : POST /api/teacher/reveal-question

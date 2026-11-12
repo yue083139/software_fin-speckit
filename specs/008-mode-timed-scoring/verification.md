@@ -39,7 +39,7 @@ FAILED tests/test_timed_mode.py::test_student_leaderboard_has_no_scores - ass...
 | sequence | `open_next`：檢查 → `Round(opened_at = clock())` → `create_task` 計時器 | `activity.py:367` 起 | 一致 |
 | sequence | `submit`：題號＝current、未關閉、`clock() - opened_at <= limit`；`elapsed_ms` 同一讀值 | `activity.py:240`–`:247` | 一致 |
 | sequence | 計時器 `close_due()` → closed → 推播 | `activity.py:385` `_run_timer`（迴圈）、`:393` | 一致 |
-| sequence | 太晚送出 409 | `activity.py` 送出前置條件；探針「關閉後送出 409」 | 一致 |
+| sequence | 太晚送出 409 | `activity.py` 送出前置條件；探針「關閉後送出 409 這一題目前沒有開放作答」 | **偏離已先改圖**（實作輪架構通道）：v1.2 圖寫「本題作答時間已到」，但圖中情境是計時器已關閉之後才送，程式回「這一題目前沒有開放作答」；「時間已到」只在計時器尚未關閉時出現。已改圖並重轉 PNG |
 | sequence | `reveal_question` → views → results `own_revealed`、`leaderboard(with_scores=False)` → `TimedRule` | `views.py:88`；`results.py` | 一致（圖已同批改） |
 | component | `app.py` `open-next`、`close-question`、`reveal-question`、`question-settings(time_limit)` | `server/quiz_server/app.py:207`、`:213`、`:217`；`QuestionSettingsBody` | 一致 |
 | component | 計時器任務迴圈直到關閉 | `activity.py:385` | 一致 |
@@ -69,3 +69,21 @@ gate-agents: 0 處漂移
 gate-diagrams-syntax: 25 個圖檔語法通過
 gate-parity: 0 處不一致
 ```
+
+## 實作輪評審補測（2026-11-12）
+
+紅隊實作輪 `CLEARED`，另指出三處「程式對、測試守不住」（變異後仍綠）。已補測試，變異改為必紅：
+
+```
+== R1 作答毫秒改回自開始搶答（刪 opened_at = rnd.opened_at）
+FAILED tests/test_timed_mode.py::test_open_in_order_and_only_current_accepted
+1 failed, 16 passed, 1 warning in 2.35s
+== R2 重置不清回合（刪 self.rounds = {}）
+FAILED tests/test_timed_mode.py::test_reset_clears_rounds_and_timer - Asserti...
+1 failed, 16 passed, 1 warning in 2.32s
+== R3 採用建議不檢查回合已關閉（刪 _require_judgeable）
+FAILED tests/test_timed_mode.py::test_judge_and_reveal_preconditions - Failed...
+1 failed, 16 passed, 1 warning in 2.36s
+```
+
+架構通道實作輪 1 重要（契約 `judge`／`accept-suggestions` 未補時間計分語意）、2 次要（名次「空陣列」字句、008 時序圖晚送訊息）已修，見 `contracts/api.md`、design D5／D6、SpecKit 008 圖與核對表。

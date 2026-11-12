@@ -46,6 +46,7 @@ def test_open_in_order_and_only_current_accepted(fixture_bytes):
         a = await timed_activity(fixture_bytes, clock)
         with pytest.raises(PhaseError):
             await a.submit("第1組", 1, ["甲", "乙"])  # 尚未開題
+        clock.t += 30  # 開始搶答與開題之間隔 30 秒：作答毫秒必須自開題起算，不是自開始搶答（實作輪紅隊）
         assert await a.open_next() == 1
         with pytest.raises(PhaseError):
             await a.open_next()  # 目前題未揭曉
@@ -130,6 +131,8 @@ def test_judge_and_reveal_preconditions(fixture_bytes):
         await a.submit("第1組", 1, ["甲", "乙"])
         with pytest.raises(PhaseError):
             await a.judge(1, "第1組", True)  # 未關閉不可判
+        with pytest.raises(PhaseError):
+            await a.accept_suggestions()  # 開放中不可批次採用建議
         with pytest.raises(PhaseError):
             await a.reveal_question()
         await a.close_question()
@@ -342,3 +345,20 @@ def test_timed_other_team_submit_sends_nothing(timed, teacher_headers):
         post(c, "close-question", teacher_headers)
         after = ws.receive_json()
     assert after["seq"] == before["seq"] + 1 and after["view"]["round"]["state"] == "closed"
+
+
+def test_reset_clears_rounds_and_timer(timed, teacher_headers):
+    """時間計分跑完→結束→重置：回合與計時器清空，可再從第 1 題開始（實作輪紅隊）。"""
+    c, _ = timed
+    post(c, "start", teacher_headers)
+    for _ in range(4):
+        post(c, "open-next", teacher_headers)
+        post(c, "close-question", teacher_headers)
+        post(c, "reveal-question", teacher_headers)
+    assert post(c, "end", teacher_headers).json() == {"phase": "ended"}
+    assert post(c, "reset", teacher_headers).status_code == 200
+    act = c.app.state.activity
+    assert act.rounds == {} and act._timer is None
+    post(c, "start", teacher_headers)
+    assert post(c, "open-next", teacher_headers).json() == {"question": 1}
+    post(c, "close-question", teacher_headers)

@@ -40,8 +40,8 @@
 | `POST /api/teacher/close-question` | 老師 | — | `{question}`：提早結束目前這一題 | 401；409 沒有進行中的題目 |
 | `POST /api/teacher/reveal-question` | 老師 | — | `{question}` | 401；409 本題未關閉或尚有未判定 |
 | `POST /api/teacher/mode` | 老師 | `{mode}` | `{mode}` | 401；409 非 preparing；422 未知模式 |
-| `POST /api/teacher/judge` | 老師 | `{question, team, correct}` | `{question, team, correct}`；可改判 | 401；404 該組沒有送出此題；409 非 judging |
-| `POST /api/teacher/accept-suggestions` | 老師 | — | `{applied}`：只寫入尚未判定且有建議者 | 401；409 非 judging |
+| `POST /api/teacher/judge` | 老師 | `{question, team, correct}` | `{question, team, correct}`；可改判 | 401；404 該組沒有送出此題；409 非 judging——時間計分改為：非 answering，或該題未關閉／已揭曉（mode-timed-scoring 語意補充） |
+| `POST /api/teacher/accept-suggestions` | 老師 | — | `{applied}`：只寫入尚未判定且有建議者；時間計分只處理目前已關閉的那一題 | 401；409 非 judging——時間計分改為：沒有已關閉、未揭曉的題目（mode-timed-scoring 語意補充） |
 | `POST /api/teacher/reveal` | 老師 | — | `{phase: "ended"}` | 401；409 非 judging 或尚有未判定 |
 | `POST /api/teacher/reset` | 老師 | — | `{phase}`；清空作答 | 401；409 階段不符 |
 

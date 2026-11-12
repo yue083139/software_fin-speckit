@@ -21,5 +21,5 @@
 
 - 老師與學生：`round: {question, state: "open"|"closed", deadline_epoch_ms} | null`；`questions[].time_limit`。
 - 老師與學生：`mode.sequential`。
-- 學生（逐題模式、非 ended）：`revealed: [{question, submitted, correct, score}]`（只有本組）、`my_total`（本組累積）、`leaderboard: [{team, rank}]`（依已揭曉題累積分數的名次，不含分數）。
+- 學生（逐題模式、非 ended）：`revealed: [{question, submitted, correct, score}]`（只有本組）、`my_total`（本組累積）、`leaderboard: [{team, rank}]`（依已揭曉題累積分數的名次，不含分數；尚無揭曉題時全部組別同為第 1 名）。
 - 老師：`leaderboard: [{team, rank, score}]`。
