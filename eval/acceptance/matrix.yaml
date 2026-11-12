@@ -24,7 +24,7 @@ rows:
   - id: M-004
     需求: R-09
     聲明: 搶答結束前，任何送往學生端的訊息與回應都不含其他組別的答案
-    守門: server/tests/test_isolation.py（WebSocket、送出成功／錯誤回應、他組送出 0 則推播、冒用組別參數、非 ended 各階段、日誌）
+    守門: server/tests/test_isolation.py（WebSocket、送出成功／錯誤回應、他組送出 0 則推播、冒用組別參數、非 ended 各階段、日誌、判定中 0 則推播且不含判定結果）
     狀態: covered
     卡: buzz-answering
   - id: M-005
@@ -51,3 +51,27 @@ rows:
     守門: server/tests/test_results_view.py::test_student_results_only_when_ended、test_teacher_and_student_agree
     狀態: covered
     卡: results-view
+  - id: M-009
+    需求: X-04
+    聲明: 老師只能在準備階段切換模式（經典搶答／只計對錯），經典搶答行為與第一期相同
+    守門: server/tests/test_modes.py；server/tests/test_results_view.py::test_teacher_and_student_agree（兩模式）；第一期全部測試
+    狀態: covered
+    卡: game-mode-framework
+  - id: M-010
+    需求: X-04
+    聲明: 只計對錯模式結束後進入判定中，全部判定完才能揭曉；得主為最早送出的正確答案並寫回匯出
+    守門: server/tests/test_judging.py；server/tests/test_scoring.py::test_accuracy_rule；server/tests/test_api_export.py::test_accuracy_exports_earliest_correct
+    狀態: covered
+    卡: game-mode-framework
+  - id: M-011
+    需求: R-09、X-04
+    聲明: 判定中學生收不到他組答案與判定結果；參考答案與建議在任何階段都不送往學生
+    守門: server/tests/test_isolation.py::test_judging_hides_judgments、test_reference_never_sent_to_students
+    狀態: covered
+    卡: game-mode-framework
+  - id: M-012
+    需求: X-04
+    聲明: 匯入時可選讀取參考答案欄，只產生判定建議，採用建議不覆蓋老師已判定者
+    守門: server/tests/test_guided_notes_parse.py::test_reference_column、test_templates_have_no_reference；server/tests/test_judging.py::test_suggest、test_accept_suggestions_fills_only_unjudged、test_concurrent_judge_and_accept_suggestions
+    狀態: covered
+    卡: game-mode-framework

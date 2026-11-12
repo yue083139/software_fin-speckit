@@ -89,3 +89,19 @@ def test_fullwidth_and_english_aliases():
     notes = parse_workbook(_book({"B3": "Ｎｏ.", "D3": "Answer", "B4": "１", "B5": 2}))
     assert [q.number for q in notes.questions] == [1, 2]
     assert _cells(notes) == [[("Sheet", "D4")], [("Sheet", "D5")]]
+
+
+def test_reference_column(fixture_bytes):
+    """可選參考答案欄（game-mode-framework D4）：表頭「題號／題目／作答／參考答案」。"""
+    notes = parse_workbook(fixture_bytes("reference.xlsx"))
+    assert [len(q.slots) for q in notes.questions] == [1, 2, 1, 1]
+    assert [[s.reference for s in q.slots] for q in notes.questions] == [
+        ["CPU"], ["二進位", "0"], [None], ["Linux"]]
+    assert _cells(notes) == [[("學習單", "F4")], [("學習單", "F5"), ("學習單", "F6")],
+                             [("學習單", "F7")], [("學習單", "F8")]]
+
+
+@pytest.mark.parametrize("name", ["single.xlsx", "group.xlsx", "variant.xlsx"])
+def test_templates_have_no_reference(fixture_bytes, name):
+    notes = parse_workbook(fixture_bytes(name))
+    assert all(s.reference is None for q in notes.questions for s in q.slots)

@@ -17,8 +17,8 @@
 ## R3 判定階段與狀態機
 
 - **Decision**：`end()` 加 `_require(ANSWERING)` 後依 `mode.judged` 轉 `judging`／`ended`；`judge`、`accept_suggestions` 只在 `judging`；`reveal()` 要求 `pending_judgments() == 0`。檢查與寫入之間放 `_checkpoint()`。
-- **Rationale**：轉移表允許 `judging → ended`，若 `end()` 不擋，`POST /api/teacher/end` 可繞過揭曉的未判定檢查。
-- **證偽欄｜可證偽**：`test_judging.py`（錯誤碼、未判定 409、判定中結束 409、改判、`test_concurrent_reveal_and_judge` 20 輪）；變異實錄：拿掉未判定檢查、拿掉 `_require(ANSWERING)`，必紅。
+- **Rationale**：把「結束搶答只在搶答中」寫成明確前置條件。v1.2 更正：判定模式下 `end()` 目標是 `judging`，轉移表本身已擋 `judging → judging`，拿掉此行仍 409（變異實錄），原「不擋即可繞過」不成立。
+- **證偽欄｜可證偽**：`test_judging.py`（錯誤碼、未判定 409、判定中結束 409、改判、`test_concurrent_judge_and_accept_suggestions` 20 輪：老師判定與採用全部建議並發，最終必為老師的判定；v1.0 的「揭曉與判定並發」測試拿掉鎖仍綠，已換掉）；變異實錄：拿掉未判定檢查、拿掉 `_require(ANSWERING)`，必紅。
 
 ## R4 參考答案與建議
 

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `006-game-mode-framework`
 **Created**: 2026-11-12
-**Status**: Draft（v1.1，提案輪評審後）
+**Status**: Implemented（v1.2；人工驗證待負責人）
 **Input**: User description: "參考 Kahoot 等成熟搶答軟體做多種模式；老師判定對錯，匯入檔有參考答案欄時預填建議（負責人 2026-11-12 裁定 TRD §6）"
 **需求編號**：X-04（`docs/trd-game-modes.md` T-01～T-04、T-06、M3）｜**parity**：`docs/parity.md` §4 `game-mode-framework`｜**檔位**：S（活動階段狀態機、作答隔離、Guided Notes 解析口徑、`contracts/`）
 **圖表**：`diagrams/006-game-mode-framework-{component,class,sequence}.puml`
@@ -86,7 +86,7 @@
 
 - **SC-001**: 第一期全部既有測試在本功能後只因新增欄位而更新斷言，行為相關斷言不改即綠。
 - **SC-002**: 學生端四個階段的全部傳輸位元組不含任何參考答案字串（`test_reference_never_sent_to_students`）。
-- **SC-003**: 拿掉 `reveal` 的未判定檢查、拿掉 `end` 的 `answering` 前置條件，對應測試必紅（變異實錄）。
+- **SC-003**: 拿掉 `reveal` 的未判定檢查、`judge` 或 `accept_suggestions` 拿掉鎖，對應測試必紅（變異實錄）。
 
 ## Assumptions
 
