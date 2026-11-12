@@ -1,6 +1,7 @@
 """作答狀況與結果（results-view D1–D3）。"""
 import json
 
+import pytest
 from conftest import TEACHER_KEY
 
 
@@ -44,18 +45,38 @@ def test_student_results_only_when_ended(loaded_client, teacher_headers):
     assert after["team_scores"]["第1組"] == 1
 
 
-def test_teacher_and_student_agree(loaded_client, teacher_headers):
+def _without_teacher_only(board: list[dict]) -> list[dict]:
+    """老師版只多 `reference` 與 `ranking[].suggestion`（game-mode-framework D6）；拿掉後應與學生版相同。"""
+    out = []
+    for q in board:
+        q = {k: v for k, v in q.items() if k != "reference"}
+        q["ranking"] = [{k: v for k, v in r.items() if k != "suggestion"} for r in q["ranking"]]
+        out.append(q)
+    return out
+
+
+@pytest.mark.parametrize("mode", ["classic", "accuracy"])
+def test_teacher_and_student_agree(loaded_client, teacher_headers, mode):
+    loaded_client.post("/api/teacher/mode", json={"mode": mode}, headers=teacher_headers)
     t1, t2 = join(loaded_client, "第1組"), join(loaded_client, "第2組")
     loaded_client.post("/api/teacher/start", headers=teacher_headers)
     submit(loaded_client, t1, 3, ["甲"])
     submit(loaded_client, t2, 3, ["乙"])
     submit(loaded_client, t2, 4, ["丙"])
     loaded_client.post("/api/teacher/end", headers=teacher_headers)
+    if mode == "accuracy":
+        for q, team, ok in ((3, "第1組", False), (3, "第2組", True), (4, "第2組", True)):
+            loaded_client.post("/api/teacher/judge", json={"question": q, "team": team, "correct": ok},
+                               headers=teacher_headers)
+        assert loaded_client.post("/api/teacher/reveal", headers=teacher_headers).status_code == 200
     teacher = loaded_client.get("/api/teacher/state", headers=teacher_headers).json()
     with loaded_client.websocket_connect(f"/ws?role=student&token={t1}") as ws:
         student = ws.receive_json()["view"]
-    assert json.dumps(teacher["board"], sort_keys=True) == json.dumps(student["results"], sort_keys=True)
+    assert json.dumps(_without_teacher_only(teacher["board"]), sort_keys=True) == json.dumps(
+        student["results"], sort_keys=True)
     assert teacher["team_scores"] == student["team_scores"]
+    q3 = next(r for r in student["results"] if r["number"] == 3)
+    assert q3["winner"]["team"] == ("第1組" if mode == "classic" else "第2組")
 
 
 def test_teacher_board_empty_before_import(client, teacher_headers):

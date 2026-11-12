@@ -59,3 +59,30 @@ def test_export_can_repeat(loaded_client, teacher_headers):
     a = loaded_client.get("/api/teacher/export", headers=teacher_headers)
     b = loaded_client.get("/api/teacher/export", headers=teacher_headers)
     assert a.status_code == b.status_code == 200
+
+
+def test_accuracy_exports_earliest_correct(loaded_client, teacher_headers):
+    """只計對錯：寫回最早送出的**正確**答案；全錯的題目不寫（game-mode-framework D2）。"""
+    c = loaded_client
+    c.post("/api/teacher/mode", json={"mode": "accuracy"}, headers=teacher_headers)
+    t1, t2 = join(c, "第1組"), join(c, "第2組")
+    c.post("/api/teacher/start", headers=teacher_headers)
+    submit(c, t1, 3, ["地址"])
+    submit(c, t2, 3, ["位址"])
+    submit(c, t1, 4, ["錯的"])
+    c.post("/api/teacher/end", headers=teacher_headers)
+    for q, team, ok in ((3, "第1組", False), (3, "第2組", True), (4, "第1組", False)):
+        c.post("/api/teacher/judge", json={"question": q, "team": team, "correct": ok},
+               headers=teacher_headers)
+    assert c.get("/api/teacher/export", headers=teacher_headers).status_code == 409  # 判定中不可匯出
+    c.post("/api/teacher/reveal", headers=teacher_headers)
+    r = c.get("/api/teacher/export", headers=teacher_headers)
+    ws = openpyxl.load_workbook(io.BytesIO(r.content))["學習單"]
+    original = openpyxl.load_workbook(io.BytesIO(fixture_bytes_group()))["學習單"]
+    assert ws["G11"].value.endswith("位址")
+    assert ws["G13"].value == original["G13"].value
+
+
+def fixture_bytes_group() -> bytes:
+    from conftest import FIXTURES
+    return (FIXTURES / "group.xlsx").read_bytes()

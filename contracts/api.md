@@ -16,6 +16,8 @@
 
 `phase`：`preparing`（準備中）｜`answering`（搶答中）｜`judging`（判定中，經典模式不使用）｜`ended`（已結束）
 
+`mode`（game-mode-framework）：`classic`（經典搶答，預設）｜`accuracy`（只計對錯；結束搶答後進入 `judging`，老師判定完才揭曉）
+
 ## REST 端點
 
 錯誤回應一律為 `{"detail": "<繁體中文訊息>"}`，訊息不含任何學生答案（請求格式錯誤也不回顯請求本體）。
@@ -32,7 +34,11 @@
 | `POST /api/teacher/import-url` | 老師 | `{url}`（`https://docs.google.com/spreadsheets/d/<id>/…`，知道連結者可檢視） | `{source, count}` | 400 連結或下載不符；401；409 非 preparing |
 | `GET /api/teacher/export` | 老師 | — | xlsx 檔（原 Guided Notes，得主答案寫入作答格、一律為文字）；`Content-Disposition` 含 `filename*=UTF-8''<原檔名>-搶答結果.xlsx` | 401；409 非 ended 或尚未匯入 |
 | `POST /api/teacher/start` | 老師 | — | `{phase}` | 401；409 階段不符或尚未匯入題目 |
-| `POST /api/teacher/end` | 老師 | — | `{phase}` | 401；409 階段不符 |
+| `POST /api/teacher/end` | 老師 | — | `{phase}`（判定模式為 `judging`，經典為 `ended`） | 401；409 非 answering |
+| `POST /api/teacher/mode` | 老師 | `{mode}` | `{mode}` | 401；409 非 preparing；422 未知模式 |
+| `POST /api/teacher/judge` | 老師 | `{question, team, correct}` | `{question, team, correct}`；可改判 | 401；404 該組沒有送出此題；409 非 judging |
+| `POST /api/teacher/accept-suggestions` | 老師 | — | `{applied}`：只寫入尚未判定且有建議者 | 401；409 非 judging |
+| `POST /api/teacher/reveal` | 老師 | — | `{phase: "ended"}` | 401；409 非 judging 或尚有未判定 |
 | `POST /api/teacher/reset` | 老師 | — | `{phase}`；清空作答 | 401；409 階段不符 |
 
 ## WebSocket `/ws`
@@ -51,6 +57,8 @@
 
 `questions[].labels`：每個子題給學生看的標籤，長度＝子題數；單題為 `[""]`。不含作答格座標（guided-notes-import）。
 
+老師 view 另含（game-mode-framework）：`mode: {key, label, judged}`、`modes: [{key, label}]`、`score_label`（經典「得題數」，其餘「得分」）、`pending_judgments`（未判定筆數）；`board[]` 另含 `reference: [每個子題的參考答案或 null]`，`board[].ranking[]` 另含 `suggestion`（`true`／`false`／`null`）。參考答案與建議**只在老師 view**。
+
 老師 view 另含（results-view）：`board`（格式同學生 view 的 `results`，任何階段即時更新）與 `team_scores`（`{組名: 分數}`，經典規則＝得題數）。
 
 ### 學生 view
@@ -60,7 +68,7 @@
  "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
 
-所有階段都含 `my_submissions`（只有本組：`[{question, answers}]`，不含順位、序號、他組是否送出）。只有 `ended` 階段另含 `results`：
+所有階段都含 `mode: {key, label}`、`score_label` 與 `my_submissions`（只有本組：`[{question, answers}]`，不含順位、序號、他組是否送出）。`judging` 與 `answering` 相同，不含判定結果。只有 `ended` 階段另含 `results`：
 
 ```json
 {"results": [{"number": 3, "labels": [""], "winner": {"team": "第2組", "answers": ["位址"]},
@@ -68,7 +76,7 @@
                           {"team": "第1組", "answers": ["地址"], "rank": 2, "is_winner": false, "score": 0}]}]}
 ```
 
-順位依伺服器接收序；經典規則得主得 1 分（buzz-answering D2）。`ended` 另含 `team_scores`。老師的 `board` 與學生的 `results` 由同一函式產生，內容一致（results-view D1）。
+順位依伺服器接收序；經典規則得主得 1 分（buzz-answering D2）。`ranking[]` 另含 `correct`（經典為 `null`；只計對錯為老師判定），只計對錯的得主＝最早送出的正確答案，正確者各得 1 分（game-mode-framework）。`ended` 另含 `team_scores`。老師的 `board` 與學生的 `results` 由同一函式產生，內容一致（results-view D1）。
 
 憑證缺、錯或已撤銷：
 

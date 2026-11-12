@@ -1,7 +1,38 @@
-import type { QuestionResult } from "../types";
+import type { QuestionResult, RankedAnswer } from "../types";
+
+export type Judge = (question: number, team: string, correct: boolean) => void;
 
 function formatAnswers(labels: string[], answers: string[]): string {
   return answers.map((a, i) => `${labels[i] ?? ""}${a}`).join(" ／ ");
+}
+
+function verdict(correct: boolean | null | undefined): string {
+  if (correct === true) return "✓ 正確";
+  if (correct === false) return "✗ 錯誤";
+  return "";
+}
+
+// 判定中每格的建議與「正確／錯誤」鈕（game-mode-framework D8）；建議只來自老師 view
+function JudgeCell({ question, r, onJudge }: { question: number; r: RankedAnswer; onJudge: Judge }) {
+  return (
+    <div className="row">
+      {r.suggestion != null && <span className="muted">建議：{r.suggestion ? "正確" : "錯誤"}</span>}
+      <button
+        className={r.correct === true ? "small selected" : "small"}
+        aria-label={`第 ${question} 題 ${r.team} 正確`}
+        onClick={() => onJudge(question, r.team, true)}
+      >
+        正確
+      </button>
+      <button
+        className={r.correct === false ? "small selected" : "small"}
+        aria-label={`第 ${question} 題 ${r.team} 錯誤`}
+        onClick={() => onJudge(question, r.team, false)}
+      >
+        錯誤
+      </button>
+    </div>
+  );
 }
 
 // 老師即時作答狀況表：列＝題號、欄＝組別，格內為答案與順位，得主加底色（results-view D4）
@@ -9,10 +40,16 @@ export function Board({
   board,
   teams,
   scores,
+  scoreLabel = "得題數",
+  winnerTag = "搶答成功",
+  onJudge,
 }: {
   board: QuestionResult[];
   teams: string[];
   scores: Record<string, number>;
+  scoreLabel?: string;
+  winnerTag?: string;
+  onJudge?: Judge;
 }) {
   if (board.length === 0) return <p className="muted">尚未匯入題目。</p>;
   return (
@@ -33,6 +70,9 @@ export function Board({
               <th>
                 {q.number}
                 {q.labels.length > 1 && <span className="muted">（題組）</span>}
+                {q.reference?.some((x) => x != null) && (
+                  <div className="muted">參考答案：{q.reference.map((x) => x ?? "—").join(" ／ ")}</div>
+                )}
               </th>
               {teams.map((t) => {
                 const r = q.ranking.find((x) => x.team === t);
@@ -46,7 +86,12 @@ export function Board({
                   <td key={t} className={r.is_winner ? "winner" : undefined}>
                     <div>{formatAnswers(q.labels, r.answers)}</div>
                     <div className="muted">第 {r.rank} 順位</div>
-                    {r.is_winner && <div className="tag">搶答成功</div>}
+                    {r.is_winner && <div className="tag">{winnerTag}</div>}
+                    {onJudge ? (
+                      <JudgeCell question={q.number} r={r} onJudge={onJudge} />
+                    ) : (
+                      r.correct != null && <div>{verdict(r.correct)}</div>
+                    )}
                   </td>
                 );
               })}
@@ -58,7 +103,7 @@ export function Board({
         </tbody>
         <tfoot>
           <tr>
-            <th>得題數</th>
+            <th>{scoreLabel}</th>
             {teams.map((t) => (
               <td key={t}>
                 <strong>{scores[t] ?? 0}</strong>
@@ -77,17 +122,21 @@ export function StudentResults({
   team,
   results,
   scores,
+  scoreLabel = "得題數",
+  winnerTag = "搶答成功",
 }: {
   team: string;
   results: QuestionResult[];
   scores: Record<string, number>;
+  scoreLabel?: string;
+  winnerTag?: string;
 }) {
   return (
     <>
       <section className="card">
         <h2>搶答結果</h2>
         <p>
-          本組得題數：<strong>{scores[team] ?? 0}</strong>
+          本組{scoreLabel}：<strong>{scores[team] ?? 0}</strong>
         </p>
         <p className="muted">
           各組：
@@ -103,17 +152,23 @@ export function StudentResults({
             <h3>第 {q.number} 題</h3>
             {q.winner ? (
               <p className={q.winner.team === team ? "ok" : undefined}>
-                搶答成功：{q.winner.team}（{formatAnswers(q.labels, q.winner.answers)}）
+                {winnerTag}：{q.winner.team}（{formatAnswers(q.labels, q.winner.answers)}）
               </p>
             ) : (
-              <p className="muted">沒有組別搶答</p>
+              <p className="muted">{winnerTag === "搶答成功" ? "沒有組別搶答" : "沒有組別答對"}</p>
             )}
-            <p>本組：{mine ? `第 ${mine.rank} 順位（${formatAnswers(q.labels, mine.answers)}）` : "未作答"}</p>
+            <p>
+              本組：
+              {mine
+                ? `第 ${mine.rank} 順位（${formatAnswers(q.labels, mine.answers)}）${mine.correct != null ? ` ${verdict(mine.correct)}` : ""}`
+                : "未作答"}
+            </p>
             {q.ranking.length > 0 && (
               <ol>
                 {q.ranking.map((r) => (
                   <li key={r.team}>
                     {r.team}：{formatAnswers(q.labels, r.answers)}
+                    {r.correct != null && ` ${verdict(r.correct)}`}
                   </li>
                 ))}
               </ol>

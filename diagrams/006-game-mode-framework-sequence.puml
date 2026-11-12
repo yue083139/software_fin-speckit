@@ -1,0 +1,44 @@
+@startuml 006-game-mode-framework-sequence
+title 006 game-mode-framework：時序圖（只計對錯：結束 → 判定 → 揭曉）
+
+actor "老師" as T
+actor "第2組" as B
+participant "app.py" as App
+participant "Activity" as Act
+participant "judging" as J
+participant "views" as V
+participant "AccuracyRule" as Rule
+
+T -> App : POST /api/teacher/mode {mode: accuracy}（preparing）
+App -> Act : set_mode(accuracy)
+== 搶答（同經典：各組送出、伺服器配序號） ==
+T -> App : POST /api/teacher/end
+App -> Act : end()
+Act -> Act : _require(ANSWERING)；mode.judged -> JUDGING
+App --> B : 推播 phase=judging（只含本組 my_submissions）
+
+T -> App : POST /api/teacher/accept-suggestions
+App -> Act : accept_suggestions()
+loop 每筆未判定的送出
+  Act -> J : suggest(answers, slots)
+  J --> Act : True / False / None
+  Act -> Act : 有建議才寫入 judgments
+end
+T -> App : POST /api/teacher/judge {question, team, correct}
+App -> Act : judge(...)（改判）
+App -> V : student_view(第2組)：內容不變
+note right of App : 第2組不推送任何訊息
+
+T -> App : POST /api/teacher/reveal
+App -> Act : reveal()
+alt 尚有未判定
+  Act --> App : PhaseError（尚有 N 筆未判定）
+  App --> T : 409
+else 全部判定
+  Act -> Act : JUDGING -> ENDED
+  App -> V : student_view(第2組) 加 results
+  V -> Rule : rank(送出, judgments)
+  Rule --> V : correct、score、最早正確者為得主
+  App --> B : 推播 ended＋results（含對錯，不含建議與參考答案）
+end
+@enduml

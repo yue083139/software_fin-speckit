@@ -4,6 +4,7 @@ import { PHASE_LABEL, type StudentView } from "../types";
 import { AnswerForm, type Submit } from "./AnswerForm";
 import { QuestionList } from "./ImportPanel";
 import { StudentResults } from "./Results";
+import { MODE_HINT } from "./Teacher";
 
 export function StudentPanel({ view, onSubmit = async () => {} }: { view: StudentView; onSubmit?: Submit }) {
   if (!view.team_valid)
@@ -23,6 +24,11 @@ export function StudentPanel({ view, onSubmit = async () => {} }: { view: Studen
         <p className="phase">
           目前階段：<strong>{PHASE_LABEL[view.phase]}</strong>
         </p>
+        {view.mode && (
+          <p className="muted">
+            模式：{view.mode.label}。{MODE_HINT[view.mode.key] ?? ""}
+          </p>
+        )}
         {view.phase === "preparing" && (
           <>
             <p>等待老師開始搶答…</p>
@@ -30,10 +36,17 @@ export function StudentPanel({ view, onSubmit = async () => {} }: { view: Studen
           </>
         )}
         {view.phase === "answering" && <p>搶答進行中：每題每組只能送出一次，送出後不能修改。</p>}
+        {view.phase === "judging" && <p>老師判定中，揭曉前看不到其他組的答案。</p>}
       </section>
       {view.phase === "answering" && <AnswerForm questions={questions} submitted={mine} onSubmit={onSubmit} />}
       {view.phase === "ended" && view.results && view.team && (
-        <StudentResults team={view.team} results={view.results} scores={view.team_scores ?? {}} />
+        <StudentResults
+          team={view.team}
+          results={view.results}
+          scores={view.team_scores ?? {}}
+          scoreLabel={view.score_label}
+          winnerTag={view.mode?.key === "classic" || !view.mode ? "搶答成功" : "最早答對"}
+        />
       )}
     </>
   );

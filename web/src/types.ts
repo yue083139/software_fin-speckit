@@ -1,6 +1,13 @@
 // 伺服器推來的畫面狀態（contracts/api.md）；前端只顯示，不判定、不過濾。
 export type Phase = "preparing" | "answering" | "judging" | "ended";
 
+// 模式（game-mode-framework）；新欄位皆可選，舊伺服器或測試資料缺欄時以經典模式顯示
+export interface ModeInfo {
+  key: string;
+  label: string;
+  judged?: boolean;
+}
+
 export interface QuestionOutline {
   number: number;
   labels: string[];
@@ -15,6 +22,10 @@ export interface TeacherView {
   questions: QuestionOutline[];
   board: QuestionResult[];
   team_scores: Record<string, number>;
+  mode?: ModeInfo;
+  modes?: ModeInfo[];
+  score_label?: string;
+  pending_judgments?: number;
 }
 
 export interface StudentView {
@@ -26,6 +37,8 @@ export interface StudentView {
   my_submissions?: { question: number; answers: string[] }[];
   results?: QuestionResult[];
   team_scores?: Record<string, number>;
+  mode?: ModeInfo;
+  score_label?: string;
 }
 
 export interface RankedAnswer {
@@ -34,6 +47,8 @@ export interface RankedAnswer {
   rank: number;
   is_winner: boolean;
   score: number;
+  correct?: boolean | null; // 經典為 null；判定模式為老師判定
+  suggestion?: boolean | null; // 只在老師 view
 }
 
 export interface QuestionResult {
@@ -41,6 +56,7 @@ export interface QuestionResult {
   labels: string[];
   ranking: RankedAnswer[];
   winner: { team: string; answers: string[] } | null;
+  reference?: (string | null)[]; // 只在老師 view
 }
 
 export type View = TeacherView | StudentView;

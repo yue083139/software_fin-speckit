@@ -53,6 +53,16 @@ class SubmitBody(BaseModel):
     answers: list[str]
 
 
+class ModeBody(BaseModel):
+    mode: str
+
+
+class JudgeBody(BaseModel):
+    question: int
+    team: str
+    correct: bool
+
+
 XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
@@ -181,6 +191,27 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
     async def end() -> dict[str, str]:
         await act.end()
         log.info("活動 v%s 結束搶答", act.version)
+        return {"phase": act.phase.value}
+
+    @app.post("/api/teacher/mode", dependencies=teacher)
+    async def set_mode(body: ModeBody) -> dict[str, str]:
+        await act.set_mode(body.mode)
+        return {"mode": act.mode.key}
+
+    @app.post("/api/teacher/judge", dependencies=teacher)
+    async def judge(body: JudgeBody) -> dict[str, Any]:
+        await act.judge(body.question, body.team, body.correct)
+        log.info("判定：題 %s 組別 %s 結果 %s", body.question, body.team, body.correct)
+        return {"question": body.question, "team": body.team, "correct": body.correct}
+
+    @app.post("/api/teacher/accept-suggestions", dependencies=teacher)
+    async def accept_suggestions() -> dict[str, int]:
+        return {"applied": await act.accept_suggestions()}
+
+    @app.post("/api/teacher/reveal", dependencies=teacher)
+    async def reveal() -> dict[str, str]:
+        await act.reveal()
+        log.info("活動 v%s 揭曉結果", act.version)
         return {"phase": act.phase.value}
 
     @app.post("/api/teacher/reset", dependencies=teacher)

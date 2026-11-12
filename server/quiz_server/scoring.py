@@ -24,13 +24,16 @@ class Ranked:
     rank: int
     is_winner: bool
     score: int
+    correct: bool | None = None  # None＝本模式不判定或尚未判定（game-mode-framework D2）
 
 
 class ScoringRule(Protocol):
     name: str
 
     def rank(self, submissions: Sequence[Submission], judgments: Mapping[str, bool] | None = None,
-             attrs: Mapping[str, Any] | None = None) -> list[Ranked]: ...
+             attrs: Mapping[str, Any] | None = None) -> list[Ranked]:
+        """`judgments`：該題「組別 → 是否正確」。"""
+        ...
 
     def team_scores(self, teams: Sequence[str], ranked: Sequence[Sequence[Ranked]]) -> dict[str, int]: ...
 
@@ -49,9 +52,34 @@ class ClassicBuzzRule:
         ]
 
     def team_scores(self, teams: Sequence[str], ranked: Sequence[Sequence[Ranked]]) -> dict[str, int]:
-        scores = dict.fromkeys(teams, 0)
-        for per_question in ranked:
-            for r in per_question:
-                if r.team in scores:
-                    scores[r.team] += r.score
-        return scores
+        return _sum_scores(teams, ranked)
+
+
+def _sum_scores(teams: Sequence[str], ranked: Sequence[Sequence[Ranked]]) -> dict[str, int]:
+    scores = dict.fromkeys(teams, 0)
+    for per_question in ranked:
+        for r in per_question:
+            if r.team in scores:
+                scores[r.team] += r.score
+    return scores
+
+
+class AccuracyRule:
+    """只計對錯（TRD M3）：判定正確者各得 1 分；得主＝依 seq 最早的正確送出，供匯出寫回。"""
+
+    name = "accuracy"
+
+    def rank(self, submissions: Sequence[Submission], judgments: Mapping[str, bool] | None = None,
+             attrs: Mapping[str, Any] | None = None) -> list[Ranked]:
+        judged = judgments or {}
+        out: list[Ranked] = []
+        winner_found = False
+        for i, s in enumerate(sorted(submissions, key=lambda s: s.seq), 1):
+            correct = judged.get(s.team)
+            is_winner = correct is True and not winner_found
+            winner_found = winner_found or is_winner
+            out.append(Ranked(s.team, s.answers, s.seq, i, is_winner, 1 if correct is True else 0, correct))
+        return out
+
+    def team_scores(self, teams: Sequence[str], ranked: Sequence[Sequence[Ranked]]) -> dict[str, int]:
+        return _sum_scores(teams, ranked)

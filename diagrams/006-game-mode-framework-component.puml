@@ -1,0 +1,38 @@
+@startuml 006-game-mode-framework-component
+title 006 game-mode-framework：組件圖
+
+package "web" {
+  [Teacher\nModeSelector・JudgeControls\n（採用全部建議、揭曉）] as TPage
+  [Board\n每格建議與正確／錯誤鈕] as Board
+  [StudentPanel\n模式說明・判定中提示・結果對錯] as SPage
+  [api.ts\nteacherPost(mode / judge / accept-suggestions / reveal)] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\nPOST /api/teacher/mode・judge\naccept-suggestions・reveal] as App
+  [modes\nMode・MODES（classic、accuracy）] as Modes
+  [activity.Activity\nset_mode・end・judge\naccept_suggestions・reveal] as Act
+  [scoring\nClassicBuzzRule・AccuracyRule\nRanked.correct] as Scoring
+  [judging\nsuggest（正規化全等）] as Judging
+  [guided_notes\n可選參考答案欄 Slot.reference] as Notes
+  [results\nbuild(teacher=)] as Results
+  [views\nteacher_view・student_view] as Views
+}
+
+TPage --> Api
+SPage --> Api
+TPage --> Board
+Api --> App : X-Teacher-Key
+App --> Act
+Act --> Modes : rule = mode.rule
+Act --> Judging : 建議
+Judging --> Notes : 參考答案
+Results --> Scoring : rank(送出, judgments)
+App --> Views
+Views --> Results
+
+note right of Views
+  student_view：judging 與 answering 相同，只含本組；
+  參考答案與建議只在 teacher=True 的結果中
+end note
+@enduml

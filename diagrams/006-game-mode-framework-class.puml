@@ -1,0 +1,79 @@
+@startuml 006-game-mode-framework-class
+title 006 game-mode-framework：類別圖
+
+class Mode <<frozen dataclass>> {
+  + key : str  ' classic | accuracy
+  + label : str
+  + judged : bool
+  + rule : ScoringRule
+}
+
+class modes_module <<module>> {
+  + MODES : dict[str, Mode]
+  + DEFAULT_MODE = "classic"
+}
+
+class Ranked <<frozen dataclass>> {
+  + team : str
+  + answers : tuple[str, ...]
+  + seq : int
+  + rank : int
+  + is_winner : bool
+  + score : int
+  + correct : bool | None  ' 新增
+}
+
+interface ScoringRule {
+  + name : str
+  + rank(submissions, judgments, attrs) : list[Ranked]
+  + team_scores(teams, ranked) : dict[str, int]
+}
+
+class ClassicBuzzRule {
+  + name = "classic"
+}
+
+class AccuracyRule {
+  + name = "accuracy"
+  + rank(...)  ' 正確 1 分；得主＝最早正確者
+}
+
+class Slot <<frozen dataclass>> {
+  + sheet : str
+  + cell : str
+  + label : str
+  + placeholder : bool
+  + display : str
+  + reference : str | None  ' 新增
+}
+
+class judging_module <<module>> {
+  + normalize(text) : str
+  + suggest(answers, slots) : bool | None
+}
+
+class ModeError <<ValueError>>
+
+class Activity {
+  + mode : Mode
+  + rule : ScoringRule  ' 唯讀＝mode.rule
+  + judgments : dict[int, dict[str, bool]]
+  + set_mode(key)
+  + end()  ' 只接受 answering；judged -> judging
+  + judge(number, team, correct)
+  + accept_suggestions() : int
+  + pending_judgments() : int
+  + suggestion(number, team) : bool | None
+  + reveal()  ' judging -> ended，須無未判定
+}
+
+ScoringRule <|.. ClassicBuzzRule
+ScoringRule <|.. AccuracyRule
+ScoringRule ..> Ranked
+Mode --> ScoringRule
+modes_module *-- Mode
+Activity --> Mode
+Activity ..> judging_module
+judging_module ..> Slot
+Activity ..> ModeError
+@enduml

@@ -95,3 +95,64 @@ def test_logs_do_not_contain_answers(two_teams, caplog):
         submit(client, ta, 3, [SECRET_A])
     assert SECRET_A not in caplog.text
     assert "第1組" in caplog.text
+
+
+def test_judging_hides_judgments(two_teams, teacher_headers):
+    """判定中：老師判定第1組，第2組收到 0 則推播，view 不含第1組答案與判定結果（game-mode-framework D5）。"""
+    client, ta, tb = two_teams
+    act = client.app.state.activity
+    # two_teams 已開始搶答；回到準備改模式需重置，故直接在此測試內重建流程
+    client.post("/api/teacher/end", headers=teacher_headers)
+    client.post("/api/teacher/reset", headers=teacher_headers)
+    client.post("/api/teacher/mode", json={"mode": "accuracy"}, headers=teacher_headers)
+    client.post("/api/teacher/start", headers=teacher_headers)
+    submit(client, ta, 3, [SECRET_A])
+    submit(client, tb, 3, ["乙組答案"])
+    client.post("/api/teacher/end", headers=teacher_headers)
+    assert act.phase is Phase.JUDGING
+    with client.websocket_connect(f"/ws?role=student&token={tb}") as wb:
+        before = json.loads(wb.receive_text())
+        client.post("/api/teacher/judge", json={"question": 3, "team": "第1組", "correct": True},
+                    headers=teacher_headers)
+        client.post("/api/teacher/judge", json={"question": 3, "team": "第2組", "correct": False},
+                    headers=teacher_headers)
+        client.post("/api/teacher/reveal", headers=teacher_headers)
+        after = json.loads(wb.receive_text())
+    raw = json.dumps(before, ensure_ascii=False)
+    assert SECRET_A not in raw and "correct" not in raw and "results" not in before["view"]
+    assert after["seq"] == before["seq"] + 1 and after["view"]["phase"] == "ended"
+    assert SECRET_A in json.dumps(after, ensure_ascii=False)
+
+
+REFERENCES = ["CPU", "二進位", "Linux"]
+
+
+def test_reference_never_sent_to_students(client, teacher_headers, fixture_bytes):
+    """參考答案與建議在 preparing／answering／judging／ended 都不送往學生（game-mode-framework D5）。"""
+    upload = {"file": ("reference.xlsx", fixture_bytes("reference.xlsx"), "application/octet-stream")}
+    client.post("/api/teacher/import", headers=teacher_headers, files=upload)
+    client.post("/api/teacher/mode", json={"mode": "accuracy"}, headers=teacher_headers)
+    ta, tb = join(client, "第1組"), join(client, "第2組")
+    seen: list[str] = []
+    with client.websocket_connect(f"/ws?role=student&token={tb}") as wb:
+        seen.append(wb.receive_text())                                   # preparing
+        client.post("/api/teacher/start", headers=teacher_headers)
+        seen.append(wb.receive_text())                                   # answering
+        seen.append(submit(client, ta, 1, ["cpu"]).text)
+        seen.append(submit(client, tb, 1, ["gpu"]).text)
+        seen.append(wb.receive_text())                                   # 本組送出後
+        seen.append(submit(client, tb, 1, ["再送"]).text)               # 錯誤回應
+        client.post("/api/teacher/end", headers=teacher_headers)
+        seen.append(wb.receive_text())                                   # judging
+        client.post("/api/teacher/accept-suggestions", headers=teacher_headers)
+        client.post("/api/teacher/reveal", headers=teacher_headers)
+        seen.append(wb.receive_text())                                   # ended
+    seen.append(client.get("/api/public/info").text)
+    assert json.loads(seen[-2])["view"]["phase"] == "ended"
+    for raw in seen:
+        assert "suggestion" not in raw and "reference" not in raw
+        for ref in REFERENCES:
+            # 學生答案「gpu」「cpu」可在 ended 出現；參考答案原文「CPU」等不得出現
+            assert ref not in raw, (ref, raw[:200])
+    teacher = client.get("/api/teacher/state", headers=teacher_headers).text
+    assert "CPU" in teacher and "二進位" in teacher

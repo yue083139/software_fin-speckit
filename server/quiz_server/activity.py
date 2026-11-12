@@ -10,8 +10,10 @@ import time
 import unicodedata
 
 from .guided_notes import ParsedNotes, Question, parse_workbook
+from .judging import suggest
+from .modes import DEFAULT_MODE, MODES, Mode, ModeError
 from .phases import Phase, PhaseError, check_transition
-from .scoring import ClassicBuzzRule, ScoringRule, Submission
+from .scoring import ScoringRule, Submission
 
 MIN_TEAMS, MAX_TEAMS, DEFAULT_TEAMS = 2, 12, 4
 MAX_ANSWER_CHARS = 200
@@ -60,10 +62,16 @@ class Activity:
         self.notes: ParsedNotes | None = None
         self.source_bytes: bytes | None = None  # 匯入當下的原檔，供匯出寫回（guided-notes-import D6）
         self.source_name: str | None = None
-        self.rule: ScoringRule = ClassicBuzzRule()
+        self.mode: Mode = MODES[DEFAULT_MODE]
         self.submissions: dict[int, list[Submission]] = {}
+        self.judgments: dict[int, dict[str, bool]] = {}  # 題號 → 組別 → 正確否（game-mode-framework D3）
         self._seq = 0
         self._started_at = 0.0
+
+    @property
+    def rule(self) -> ScoringRule:
+        """結果、view 與匯出一律經此取得規則（game-mode-framework D1）。"""
+        return self.mode.rule
 
     @property
     def questions(self) -> tuple[Question, ...]:
@@ -128,6 +136,16 @@ class Activity:
     def require_preparing(self) -> None:
         self._require(Phase.PREPARING)
 
+    # ---- 模式（game-mode-framework D1） ----
+    async def set_mode(self, key: str) -> None:
+        if key not in MODES:
+            raise ModeError("不支援的模式")
+        async with self._lock:
+            self._require(Phase.PREPARING)
+            await self._checkpoint()
+            self.mode = MODES[key]
+            await self._bump()
+
     # ---- 題目 ----
     async def load_questions(self, data: bytes, name: str) -> None:
         async with self._lock:
@@ -140,6 +158,7 @@ class Activity:
 
     def _clear_answers(self) -> None:
         self.submissions = {q.number: [] for q in self.questions}
+        self.judgments = {q.number: {} for q in self.questions}
         self._seq = 0
 
     def question(self, number: int) -> Question:
@@ -185,6 +204,59 @@ class Activity:
 
     async def end(self) -> None:
         async with self._lock:
+            # 轉移表允許 judging → ended；不先擋住，「結束搶答」就能繞過 reveal 的未判定檢查
+            self._require(Phase.ANSWERING)
+            await self._transition(Phase.JUDGING if self.mode.judged else Phase.ENDED)
+            await self._bump()
+
+    # ---- 判定（game-mode-framework D3、D4） ----
+    def _submission(self, number: int, team: str) -> Submission:
+        self.question(number)
+        for s in self.submissions.get(number, []):
+            if s.team == team:
+                return s
+        raise KeyError(team)
+
+    def suggestion(self, number: int, team: str) -> bool | None:
+        return suggest(self._submission(number, team).answers, self.question(number).slots)
+
+    def pending_judgments(self) -> int:
+        return sum(1 for n, subs in self.submissions.items() for s in subs
+                   if s.team not in self.judgments.get(n, {}))
+
+    async def judge(self, number: int, team: str, correct: bool) -> None:
+        async with self._lock:
+            self._require(Phase.JUDGING)
+            self._submission(number, team)
+            await self._checkpoint()
+            self.judgments.setdefault(number, {})[team] = correct
+            await self._bump()
+
+    async def accept_suggestions(self) -> int:
+        """只寫入「尚未判定且有建議」者；老師已判定的不覆蓋。"""
+        async with self._lock:
+            self._require(Phase.JUDGING)
+            todo = []
+            for number, subs in self.submissions.items():
+                for s in subs:
+                    if s.team in self.judgments.get(number, {}):
+                        continue
+                    hint = suggest(s.answers, self.question(number).slots)
+                    if hint is not None:
+                        todo.append((number, s.team, hint))
+            await self._checkpoint()
+            for number, team, hint in todo:
+                self.judgments.setdefault(number, {})[team] = hint
+            if todo:
+                await self._bump()
+            return len(todo)
+
+    async def reveal(self) -> None:
+        async with self._lock:
+            self._require(Phase.JUDGING)
+            pending = self.pending_judgments()
+            if pending:
+                raise PhaseError(f"尚有 {pending} 筆未判定，全部判定後才能揭曉")
             await self._transition(Phase.ENDED)
             await self._bump()
 

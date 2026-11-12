@@ -14,6 +14,8 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 NUMBER_ALIASES = ("題號", "編號", "題次", "no", "no.", "#")
 ANSWER_ALIASES = ("作答", "答案", "回答", "answer")
+# 可選欄（game-mode-framework D4）：只產生判定建議；不含「答案」以免與作答欄別名衝突
+REFERENCE_ALIASES = ("參考答案", "正確答案", "標準答案", "解答", "answerkey")
 HEADER_SCAN_ROWS = 50
 PLACEHOLDER = re.compile(r"[_＿]{3,}")
 NUMBER_TEXT = re.compile(r"^(\d+)[.、]?$")
@@ -30,6 +32,7 @@ class Slot:
     label: str  # 作答格原有文字（如「（1）」或佔位符原文），寫回時保留
     placeholder: bool
     display: str  # 給學生看的子題標籤
+    reference: str | None = None  # 同列參考答案欄的值；只供老師與判定建議，永不送往學生
 
 
 @dataclass(frozen=True)
@@ -61,9 +64,9 @@ def _merged_index(ws: Worksheet) -> dict[tuple[int, int], CellRange]:
     return index
 
 
-def _find_header(ws: Worksheet, merged: dict) -> tuple[int, int, int] | None:
+def _find_header(ws: Worksheet, merged: dict) -> tuple[int, int, int, int | None] | None:
     for row in range(1, min(ws.max_row, HEADER_SCAN_ROWS) + 1):
-        number_col = answer_col = None
+        number_col = answer_col = reference_col = None
         for col in range(1, ws.max_column + 1):
             value = ws.cell(row, col).value
             if value is None:
@@ -74,9 +77,23 @@ def _find_header(ws: Worksheet, merged: dict) -> tuple[int, int, int] | None:
             elif answer_col is None and text in ANSWER_ALIASES:
                 rng = merged.get((row, col))
                 answer_col = rng.min_col if rng else col
+            elif reference_col is None and text in REFERENCE_ALIASES:
+                rng = merged.get((row, col))
+                reference_col = rng.min_col if rng else col
         if number_col is not None and answer_col is not None:
-            return row, number_col, answer_col
+            return row, number_col, answer_col, reference_col
     return None
+
+
+def _reference(ws: Worksheet, merged: dict, row: int, col: int | None) -> str | None:
+    if col is None:
+        return None
+    rng = merged.get((row, col))
+    if rng is not None and rng.min_row != row:
+        return None  # 縱向合併的非錨點列：參考答案只屬於錨點列的子題
+    value = ws.cell(row, rng.min_col if rng else col).value
+    text = "" if value is None else str(value).strip()
+    return text or None
 
 
 def _as_number(value: object) -> int | None:
@@ -115,9 +132,9 @@ def parse_workbook(data: bytes) -> ParsedNotes:
     )
 
 
-def _parse_sheet(ws: Worksheet, merged: dict, header: tuple[int, int, int]) -> ParsedNotes:
-    header_row, number_col, answer_col = header
-    raw: list[tuple[int, list[tuple[str, str, bool]]]] = []
+def _parse_sheet(ws: Worksheet, merged: dict, header: tuple[int, int, int, int | None]) -> ParsedNotes:
+    header_row, number_col, answer_col, reference_col = header
+    raw: list[tuple[int, list[tuple[str, str, bool, str | None]]]] = []
     for row in range(header_row + 1, ws.max_row + 1):
         rng = merged.get((row, number_col))
         if rng is not None and (rng.min_row, rng.min_col) != (row, number_col):
@@ -126,7 +143,7 @@ def _parse_sheet(ws: Worksheet, merged: dict, header: tuple[int, int, int]) -> P
         if number is None:
             continue
         rows = range(rng.min_row, rng.max_row + 1) if rng else range(row, row + 1)
-        slots: list[tuple[str, str, bool]] = []
+        slots: list[tuple[str, str, bool, str | None]] = []
         seen: set[tuple[int, int]] = set()
         for r in rows:
             arng = merged.get((r, answer_col))
@@ -139,7 +156,8 @@ def _parse_sheet(ws: Worksheet, merged: dict, header: tuple[int, int, int]) -> P
             value = ws.cell(*anchor).value
             label = "" if value is None else str(value)
             coord = f"{get_column_letter(anchor[1])}{anchor[0]}"
-            slots.append((coord, label, bool(PLACEHOLDER.search(label))))
+            ref = _reference(ws, merged, r, reference_col)
+            slots.append((coord, label, bool(PLACEHOLDER.search(label)), ref))
         if not slots:
             raise GuidedNotesError(f"第 {number} 題找不到作答格")
         raw.append((number, slots))
@@ -151,8 +169,8 @@ def _parse_sheet(ws: Worksheet, merged: dict, header: tuple[int, int, int]) -> P
         raise GuidedNotesError("題號重複：" + "、".join(map(str, dupes)))
     questions = tuple(
         Question(number, tuple(
-            Slot(ws.title, coord, label, ph, _display(label, ph, i, len(slots) > 1))
-            for i, (coord, label, ph) in enumerate(slots, 1)
+            Slot(ws.title, coord, label, ph, _display(label, ph, i, len(slots) > 1), ref)
+            for i, (coord, label, ph, ref) in enumerate(slots, 1)
         ))
         for number, slots in raw
     )

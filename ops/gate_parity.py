@@ -22,6 +22,8 @@ SHARED = [
     "tests/fixtures/guided-notes/single.xlsx",
     "tests/fixtures/guided-notes/group.xlsx",
     "tests/fixtures/guided-notes/variant.xlsx",
+    "tests/fixtures/guided-notes/reference.xlsx",
+    "tests/fixtures/guided-notes/build_reference.py",
     "contracts/api.md",
 ]
 SKIPPED = "gate-parity: 未跑（未提供另一 repo 路徑或路徑不存在）"
