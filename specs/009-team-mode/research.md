@@ -40,7 +40,7 @@
 - **Decision**：老師「組別」區塊組隊勾選框（準備階段）、每組「已加入（n 台）」與邀請碼；首頁組隊時已加入的組別不停用、多「邀請碼」輸入欄；學生頁只在準備階段顯示本組邀請碼（搶答中提示向老師索取）；作答卡輸入後 400 毫秒送草稿，組內草稿與本機輸入不同時顯示「組內草稿：…」與「套用」（不覆蓋正在輸入的內容）。
 - **證偽欄｜可證偽**：`web/src/pages/team.test.tsx`。
 
-## R7 契約語意補充（v1.1，呈負責人批准）
+## R7 契約語意補充（v1.1，負責人 2026-11-14 批准）
 
 - **Decision**：`contracts/api.md` 以下既有字句在組隊時語意改變（組隊關閉時與 001 相同）：①身分表「一組一台裝置」補「組隊時最多 6 台，第二台起憑邀請碼加入」；②`POST /api/student/join` 本體 `{team, code?}`，增 403「邀請碼不正確」，409 在組隊時改指「此組裝置已滿」；③`release` 組隊時撤銷全部裝置、清草稿並換新碼；④`teams` 另清除邀請碼與草稿。`docs/product-trd.md` §3 同批補「組隊時最多 6 台」。
 - **證偽欄｜可證偽**：001 的 `test_join_once_per_team`、`test_concurrent_join_same_team_once` 不改仍綠；`test_single_device_without_team_play_unchanged`。

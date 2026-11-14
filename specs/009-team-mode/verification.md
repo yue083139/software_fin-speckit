@@ -20,7 +20,7 @@
 
 偏離：無。
 
-## 契約語意補充（待負責人批准）
+## 契約語意補充（負責人 2026-11-14 批准）
 
 見 research R7。組隊關閉時與 001 相同（001 的加入測試未改仍綠）。
 
@@ -43,7 +43,7 @@ gate-diagrams-syntax: 28 個圖檔語法通過
 gate-parity: 0 處不一致
 ```
 
-變異實錄：程式與測試和 OpenSpec 組逐字相同，八則變異見 `openspec/changes/team-mode/verification.md`（OpenSpec repo）。
+變異實錄：程式與測試和 OpenSpec 組逐字相同，八則變異見 `openspec/changes/archive/2026-11-14-team-mode/verification.md`（OpenSpec repo）。
 
 ## 人工驗證（需求 P-05）
 
