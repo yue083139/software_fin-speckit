@@ -44,7 +44,7 @@ $ git grep -nE '"[A-Z]{1,2}[0-9]+"' -- server/quiz_server
 
 ## 人工驗證（需求 P-05）
 
-狀態：**待負責人執行**。步驟：
+狀態：**待執行**（交組員，照 `docs/manual-verification.md` 對應場次執行，結果回填本段）。步驟：
 
 1. `make dev`，開老師頁。
 2. 依序上傳 `tests/fixtures/guided-notes/single.xlsx`、`group.xlsx`、`variant.xlsx`，題目清單分別為 6 題、4 題（第 1、2 題為 2 子題）、5 題（第 2 題 3 子題、第 4 題 2 子題）。

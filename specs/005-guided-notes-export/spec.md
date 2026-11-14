@@ -2,7 +2,7 @@
 
 **Feature Branch**: `005-guided-notes-export`
 **Created**: 2026-11-11
-**Status**: Implemented（人工驗證待負責人）
+**Status**: Merged（人工驗證待執行，見 `docs/manual-verification.md`）
 **Input**: User description: "把搶答成功的組別答案寫回原 Guided Notes 的填空格並匯出 xlsx"
 **需求編號**：R-05｜**parity**：`docs/parity.md` §4 `guided-notes-export`｜**檔位**：S（Guided Notes 寫回口徑）
 **圖表**：`diagrams/005-guided-notes-export-{component,class,sequence}.puml`

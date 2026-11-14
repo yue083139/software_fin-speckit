@@ -2,7 +2,7 @@
 
 **Feature Branch**: `003-buzz-answering`
 **Created**: 2026-11-11
-**Status**: Implemented（人工驗證待負責人）
+**Status**: Merged（人工驗證待執行，見 `docs/manual-verification.md`）
 **Input**: User description: "老師開啟／結束搶答、各組以組為單位送出答案、伺服器以接收序判定最快組、搶答結束前作答隔離"
 **需求編號**：R-03、R-06、R-07、R-09、R-10（X-01 題組同時送出）｜**parity**：`docs/parity.md` §4 `buzz-answering`｜**檔位**：S
 **圖表**：`diagrams/003-buzz-answering-{component,class,sequence}.puml`

@@ -28,7 +28,7 @@
 
 ## 人工驗證（需求 P-05）
 
-狀態：**待負責人執行**。步驟同 OpenSpec 組 `openspec/changes/question-settings/verification.md`：勾第 3 題雙倍、學生看到標記、開始後不可改、第1組搶到第 3 題得 2 分、欄名「得分」、重置保留、重新匯入清除。
+狀態：**待執行**（交組員，照 `docs/manual-verification.md` 對應場次執行，結果回填本段）。步驟同 OpenSpec 組 `openspec/changes/archive/2026-11-14-question-settings/verification.md`：勾第 3 題雙倍、學生看到標記、開始後不可改、第1組搶到第 3 題得 2 分、欄名「得分」、重置保留、重新匯入清除。
 
 結果：＿＿＿（執行人／日期／看到什麼）
 
