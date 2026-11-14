@@ -16,6 +16,7 @@
 ## R2 憑證與邀請碼
 
 - **Decision**：`_tokens`（憑證 → 組別）多對一。組隊關閉：同 001（已有憑證 ⇒ 409）。組隊開啟且該組**有邀請碼**（已有裝置或曾被釋放）⇒ `code` 經 NFKC、去空白、轉大寫後以位元組 `secrets.compare_digest` 比對，不符 403；再檢查 `MAX_DEVICES = 6`，滿 409（先比對碼：沒有正確碼的人不該知道該組幾台）。組隊開啟且**無邀請碼** ⇒ 發憑證並產生邀請碼（6 碼，字母表 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`，`secrets.choice`，約 10⁹ 種，不設嘗試次數限制，屬取捨）。`start` 換新所有邀請碼；`release` 撤銷該組全部憑證、清草稿並換新碼（只在老師畫面）。讓出點夾在檢查與寫入之間。台數＝已發出憑證數，關分頁不釋放名額，只能整組釋放（屬取捨：單台釋放需裝置識別與在線偵測）。
+- **殘餘風險**：準備階段已憑碼加入的冒用者，開始搶答換碼後憑證不會被撤銷；老師可從台數看出異常並釋放整組。
 - **Rationale**：沒有邀請碼，選一個已有人的組別就能讀到該組草稿與送出；常駐顯示的碼在搶答中被瞄到、或釋放後搶先以第一台加入，都會重新打開冒用。
 - **證偽欄｜可證偽**：`test_join_requires_code`、`test_fullwidth_code_accepted`、`test_device_limit`、`test_concurrent_join_at_limit`、`test_concurrent_first_join_one_code`、`test_release_revokes_all_devices_and_code`、`test_code_rotates_on_start_and_hidden_from_students`、`test_toggle_revokes_only_on_change`。
 
@@ -36,7 +37,7 @@
 
 ## R6 web
 
-- **Decision**：老師「組別」區塊組隊勾選框（準備階段）、每組「已加入（n 台）」與邀請碼；首頁組隊時已加入的組別不停用、多「邀請碼」輸入欄；學生頁顯示本組邀請碼；作答卡輸入後 400 毫秒送草稿，組內草稿與本機輸入不同時顯示「組內草稿：…」與「套用」（不覆蓋正在輸入的內容）。
+- **Decision**：老師「組別」區塊組隊勾選框（準備階段）、每組「已加入（n 台）」與邀請碼；首頁組隊時已加入的組別不停用、多「邀請碼」輸入欄；學生頁只在準備階段顯示本組邀請碼（搶答中提示向老師索取）；作答卡輸入後 400 毫秒送草稿，組內草稿與本機輸入不同時顯示「組內草稿：…」與「套用」（不覆蓋正在輸入的內容）。
 - **證偽欄｜可證偽**：`web/src/pages/team.test.tsx`。
 
 ## R7 契約語意補充（v1.1，呈負責人批准）

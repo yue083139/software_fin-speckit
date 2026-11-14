@@ -12,7 +12,7 @@ package "web" {
 package "server/quiz_server" {
   [app.py\nPOST /api/teacher/team-play\nPOST /api/student/join {team, code?}\nPOST /api/student/draft] as App
   [activity.Activity\nteam_play・_codes・_tokens 多對一・drafts] as Act
-  [views\n老師 devices・invite_codes\n學生 invite_code・drafts（answering、本組）] as Views
+  [views\n老師 devices・invite_codes\n學生 invite_code（只在 preparing）・drafts（只在 answering、本組）] as Views
 }
 
 TSet --> Api
