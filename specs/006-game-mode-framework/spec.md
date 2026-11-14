@@ -2,7 +2,7 @@
 
 **Feature Branch**: `006-game-mode-framework`
 **Created**: 2026-11-12
-**Status**: Implemented（v1.2；人工驗證待負責人）
+**Status**: Merged（v1.2；人工驗證待執行，見 `docs/manual-verification.md`）
 **Input**: User description: "參考 Kahoot 等成熟搶答軟體做多種模式；老師判定對錯，匯入檔有參考答案欄時預填建議（負責人 2026-11-12 裁定 TRD §6）"
 **需求編號**：X-04（`docs/trd-game-modes.md` T-01～T-04、T-06、M3）｜**parity**：`docs/parity.md` §4 `game-mode-framework`｜**檔位**：S（活動階段狀態機、作答隔離、Guided Notes 解析口徑、`contracts/`）
 **圖表**：`diagrams/006-game-mode-framework-{component,class,sequence}.puml`

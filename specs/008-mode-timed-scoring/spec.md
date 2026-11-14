@@ -2,7 +2,7 @@
 
 **Feature Branch**: `008-mode-timed-scoring`
 **Created**: 2026-11-12
-**Status**: Implemented（v1.2；人工驗證待負責人）
+**Status**: Merged（v1.2；人工驗證待執行，見 `docs/manual-verification.md`）
 **Input**: User description: "可選擇加入「時間計分」（Kahoot 式）；排行榜每題揭曉後公開（負責人 2026-11-12 裁定）"
 **需求編號**：X-04（`docs/trd-game-modes.md` M2、T-04、T-05 時限、§6 排行榜）｜**parity**：`docs/parity.md` §4 `mode-timed-scoring`｜**檔位**：S（判定口徑、作答隔離、階段狀態機、`contracts/`）
 **圖表**：`diagrams/008-mode-timed-scoring-{component,class,sequence}.puml`
