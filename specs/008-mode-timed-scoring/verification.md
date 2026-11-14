@@ -47,7 +47,7 @@ FAILED tests/test_timed_mode.py::test_student_leaderboard_has_no_scores - ass...
 
 ## 人工驗證（需求 P-05）
 
-狀態：**待執行**（交組員，照 `docs/manual-verification.md` 對應場次執行，結果回填本段）。步驟同 OpenSpec 組 `openspec/changes/mode-timed-scoring/verification.md`：選時間計分、設時限、逐題開放、倒數到 0 自動關閉、晚送被拒、判定後揭曉、學生看到本組結果與沒有分數欄的名次表、未揭曉時不能開下一題或結束。
+狀態：**待執行**（交組員，照 `docs/manual-verification.md` 對應場次執行，結果回填本段）。步驟同 OpenSpec 組 `openspec/changes/archive/2026-11-14-mode-timed-scoring/verification.md`：選時間計分、設時限、逐題開放、倒數到 0 自動關閉、晚送被拒、判定後揭曉、學生看到本組結果與沒有分數欄的名次表、未揭曉時不能開下一題或結束。
 
 結果：＿＿＿（執行人／日期／看到什麼）
 

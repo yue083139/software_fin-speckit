@@ -65,6 +65,6 @@ FAILED tests/test_judging.py::test_concurrent_judge_and_accept_suggestions - ...
 
 ## 人工驗證（需求 P-05）
 
-狀態：**待執行**（交組員，照 `docs/manual-verification.md` 對應場次執行，結果回填本段）。步驟同 OpenSpec 組 `openspec/changes/game-mode-framework/verification.md`：匯入 `reference.xlsx`、選「只計對錯」、兩組作答、結束進入判定中（學生看不到他組答案與參考答案）、採用全部建議、手動判剩餘一筆、揭曉、學生看到對錯與「最早答對」、匯出寫回最早答對者。
+狀態：**待執行**（交組員，照 `docs/manual-verification.md` 對應場次執行，結果回填本段）。步驟同 OpenSpec 組 `openspec/changes/archive/2026-11-14-game-mode-framework/verification.md`：匯入 `reference.xlsx`、選「只計對錯」、兩組作答、結束進入判定中（學生看不到他組答案與參考答案）、採用全部建議、手動判剩餘一筆、揭曉、學生看到對錯與「最早答對」、匯出寫回最早答對者。
 
 結果：＿＿＿（執行人／日期／看到什麼）
