@@ -8,7 +8,7 @@
 | 身分 | 憑據 | REST | WebSocket |
 |---|---|---|---|
 | 老師 | 伺服器啟動時產生的老師金鑰 | 標頭 `X-Teacher-Key` | 查詢參數 `role=teacher&key=<金鑰>` |
-| 學生 | `POST /api/student/join` 取得的組別憑證（一組一台裝置） | 標頭 `X-Team-Token` | 查詢參數 `role=student&token=<憑證>` |
+| 學生 | `POST /api/student/join` 取得的組別憑證（一組一台裝置；組隊時一組最多 6 台，第二台起憑邀請碼加入——team-mode 語意補充） | 標頭 `X-Team-Token` | 查詢參數 `role=student&token=<憑證>` |
 
 伺服器一律由憑證反查組別，不採信客戶端自報的組別名稱。
 
@@ -24,12 +24,14 @@
 
 | 方法與路徑 | 身分 | 本體 | 成功回應 | 錯誤 |
 |---|---|---|---|---|
-| `GET /api/public/info` | 任何人 | — | `{phase, teams: [組名], joined: [已加入組名]}` | — |
-| `POST /api/student/join` | 任何人 | `{team}` | `{team, token}` | 404 組別不存在；409 該組已有裝置 |
+| `GET /api/public/info` | 任何人 | — | `{phase, teams: [組名], joined: [已加入組名], team_play}`（不含台數與邀請碼；team-mode） | — |
+| `POST /api/student/join` | 任何人 | `{team, code?}`（組隊時：該組已有邀請碼就必須帶，不分大小寫與全半形、忽略空白） | `{team, token}` | 403 邀請碼不正確（組隊）；404 組別不存在；409 該組已有裝置（非組隊）或此組裝置已滿（組隊，最多 6 台；先比對邀請碼再檢查上限）——team-mode 語意補充 |
+| `POST /api/student/draft` | 學生（`X-Team-Token`） | `{question, answers: [每個子題一個字串，可空白]}` | `{question}`（不回顯內容） | 403 憑證無效；404 題號不存在；409 非組隊（「只有組隊模式可以共用草稿」）、非 answering、本組已送出此題、時間計分非開放中題；422 子題數不符、超過 200 字、含控制字元、格式錯誤（team-mode） |
 | `POST /api/student/submit` | 學生（`X-Team-Token`） | `{question, answers: [每個子題一個字串]}` | `{question, answers}`（只回本組這筆，不含順位） | 403 憑證無效；404 題號不存在；409 非 answering 或本組已送出此題，時間計分另有「這一題目前沒有開放作答」「本題作答時間已到」；422 子題數不符、空白、超過 200 字、含控制字元、格式錯誤 |
 | `GET /api/teacher/state` | 老師 | — | 老師 view（同 WebSocket） | 401 |
-| `POST /api/teacher/teams` | 老師 | `{count}`（2–12） | `{teams}`；撤銷所有組別憑證 | 401；409 非 preparing；422 超出範圍 |
-| `POST /api/teacher/release` | 老師 | `{team}` | `{released}`；撤銷該組憑證 | 401；404 |
+| `POST /api/teacher/teams` | 老師 | `{count}`（2–12） | `{teams}`；撤銷所有組別憑證，組隊時另清除邀請碼與草稿 | 401；409 非 preparing；422 超出範圍 |
+| `POST /api/teacher/release` | 老師 | `{team}` | `{released}`；撤銷該組憑證（組隊時撤銷該組全部裝置、清草稿，並換新邀請碼——新碼只在老師 view；team-mode 語意補充） | 401；404 |
+| `POST /api/teacher/team-play` | 老師 | `{enabled}` | `{team_play}`；值改變時撤銷所有組別憑證、邀請碼與草稿，值不變不動；重置保留（team-mode） | 401；409 非 preparing；422 格式錯誤 |
 | `POST /api/teacher/import` | 老師 | `multipart/form-data`，欄位 `file`（.xlsx，≤5 MB） | `{source, count}`；取代題目並清空作答 | 400 檔案或格式不符；401；409 非 preparing |
 | `POST /api/teacher/import-url` | 老師 | `{url}`（`https://docs.google.com/spreadsheets/d/<id>/…`，知道連結者可檢視） | `{source, count}` | 400 連結或下載不符；401；409 非 preparing |
 | `GET /api/teacher/export` | 老師 | — | xlsx 檔（原 Guided Notes，得主答案寫入作答格、一律為文字）；`Content-Disposition` 含 `filename*=UTF-8''<原檔名>-搶答結果.xlsx` | 401；409 非 ended 或尚未匯入 |
@@ -65,6 +67,8 @@
 
 老師 view 另含（game-mode-framework）：`mode: {key, label, judged}`、`modes: [{key, label}]`、`score_label`（經典模式且全部倍率為 1 時「得題數」，其餘「得分」）、`pending_judgments`（未判定筆數）；`board[]` 另含 `reference: [每個子題的參考答案或 null]`，`board[].ranking[]` 另含 `suggestion`（`true`／`false`／`null`）。參考答案與建議**只在老師 view**。
 
+老師 view 另含（team-mode）：`team_play`、`devices: {組名: 已發出的憑證數}`、`invite_codes: {組名: 邀請碼}`（只列有邀請碼的組，含被釋放後待重新加入者）。老師 view 不含組內草稿。開始搶答時所有邀請碼換新。
+
 老師 view 另含（results-view）：`board`（格式同學生 view 的 `results`，任何階段即時更新）與 `team_scores`（`{組名: 分數}`；欄名見 `score_label`，經典模式且全部倍率為 1 時等於得題數——question-settings 語意補充）。
 
 ### 學生 view
@@ -74,7 +78,7 @@
  "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
 
-所有階段都含 `mode: {key, label, sequential}`、`score_label`、`round` 與 `my_submissions`（只有本組：`[{question, answers}]`，不含順位、序號、他組是否送出）。`judging` 與 `answering` 相同，不含判定結果。時間計分模式在 `ended` 前另含 `revealed: [{question, submitted, correct, score}]`（只有本組、只列已揭曉題）、`my_total`（本組累積）與 `leaderboard: [{team, rank}]`（依已揭曉題累積分數的名次，同分同名次；**不含他組分數**——分數可反推作答秒數）。只有 `ended` 階段另含 `results`：
+所有階段都含 `mode: {key, label, sequential}`、`score_label`、`round` 與 `my_submissions`（只有本組：`[{question, answers}]`，不含順位、序號、他組是否送出）。`judging` 與 `answering` 相同，不含判定結果。另含 `team_play`；組隊時 `preparing` 另含 `invite_code`（本組邀請碼），`answering` 另含 `drafts: [{question, answers}]`（只有本組、最後寫入者為準，送出即清除）；其餘階段兩者皆不帶（team-mode）。時間計分模式在 `ended` 前另含 `revealed: [{question, submitted, correct, score}]`（只有本組、只列已揭曉題）、`my_total`（本組累積）與 `leaderboard: [{team, rank}]`（依已揭曉題累積分數的名次，同分同名次；**不含他組分數**——分數可反推作答秒數）。只有 `ended` 階段另含 `results`：
 
 ```json
 {"results": [{"number": 3, "labels": [""], "winner": {"team": "第2組", "answers": ["位址"]},

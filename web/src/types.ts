@@ -45,6 +45,14 @@ export interface TeacherView {
   pending_judgments?: number;
   round?: RoundInfo | null;
   leaderboard?: LeaderRow[];
+  team_play?: boolean; // team-mode：組隊開關
+  devices?: Record<string, number>;
+  invite_codes?: Record<string, string>;
+}
+
+export interface Draft {
+  question: number;
+  answers: string[];
 }
 
 export interface StudentView {
@@ -62,6 +70,9 @@ export interface StudentView {
   revealed?: { question: number; submitted: boolean; correct: boolean | null; score: number }[];
   my_total?: number;
   leaderboard?: LeaderRow[];
+  team_play?: boolean;
+  invite_code?: string | null; // 只有本組
+  drafts?: Draft[]; // 組內草稿：只在搶答中、只含本組
 }
 
 export interface RankedAnswer {

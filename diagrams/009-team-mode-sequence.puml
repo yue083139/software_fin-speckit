@@ -1,0 +1,48 @@
+@startuml 009-team-mode-sequence
+title 009 team-mode：時序圖（組員加入、組內草稿、代表作答）
+
+actor "老師" as T
+actor "第1組 A 裝置" as A
+actor "第1組 B 裝置" as B
+actor "第2組" as C
+participant "app.py" as App
+participant "Activity" as Act
+participant "views" as V
+
+T -> App : POST /api/teacher/team-play {enabled: true}
+App -> Act : set_team_play(True)（preparing；撤銷所有憑證與邀請碼）
+A -> App : POST /api/student/join {team: 第1組}
+App -> Act : join(第1組)：無裝置 → 發憑證、產生邀請碼
+App --> A : {team, token}
+App -> V : student_view(第1組) 含 invite_code
+B -> App : POST /api/student/join {team: 第1組}（未帶碼）
+App -> Act : join(第1組, None)
+Act --> App : InviteCodeError
+App --> B : 403 邀請碼不正確
+B -> App : POST /api/student/join {team: 第1組, code}
+App -> Act : join：compare_digest 相符、未滿 6 台 → 發憑證
+App --> B : {team, token}
+
+T -> App : POST /api/teacher/start
+App -> Act : start()：組隊時換新所有邀請碼
+App -> V : 學生 view 不再含 invite_code；老師 view 有新碼
+
+== 搶答中 ==
+A -> App : POST /api/student/draft {question: 3, answers}
+App -> Act : set_draft(第1組, 3, answers)（組隊、answering、未送出）
+App --> A : {question: 3}
+App -> V : 每條連線重算 view；只有第1組的 view 改變
+App --> B : 推播 drafts（第 3 題）
+note right of C : 第2組 view 不變 → 不推送
+B -> App : POST /api/student/submit {question: 3, answers}
+App -> Act : submit(第1組, 3)（同 003 的鎖與序號）；清第1組第 3 題草稿
+App --> B : {question: 3, answers}
+App --> A : 推播 my_submissions 含第 3 題
+A -> App : POST /api/student/submit {question: 3, ...}
+App --> A : 409 本組已送出這一題，不可修改
+
+T -> App : POST /api/teacher/release {team: 第1組}
+App -> Act : release(第1組)：撤銷 A、B 憑證、清草稿、換新碼（只在老師 view）
+A -> App : POST /api/student/join {team: 第1組, 舊碼}
+App --> A : 403 邀請碼不正確
+@enduml

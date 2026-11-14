@@ -46,6 +46,9 @@ def teacher_view(a: Activity) -> dict[str, Any]:
         "phase": a.phase.value,
         "teams": list(a.teams),
         "joined": a.joined_teams(),
+        "team_play": a.team_play,
+        "devices": {t: a.devices(t) for t in a.teams},
+        "invite_codes": {t: c for t in a.teams if (c := a.invite_code(t))},  # 老師看得到邀請碼，看不到草稿
         "source": a.source_name,
         "questions": question_outline(a),
         "mode": mode_info(a, teacher=True),
@@ -75,11 +78,20 @@ def student_view(a: Activity, team: str | None) -> dict[str, Any]:
         "mode": mode_info(a, teacher=False),
         "round": round_view(a),
         "score_label": score_label(a),
+        "team_play": a.team_play,
         # 只含本組；不含順位、序號與他組是否送出（buzz-answering D3）
         "my_submissions": [
             {"question": s.question, "answers": list(s.answers)} for s in a.own_submissions(team)
         ],
     }
+    if a.team_play:
+        # 邀請碼只在準備階段給學生；搶答中只有老師畫面有（team-mode v1.1 D5）
+        if a.phase is Phase.PREPARING:
+            view["invite_code"] = a.invite_code(team)
+        # 組內草稿只在搶答中、只含本組（team-mode D5）；其餘階段不帶，fail-closed
+        if a.phase is Phase.ANSWERING:
+            view["drafts"] = [{"question": n, "answers": list(ans)}
+                              for n, ans in sorted(a.drafts.get(team, {}).items())]
     # 時間計分的例外（負責人 2026-11-12 裁定）：已揭曉題只給本組結果與各組名次，不給他組答案與分數
     if a.mode.sequential and a.phase is not Phase.ENDED:
         mine = results.own_revealed(a, team)

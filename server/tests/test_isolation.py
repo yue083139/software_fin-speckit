@@ -156,3 +156,86 @@ def test_reference_never_sent_to_students(client, teacher_headers, fixture_bytes
             assert ref not in raw, (ref, raw[:200])
     teacher = client.get("/api/teacher/state", headers=teacher_headers).text
     assert "CPU" in teacher and "二進位" in teacher
+
+
+# ---- 組隊（team-mode D5）：草稿與邀請碼只給本組 ----
+SECRET_DRAFT = "甲組草稿祕密"
+
+
+@pytest.fixture
+def team_play(loaded_client, teacher_headers):
+    c = loaded_client
+    r = c.post("/api/teacher/team-play", json={"enabled": True}, headers=teacher_headers)
+    assert r.status_code == 200
+    ta, tb = join(c, "第1組"), join(c, "第2組")
+    c.post("/api/teacher/start", headers=teacher_headers)
+    # 開始搶答會換新邀請碼；取搶答中有效的那一個
+    code_a = c.get("/api/teacher/state", headers=teacher_headers).json()["invite_codes"]["第1組"]
+    return c, ta, tb, code_a
+
+
+def draft(client, token: str, question: int, answers: list[str]):
+    return client.post("/api/student/draft", json={"question": question, "answers": answers},
+                       headers={"X-Team-Token": token})
+
+
+def test_team_draft_isolated(team_play, teacher_headers):
+    c, ta, tb, code_a = team_play
+    seen = []
+    with c.websocket_connect(f"/ws?role=student&token={tb}") as wb:
+        seen.append(wb.receive_text())
+        assert draft(c, ta, 3, [SECRET_DRAFT]).status_code == 200
+        # B 組自己的各種回應：成功、格式錯、已送出、憑證錯
+        seen.append(draft(c, tb, 3, ["乙組草稿"]).text)
+        seen.append(draft(c, tb, 1, [SECRET_DRAFT]).text)
+        seen.append(draft(c, "forged", 3, [SECRET_DRAFT]).text)
+        seen.append(wb.receive_text())  # B 自己的草稿改變 B 的 view
+        seen.append(submit(c, tb, 3, ["乙組答案"]).text)
+        seen.append(wb.receive_text())
+        seen.append(c.get("/api/public/info").text)
+        seen.append(c.post("/api/student/join", json={"team": "第1組"}).text)  # 無碼加入 A 組被拒
+    for raw in seen:
+        assert SECRET_DRAFT not in raw and code_a not in raw
+    # 老師看得到邀請碼，看不到草稿
+    teacher = c.get("/api/teacher/state", headers=teacher_headers).text
+    assert code_a in teacher and SECRET_DRAFT not in teacher
+
+
+def test_other_team_draft_sends_nothing(team_play, teacher_headers):
+    c, ta, tb, _ = team_play
+    with c.websocket_connect(f"/ws?role=student&token={tb}") as wb:
+        before = json.loads(wb.receive_text())
+        for i in range(3):
+            assert draft(c, ta, 3, [f"{SECRET_DRAFT}{i}"]).status_code == 200
+        c.post("/api/teacher/end", headers=teacher_headers)
+        after = json.loads(wb.receive_text())
+    assert after["seq"] == before["seq"] + 1
+    assert after["view"]["phase"] == "ended"
+
+
+@pytest.mark.parametrize("phase", [Phase.PREPARING, Phase.JUDGING, Phase.ENDED])
+def test_drafts_only_in_answering(team_play, phase):
+    c, ta, _, _ = team_play
+    draft(c, ta, 3, [SECRET_DRAFT])
+    act = c.app.state.activity
+    act.phase = phase  # 直接設定，驗 view 的裁切規則
+    view = student_view(act, "第1組")
+    assert "drafts" not in view
+    assert SECRET_DRAFT not in json.dumps(view, ensure_ascii=False)
+
+
+def test_invalid_token_gets_no_team_fields(team_play):
+    c, _, _, code_a = team_play
+    with c.websocket_connect("/ws?role=student&token=forged") as ws:
+        raw = ws.receive_text()
+    view = json.loads(raw)["view"]
+    assert set(view) == {"role", "phase", "team", "team_valid"}
+    assert code_a not in raw
+
+
+def test_invite_code_not_sent_to_students_while_answering(team_play, teacher_headers):
+    c, ta, _, _ = team_play
+    code_now = c.get("/api/teacher/state", headers=teacher_headers).json()["invite_codes"]["第1組"]
+    with c.websocket_connect(f"/ws?role=student&token={ta}") as wa:
+        raw = wa.receive_text()
+    assert code_now not in raw and "invite_code" not in json.loads(raw)["view"]

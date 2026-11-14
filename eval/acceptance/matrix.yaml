@@ -99,3 +99,21 @@ rows:
     守門: server/tests/test_timed_mode.py::test_timed_mode_isolated、test_timed_other_team_submit_sends_nothing、test_student_leaderboard_has_no_scores、test_leaderboard_counts_revealed_only；web/src/pages/timed.test.tsx
     狀態: covered
     卡: mode-timed-scoring
+  - id: M-017
+    需求: R-01、X-04
+    聲明: 組隊時同組第二台起須帶相符邀請碼（不分大小寫與全半形），否則 403 且不發憑證；每組最多 6 台；學生只在準備階段看得到邀請碼，開始搶答與釋放某組都換新碼
+    守門: server/tests/test_team_mode.py::test_join_requires_code、test_fullwidth_code_accepted、test_device_limit、test_concurrent_join_at_limit、test_concurrent_first_join_one_code、test_release_revokes_all_devices_and_code、test_code_rotates_on_start_and_hidden_from_students、test_toggle_revokes_only_on_change；web/src/pages/team.test.tsx
+    狀態: covered
+    卡: team-mode
+  - id: M-018
+    需求: R-07、R-10、X-04
+    聲明: 組隊時組內任一人送出即代表全組，同組多台並發送出同一題恰一筆成功；組隊不改任何模式的順位、判定與分數
+    守門: server/tests/test_team_mode.py::test_concurrent_submit_same_team、test_member_sees_team_submission、test_team_play_does_not_change_scoring
+    狀態: covered
+    卡: team-mode
+  - id: M-019
+    需求: R-09、X-04
+    聲明: 組內草稿只在搶答中送給本組裝置，他組、老師與公開資訊都拿不到，他組草稿更新不觸發本組推播
+    守門: server/tests/test_isolation.py::test_team_draft_isolated、test_other_team_draft_sends_nothing、test_drafts_only_in_answering、test_invalid_token_gets_no_team_fields、test_invite_code_not_sent_to_students_while_answering；server/tests/test_team_mode.py::test_draft_rules、test_teacher_view_has_no_drafts
+    狀態: covered
+    卡: team-mode

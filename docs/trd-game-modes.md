@@ -54,6 +54,8 @@
 
 **排程（負責人 2026-11-12 裁）**：第二期做 `game-mode-framework` → `question-settings` → `mode-timed-scoring` 三張；`mode-buzz-fallback`、`fair-ranking`、`team-mode` 列第三期，視 2026-11-30 前的餘裕再開。
 
+**範圍調整（2026-11-14）**：`team-mode` 做成與模式正交的活動設定（組隊開關），不是第四種模式——代表作答不改「誰能作答、何時鎖題、如何計分、何時揭曉」任何一項，做成模式就無法與時間計分等模式並用。
+
 **範圍調整（2026-11-12）**：M3 從 `mode-timed-scoring` 移到 `game-mode-framework`——框架若沒有任何需判定的模式，判定階段只是無人使用的程式；時限從 `question-settings` 移到 `mode-timed-scoring`——只有時間計分用得到。
 
 ## 6. 裁定
