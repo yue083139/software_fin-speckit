@@ -15,3 +15,5 @@ AI 代理在本 repo 執行的對外或難以回復的操作（建立 repo、推
 | 2026-11-12 | dev | 依負責人「合」依序合併第二期疊層 PR #8–#10（每合一個前先把基底改為 dev，一般合併，整串合完前不刪分支）；dev 到 1625c4a | dev 含第二期三卡 | 以 `rollback/02-pre-phase2` 開回復分支經 PR 還原 |
 | 2026-11-14 | 已合併的遠端功能分支 | 依負責人「刪」以 `gh api -X DELETE …/git/refs/heads/<分支>` 刪除第二期三支遠端分支（006-game-mode-framework、007-question-settings、008-mode-timed-scoring；刪前以 `git rev-list --count origin/dev..<分支>` 確認皆為 0），並刪除對應本機分支 | GitHub 分支清單只剩 main、dev | 以已合併 PR 頁面的 Restore branch 還原 |
 | 2026-11-14 | 本機 | 第二期收尾、組員交接文件、第三期 `team-mode` 完成：疊層分支 docs/phase2-closeout → docs/team-handoff → 009-team-mode；本機打標籤 `rollback/03-pre-phase3`（指向第三期前的 dev 1625c4a），待負責人以 `!` 推送分支與標籤 | 僅本機 | 刪除本機分支與標籤 |
+| 2026-11-14 | dev | 依負責人「批，合」先在最上層 PR 留言記下契約語意補充的批准，再依序把疊層 PR 基底改為 `dev` 後以一般合併合入：#11 → #12 → #13（`dev` → 9dc25b4） | dev 含第二期收尾、交接文件、第三期組隊 | 以 `rollback/03-pre-phase3` 開回復分支經 PR 還原 |
+| 2026-11-14 | 已合併的遠端功能分支 | 依負責人「刪」以 `gh api -X DELETE …/git/refs/heads/<分支>` 刪除三支遠端分支（docs/phase2-closeout、docs/team-handoff、009-team-mode；刪前以 `git rev-list --count origin/dev..<分支>` 確認皆為 0），並刪除對應本機分支 | GitHub 分支清單只剩 main、dev | 以已合併 PR 頁面的 Restore branch 還原 |

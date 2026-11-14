@@ -2,7 +2,7 @@
 
 **Feature Branch**: `009-team-mode`
 **Created**: 2026-11-14
-**Status**: Implemented（v1.1；契約語意補充呈負責人批准；人工驗證待執行，見 `docs/manual-verification.md` 場次 E）
+**Status**: Merged（v1.1；契約語意補充負責人 2026-11-14 批准；人工驗證待執行，見 `docs/manual-verification.md` 場次 E）
 **Input**: User description: "第三期做組隊模式"（負責人 2026-11-14）；TRD §6 裁定「代表作答：組內任一人送出即代表全組，其餘組員看得到組內草稿；不採分數平均」（2026-11-12）
 **需求編號**：X-04（`docs/trd-game-modes.md` M4）｜**parity**：`docs/parity.md` §4 `team-mode`｜**檔位**：S（作答隔離：新增送往學生端的草稿通道；`contracts/` 增端點與欄位；組別憑證口徑改變）
 **圖表**：`diagrams/009-team-mode-{component,class,sequence}.puml`
@@ -74,7 +74,7 @@
 - **FR-004**: 送出規則 MUST 與 003 相同；同組並發送出同一題 MUST 恰一筆成功。
 - **FR-005**: `POST /api/student/draft {question, answers}` MUST 只在組隊、`answering`、本組未送出該題（時間計分另限開放中那一題）時接受；草稿 MUST 只出現在本組 `answering` 階段的學生畫面。
 - **FR-006**: 草稿 MUST 在該題送出、重置、重新匯入、釋放、切換組隊時清除；MUST NOT 計分或匯出。
-- **FR-007**: 組隊關閉時所有行為 MUST 與 001–008 相同；`contracts/api.md` 新增兩端點與欄位，另有四處語意補充（research R7）呈負責人批准。
+- **FR-007**: 組隊關閉時所有行為 MUST 與 001–008 相同；`contracts/api.md` 新增兩端點與欄位，另有四處語意補充（research R7），負責人 2026-11-14 批准。
 
 ## Success Criteria *(mandatory)*
 
