@@ -124,10 +124,35 @@ export function TeamSettings({ view, act }: { view: TeacherView; act: Act }) {
   return (
     <section className="card">
       <h2>組別</h2>
+      <label>
+        <input
+          type="checkbox"
+          checked={!!view.team_play}
+          disabled={view.phase !== "preparing"}
+          onChange={(e) => act("team-play", { enabled: e.target.checked })}
+          aria-label="組隊（一組多台裝置）"
+        />
+        組隊（一組多台裝置）
+      </label>
+      {view.team_play && (
+        <p className="muted">
+          同組第二台起要輸入該組邀請碼；開始搶答時邀請碼會換新，搶答中要加入的組員請向老師索取。切換組隊會讓所有裝置重新加入。
+        </p>
+      )}
       <ul className="team-list">
         {view.teams.map((t) => (
           <li key={t}>
-            {t}：{view.joined.includes(t) ? "已加入" : <span className="muted">未加入</span>}
+            {t}：
+            {view.joined.includes(t) ? (
+              view.team_play ? `已加入（${view.devices?.[t] ?? 0} 台）` : "已加入"
+            ) : (
+              <span className="muted">未加入</span>
+            )}
+            {view.team_play && view.invite_codes?.[t] && (
+              <>
+                {" "}邀請碼 <code>{view.invite_codes[t]}</code>
+              </>
+            )}
             {view.joined.includes(t) && (
               <button className="small" onClick={() => act("release", { team: t })}>
                 釋放

@@ -62,12 +62,25 @@ export async function teacherDownload(key: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-export async function publicInfo(): Promise<{ phase: string; teams: string[]; joined: string[] }> {
-  return (await parse(await fetch("/api/public/info"))) as { phase: string; teams: string[]; joined: string[] };
+export interface PublicInfo {
+  phase: string;
+  teams: string[];
+  joined: string[];
+  team_play?: boolean;
 }
 
-export async function joinTeam(team: string): Promise<{ team: string; token: string }> {
-  return (await parse(await fetch("/api/student/join", jsonInit({}, { team })))) as { team: string; token: string };
+export async function publicInfo(): Promise<PublicInfo> {
+  return (await parse(await fetch("/api/public/info"))) as PublicInfo;
+}
+
+// 組隊時加入已有組員的組別要帶邀請碼（team-mode D2）
+export async function joinTeam(team: string, code?: string): Promise<{ team: string; token: string }> {
+  const body = code ? { team, code } : { team };
+  return (await parse(await fetch("/api/student/join", jsonInit({}, body)))) as { team: string; token: string };
+}
+
+export async function studentDraft(token: string, question: number, answers: string[]): Promise<unknown> {
+  return parse(await fetch("/api/student/draft", jsonInit({ "X-Team-Token": token }, { question, answers })));
 }
 
 // 組別憑證只放 sessionStorage：同分頁重新整理不必重新加入，關閉分頁即失效（app-skeleton D6）

@@ -25,6 +25,10 @@ class TeamTakenError(Exception):
     """該組已有裝置持有組別憑證；API 層轉成 409。"""
 
 
+class InviteCodeError(Exception):
+    """組隊時加入已有裝置的組別但邀請碼不符；API 層轉成 403（team-mode D2）。"""
+
+
 class AlreadySubmittedError(Exception):
     """本組本題已送出，不可修改；API 層轉成 409。"""
 
@@ -34,6 +38,9 @@ class SettingsError(ValueError):
 
 
 MULTIPLIERS = (1, 2)
+MAX_DEVICES = 6  # 組隊時每組裝置上限（team-mode D2）
+CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # 去掉易混淆的 I、O、0、1
+CODE_LENGTH = 6
 TIME_LIMIT_RANGE = (5, 120)
 
 
@@ -72,6 +79,27 @@ def clean_answers(answers: list[str], expected: int) -> tuple[str, ...]:
     return tuple(cleaned)
 
 
+def clean_draft(answers: list[str], expected: int) -> tuple[str, ...]:
+    """草稿可空白（組員清掉）；其餘限制同送出，訊息固定不回顯（team-mode D4）。"""
+    if len(answers) != expected:
+        raise AnswerError(f"此題有 {expected} 個子題")
+    cleaned = []
+    for a in answers:
+        if not isinstance(a, str):
+            raise AnswerError("草稿格式不正確")
+        if len(a) > MAX_ANSWER_CHARS:
+            raise AnswerError(f"每個答案最多 {MAX_ANSWER_CHARS} 字")
+        if any(unicodedata.category(ch) == "Cc" for ch in a):
+            raise AnswerError("答案含有不允許的控制字元")
+        cleaned.append(a)
+    return tuple(cleaned)
+
+
+def normalize_code(code: str | None) -> bytes:
+    """全形轉半形（NFKC）、去空白、轉大寫；比對一律用位元組，非 ASCII 只會比對失敗不會拋例外。"""
+    return "".join(unicodedata.normalize("NFKC", code or "").split()).upper().encode()
+
+
 def team_names(n: int) -> list[str]:
     return [f"第{i}組" for i in range(1, n + 1)]
 
@@ -85,7 +113,10 @@ class Activity:
         self.phase = Phase.PREPARING
         self.teams = team_names(team_count)
         self.version = 0
-        self._tokens: dict[str, str] = {}  # 組別憑證 → 組別（app-skeleton D6）
+        self._tokens: dict[str, str] = {}  # 組別憑證 → 組別（app-skeleton D6）；組隊時多對一
+        self.team_play = False  # 組隊：與模式正交的活動設定（team-mode D1）
+        self._codes: dict[str, str] = {}  # 組別 → 邀請碼（team-mode D2）
+        self.drafts: dict[str, dict[int, tuple[str, ...]]] = {}  # 組別 → 題號 → 組內草稿（team-mode D4）
         self.notes: ParsedNotes | None = None
         self.source_bytes: bytes | None = None  # 匯入當下的原檔，供匯出寫回（guided-notes-import D6）
         self.source_name: str | None = None
@@ -135,15 +166,43 @@ class Activity:
     def joined_teams(self) -> list[str]:
         return [t for t in self.teams if t in self._tokens.values()]
 
-    async def join(self, team: str) -> str:
+    def devices(self, team: str) -> int:
+        return sum(1 for v in self._tokens.values() if v == team)
+
+    def invite_code(self, team: str) -> str | None:
+        return self._codes.get(team)
+
+    @staticmethod
+    def _new_code() -> str:
+        return "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+
+    def _revoke_all(self) -> None:
+        self._tokens.clear()
+        self._codes.clear()
+        self.drafts = {}
+
+    async def join(self, team: str, code: str | None = None) -> str:
         async with self._lock:
             if team not in self.teams:
                 raise KeyError(team)
-            if team in self._tokens.values():
+            count = self.devices(team)
+            if count and not self.team_play:
                 raise TeamTakenError("此組已有裝置加入，請老師釋放後再加入")
+            known = self._codes.get(team) if self.team_play else None
+            if count and known is None:
+                raise InviteCodeError("邀請碼不正確")  # 防禦：組隊時有裝置的組必有邀請碼
+            if known is not None:
+                # 該組有邀請碼（已有裝置，或被老師釋放過）就必須帶碼；先比對邀請碼再檢查上限：
+                # 沒有正確邀請碼的人不該知道該組有幾台（team-mode v1.1 D2）
+                if not secrets.compare_digest(normalize_code(code), known.encode()):
+                    raise InviteCodeError("邀請碼不正確")
+                if count >= MAX_DEVICES:
+                    raise TeamTakenError(f"此組裝置已滿（最多 {MAX_DEVICES} 台）")
             await self._checkpoint()  # 讓出點必須夾在「檢查」與「寫入」之間，拿掉鎖時並發測試才會紅
             token = secrets.token_urlsafe(16)
             self._tokens[token] = team
+            if self.team_play and known is None:
+                self._codes[team] = self._new_code()
             await self._bump()
             return token
 
@@ -152,6 +211,21 @@ class Activity:
             if team not in self.teams:
                 raise KeyError(team)
             self._tokens = {k: v for k, v in self._tokens.items() if v != team}
+            # 組隊時釋放即換新碼（只顯示在老師畫面）：被踢的冒用者不能搶先以「第一台」
+            # 重新佔住該組（team-mode v1.1 D2）
+            if self.team_play:
+                self._codes[team] = self._new_code()
+            self.drafts.pop(team, None)
+            await self._bump()
+
+    async def set_team_play(self, enabled: bool) -> None:
+        async with self._lock:
+            self._require(Phase.PREPARING)
+            if enabled == self.team_play:
+                return  # 值不變不撤銷（team-mode D1）
+            await self._checkpoint()
+            self.team_play = enabled
+            self._revoke_all()
             await self._bump()
 
     async def configure_teams(self, count: int) -> None:
@@ -161,7 +235,7 @@ class Activity:
             self._require(Phase.PREPARING)
             await self._checkpoint()
             self.teams = team_names(count)
-            self._tokens.clear()  # 改組數即撤銷所有組別憑證
+            self._revoke_all()  # 改組數即撤銷所有組別憑證與邀請碼
             await self._bump()
 
     def require_preparing(self) -> None:
@@ -192,6 +266,7 @@ class Activity:
         self.submissions = {q.number: [] for q in self.questions}
         self.judgments = {q.number: {} for q in self.questions}
         self._seq = 0
+        self.drafts = {}
         self.rounds = {}
         if self._timer is not None:
             self._timer.cancel()
@@ -256,8 +331,27 @@ class Activity:
             elapsed = int((now - opened_at) * 1000)
             sub = Submission(team, number, cleaned, next_seq, elapsed)
             self.submissions[number].append(sub)
+            self.drafts.get(team, {}).pop(number, None)  # 送出即清該組該題草稿（team-mode D3）
             await self._bump()
             return sub
+
+    # ---- 組內草稿（team-mode D4） ----
+    async def set_draft(self, team: str, number: int, answers: list[str]) -> None:
+        async with self._lock:
+            if not self.team_play:
+                raise PhaseError("只有組隊模式可以共用草稿")
+            self._require(Phase.ANSWERING)
+            q = self.question(number)
+            if self.mode.sequential:
+                rnd = self.current
+                if rnd is None or rnd.number != number or rnd.closed:
+                    raise PhaseError("這一題目前沒有開放作答")
+            if any(s.team == team for s in self.submissions[number]):
+                raise AlreadySubmittedError("本組已送出這一題，不可修改")
+            cleaned = clean_draft(answers, len(q.slots))
+            await self._checkpoint()
+            self.drafts.setdefault(team, {})[number] = cleaned
+            await self._bump()
 
     def own_submissions(self, team: str) -> list[Submission]:
         return [s for subs in self.submissions.values() for s in subs if s.team == team]
@@ -274,6 +368,10 @@ class Activity:
                 raise PhaseError("尚未匯入題目，不能開始搶答")
             await self._transition(Phase.ANSWERING)
             self._started_at = self._clock()
+            # 開始搶答即換新邀請碼：準備階段被瞄到的碼在搶答中失效，
+            # 搶答中加入只能向老師索取（team-mode v1.1 D2）
+            for team in self._codes:
+                self._codes[team] = self._new_code()
             await self._bump()
 
     async def end(self) -> None:

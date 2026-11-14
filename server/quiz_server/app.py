@@ -25,7 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import results
-from .activity import Activity, AlreadySubmittedError, TeamTakenError
+from .activity import Activity, AlreadySubmittedError, InviteCodeError, TeamTakenError
 from .guided_notes import GuidedNotesError, write_answers
 from .phases import Phase, PhaseError
 from .sources import MAX_BYTES, SourceError, check_upload, download_sheet
@@ -42,6 +42,20 @@ class TeamsBody(BaseModel):
 
 class TeamBody(BaseModel):
     team: str
+
+
+class JoinBody(BaseModel):
+    team: str
+    code: str | None = None  # 組隊時加入已有裝置的組別須帶邀請碼（team-mode D2）
+
+
+class TeamPlayBody(BaseModel):
+    enabled: bool
+
+
+class DraftBody(BaseModel):
+    question: int
+    answers: list[str]
 
 
 class UrlBody(BaseModel):
@@ -107,6 +121,10 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
     async def _conflict(_: Request, exc: Exception) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=409)
 
+    @app.exception_handler(InviteCodeError)
+    async def _bad_code(_: Request, exc: InviteCodeError) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=403)
+
     @app.exception_handler(RequestValidationError)
     async def _invalid_body(_: Request, exc: RequestValidationError) -> JSONResponse:
         # FastAPI 預設會把請求本體原樣放進錯誤回應；本體可能含答案，一律不回顯（作答隔離）
@@ -127,11 +145,13 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
 
     @app.get("/api/public/info")
     async def public_info() -> dict[str, Any]:
-        return {"phase": act.phase.value, "teams": list(act.teams), "joined": act.joined_teams()}
+        # 只多組隊開關；台數與邀請碼不公開（team-mode D5）
+        return {"phase": act.phase.value, "teams": list(act.teams), "joined": act.joined_teams(),
+                "team_play": act.team_play}
 
     @app.post("/api/student/join")
-    async def join(body: TeamBody) -> dict[str, str]:
-        token = await act.join(body.team)
+    async def join(body: JoinBody) -> dict[str, str]:
+        token = await act.join(body.team, body.code)
         log.info("組別 %s 加入", body.team)
         return {"team": body.team, "token": token}
 
@@ -145,6 +165,21 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
         log.info("送出：組別 %s 題 %s 序號 %s", team, sub.question, sub.seq)
         # 成功回應只回本組這筆的題號與答案，不含序號與順位（buzz-answering D3）
         return {"question": sub.question, "answers": list(sub.answers)}
+
+    @app.post("/api/student/draft")
+    async def draft(body: DraftBody,
+                    x_team_token: Annotated[str | None, Header()] = None) -> dict[str, int]:
+        team = act.team_of(x_team_token)
+        if team is None:
+            raise HTTPException(403, "組別憑證無效，請回首頁重新加入")
+        await act.set_draft(team, body.question, body.answers)
+        # 不回顯草稿內容，也不記日誌（team-mode D4）
+        return {"question": body.question}
+
+    @app.post("/api/teacher/team-play", dependencies=teacher)
+    async def team_play(body: TeamPlayBody) -> dict[str, bool]:
+        await act.set_team_play(body.enabled)
+        return {"team_play": act.team_play}
 
     @app.get("/api/teacher/state", dependencies=teacher)
     async def teacher_state() -> dict[str, Any]:
