@@ -47,6 +47,6 @@ FAILED server\tests\test_submit.py::test_concurrent_same_team_same_question
 
 ## 人工驗證（需求 P-05）
 
-狀態：**待負責人執行**。步驟同 OpenSpec 組 `openspec/changes/archive/2026-11-12-buzz-answering/verification.md`：兩組搶同一題、題組只填一格無法送出、第2組畫面與開發者工具的 WebSocket 訊息看不到第1組答案、重複送出被拒、結束後才看到結果。
+狀態：**待執行**（交組員，照 `docs/manual-verification.md` 對應場次執行，結果回填本段）。步驟同 OpenSpec 組 `openspec/changes/archive/2026-11-12-buzz-answering/verification.md`：兩組搶同一題、題組只填一格無法送出、第2組畫面與開發者工具的 WebSocket 訊息看不到第1組答案、重複送出被拒、結束後才看到結果。
 
 結果：＿＿＿（執行人／日期／看到什麼）

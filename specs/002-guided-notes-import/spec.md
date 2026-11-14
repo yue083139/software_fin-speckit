@@ -2,7 +2,7 @@
 
 **Feature Branch**: `002-guided-notes-import`
 **Created**: 2026-11-11
-**Status**: Implemented（人工驗證待負責人）
+**Status**: Merged（人工驗證待執行，見 `docs/manual-verification.md`）
 **Input**: User description: "匯入 Guided Notes（xlsx 或 Google 試算表連結），以表頭與合併範圍動態辨識題號、題組與作答格"
 **需求編號**：R-02、X-01｜**parity**：`docs/parity.md` §4 `guided-notes-import`｜**檔位**：S（Guided Notes 解析口徑）
 **圖表**：`diagrams/002-guided-notes-import-{component,class,sequence}.puml`

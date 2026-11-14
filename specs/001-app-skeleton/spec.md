@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-app-skeleton`
 **Created**: 2026-11-11
-**Status**: Implemented（人工驗證待負責人）
+**Status**: Merged（人工驗證待執行，見 `docs/manual-verification.md`）
 **Input**: User description: "前後端骨架、老師與學生身分（組別憑證）、活動階段狀態機與 WebSocket 同步"
 **需求編號**：R-01、R-11（`docs/requirements.md`）｜**parity**：`docs/parity.md` §4 `app-skeleton`｜**檔位**：S
 **圖表**（憲章原則 VII）：`diagrams/system-component.puml`、`diagrams/001-app-skeleton-component.puml`、`diagrams/001-app-skeleton-class.puml`、`diagrams/001-app-skeleton-sequence.puml`

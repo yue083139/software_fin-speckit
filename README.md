@@ -6,11 +6,13 @@ NCU SE6005 2026 軟體工程期末專題。老師匯入填空式學習單（Guid
 
 | 文件 | 內容 |
 |---|---|
+| [`docs/product-trd.md`](docs/product-trd.md) | **第一次看專案先讀這份**：產品一句話、功能一覽、專案特色、架構與閱讀路線 |
 | [`docs/requirements.md`](docs/requirements.md) | 需求基線（兩組共用，編號 R-／X-／P-） |
 | [`docs/parity.md`](docs/parity.md) | 兩組功能一致協議、共用技術選型、功能清單與未決事項 |
 | [`docs/trd-game-modes.md`](docs/trd-game-modes.md)、[`docs/research/competitors.md`](docs/research/competitors.md) | 多模式搶答 TRD（時間計分、雙倍分數、組隊等）與競品探索 |
 | [`CLAUDE.md`](CLAUDE.md)／`AGENTS.md` | AI 代理工程規範（Claude Code／Codex） |
 | [`docs/workflow.md`](docs/workflow.md) | 開發工作流導讀 |
+| [`docs/manual-verification.md`](docs/manual-verification.md) | 人工驗證手冊（需求 P-05）：給組員照做的場次與結果表 |
 | [`.specify/memory/constitution.md`](.specify/memory/constitution.md)、[`specs/`](specs/)、[`diagrams/`](diagrams/) | 憲章、各子功能規格、PlantUML 圖表（評分檢驗 constitution／spec／plan／tasks／圖表） |
 
 ## 快速開始

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `004-results-view`
 **Created**: 2026-11-11
-**Status**: Implemented（人工驗證待負責人）
+**Status**: Merged（人工驗證待執行，見 `docs/manual-verification.md`）
 **Input**: User description: "老師即時檢視作答狀況與結果、學生在搶答結束後檢視結果"
 **需求編號**：R-04、R-08｜**parity**：`docs/parity.md` §4 `results-view`｜**檔位**：S（新增送往學生端的資料）
 **圖表**：`diagrams/004-results-view-{component,class,sequence}.puml`
