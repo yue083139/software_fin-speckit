@@ -17,7 +17,7 @@
 | 架構 | 重要 | 主規格 results-view「結束前不得有結果」與時間計分揭曉後結果矛盾 | mode-timed-scoring `specs/results-view` MODIFIED |
 | 架構 | 重要 | 主規格「順位 1 為搶答成功者」未限定經典模式 | game-mode-framework `specs/buzz-answering` MODIFIED |
 | 架構 | 重要 | 第一期測試斷言經典規則忽略倍率，與雙倍題衝突，稿未提 | question-settings tasks 1.1 改寫該測試 |
-| 架構 | 重要 | 雙倍題改了契約既有欄位的數值語意，未列為語意補充 | question-settings D3「契約語意補充」（**待負責人批准**） |
+| 架構 | 重要 | 雙倍題改了契約既有欄位的數值語意，未列為語意補充 | question-settings D3「契約語意補充」（負責人 2026-11-14 批准） |
 | 兩通道 | 次要 | TRD／parity 公式寫 `round`；view 缺 `mode.sequential`；送出路徑未寫明只讀一次時鐘；設定 API 本體放寬未列語意補充；同名次可知對方分數；名次測試以數字子字串比對會假紅 | 各卡 v1.1／v1.2 對應段落 |
 
 ## 實作期自查（變異實錄抓到的假綠）
@@ -39,3 +39,5 @@
 1. 契約語意補充三處（經典得主得 1×倍率、`team_scores` 欄名看 `score_label`；設定 API 本體放寬；時間計分的判定在 `answering` 內）——我傾向批准。
 2. 時間計分的紙本備答代價——我傾向接受，並在人工驗證／Demo 時不先發學習單。
 3. 三張卡的人工驗證（P-05），步驟在各卡 `verification.md`。
+
+**負責人裁定（2026-11-14）**：第 1、2 項批准；第 3 項人工驗證交組員執行（見 `docs/manual-verification.md`）。
