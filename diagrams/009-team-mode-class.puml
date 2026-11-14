@@ -7,12 +7,13 @@ class Activity {
   - _codes : dict[str, str]  ' 組別 → 6 碼邀請碼
   + drafts : dict[str, dict[int, tuple[str, ...]]]
   + set_team_play(enabled)  ' 只在 preparing；值改變時撤銷憑證與邀請碼
-  + join(team, code=None) : str  ' 先比對邀請碼、再檢查 MAX_DEVICES
-  + release(team)  ' 撤銷整組憑證、刪邀請碼、清草稿
+  + join(team, code=None) : str  ' 有碼就須帶碼（NFKC 後位元組比對）；先比對碼、再檢查 MAX_DEVICES
+  + release(team)  ' 撤銷整組憑證、清草稿；組隊時換新碼（只在老師 view）
+  + start()  ' 組隊時換新所有邀請碼
   + devices(team) : int
   + invite_code(team) : str | None
   + set_draft(team, number, answers)
-  + submit(team, number, answers)  ' 不改；成功後清該組該題草稿
+  + submit(team, number, answers)  ' 判定口徑不變；成功後清該組該題草稿
 }
 
 class InviteCodeError <<Exception>>
@@ -21,7 +22,7 @@ class AnswerError <<ValueError>>
 
 class views_module <<module>> {
   + teacher_view(a)  ' team_play、devices、invite_codes
-  + student_view(a, team)  ' team_play、invite_code、drafts（只在 answering）
+  + student_view(a, team)  ' team_play、invite_code（只在 preparing）、drafts（只在 answering）
 }
 
 Activity ..> InviteCodeError : 403

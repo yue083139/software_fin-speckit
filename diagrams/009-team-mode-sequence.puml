@@ -23,6 +23,10 @@ B -> App : POST /api/student/join {team: 第1組, code}
 App -> Act : join：compare_digest 相符、未滿 6 台 → 發憑證
 App --> B : {team, token}
 
+T -> App : POST /api/teacher/start
+App -> Act : start()：組隊時換新所有邀請碼
+App -> V : 學生 view 不再含 invite_code；老師 view 有新碼
+
 == 搶答中 ==
 A -> App : POST /api/student/draft {question: 3, answers}
 App -> Act : set_draft(第1組, 3, answers)（組隊、answering、未送出）
@@ -36,4 +40,9 @@ App --> B : {question: 3, answers}
 App --> A : 推播 my_submissions 含第 3 題
 A -> App : POST /api/student/submit {question: 3, ...}
 App --> A : 409 本組已送出這一題，不可修改
+
+T -> App : POST /api/teacher/release {team: 第1組}
+App -> Act : release(第1組)：撤銷 A、B 憑證、清草稿、換新碼（只在老師 view）
+A -> App : POST /api/student/join {team: 第1組, 舊碼}
+App --> A : 403 邀請碼不正確
 @enduml
