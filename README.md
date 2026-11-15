@@ -15,38 +15,63 @@ NCU SE6005 2026 軟體工程期末專題。老師匯入填空式學習單（Guid
 | [`docs/manual-verification.md`](docs/manual-verification.md) | 人工驗證手冊（需求 P-05）：給組員照做的場次與結果表 |
 | [`.specify/memory/constitution.md`](.specify/memory/constitution.md)、[`specs/`](specs/)、[`diagrams/`](diagrams/) | 憲章、各子功能規格、PlantUML 圖表（評分檢驗 constitution／spec／plan／tasks／圖表） |
 
-## 快速開始
+## 開始使用（老師／Demo）
 
-```bash
-make hooks            # 安裝 pre-push 鉤子（clone 後一次）
-uv sync --group dev   # 門禁工具依賴
-make gate-pr          # PR 門禁
-make help             # 全部指令
+**先裝兩個工具（只要一次）**：在 PowerShell 執行下面兩行。Python 不用另外裝，uv 會自動下載。
+
+```powershell
+winget install --id astral-sh.uv -e
+winget install --id OpenJS.NodeJS.LTS -e
 ```
 
-需求：Python 3.12＋[uv](https://docs.astral.sh/uv/)、Node.js 24、GNU make、bash（Windows 用 Git Bash）；轉 PlantUML 圖需 Java 或 Docker（`make diagrams`）。
+**啟動**：Windows 在檔案總管雙擊根目錄的 **`start.cmd`**（它會呼叫 `start.ps1`，缺工具時會告訴你要裝什麼）；習慣終端機的人執行 `make dev` 也一樣。第一次啟動會先安裝依賴，約需一兩分鐘。視窗會印出兩個網址：
 
-## 執行搶答活動
-
-```bash
-uv sync --project server --group dev
-make web-install
-make dev              # 建置前端並啟動 http://127.0.0.1:8000，終端機印出老師頁網址（含老師金鑰）
+```
+老師頁：http://127.0.0.1:8000/#/teacher?key=<每次啟動隨機產生>
+學生頁：http://127.0.0.1:8000/
 ```
 
-1. 老師開終端機印出的老師頁網址；學生（每組一台裝置）開 `http://127.0.0.1:8000/` 選組別。
+老師頁網址含老師金鑰，不要給學生。關閉視窗（或按 Ctrl+C）就停止伺服器，活動隨之清空。
+
+### 一場活動
+
+1. 老師開老師頁網址。學生頁在**同一台電腦**開，**每組一個分頁**：組別憑證存在分頁裡，關閉分頁即失效。系統只在本機執行，別台電腦連不到。
 2. 老師匯入 Guided Notes：上傳 xlsx（Google 試算表「檔案 → 下載 → Microsoft Excel」），或貼「知道連結者可檢視」的試算表連結。
 3. 老師按「開始搶答」；各組作答、送出（每題每組一次，題組一次送出全部子題）；最先送出的組別得該題。
 4. 老師按「結束搶答」後，學生看到結果；老師按「匯出 Guided Notes」下載填好答案的 xlsx。
 5. 放回 Google 試算表：在原試算表「檔案 → 匯入 → 上傳 → 取代試算表」。
 
-限制：伺服器重啟即清空活動（結束後請先匯出）；匯出只保證儲存格內容與合併範圍不變，圖片、資料驗證等 openpyxl 不完整支援的元素可能遺失；同一組只能一台裝置，裝置關閉後由老師在組別區按「釋放」。
+限制：伺服器重啟即清空活動（結束後請先匯出）；匯出只保證儲存格內容與合併範圍不變，圖片、資料驗證等 openpyxl 不完整支援的元素可能遺失；未開組隊時一組只能一個分頁，分頁關閉後由老師在組別區按「釋放」；開組隊時一組最多 6 個分頁，第二個起憑該組邀請碼加入。
 
+完整操作與驗收步驟見 [`docs/manual-verification.md`](docs/manual-verification.md)。
+
+## 開發
+
+除了上面兩個工具，另需 GNU make 與 bash（Windows 用 Git Bash；make 可用 `winget install --id GnuWin32.Make -e`，再把 `C:\Program Files (x86)\GnuWin32\bin` 加進 PATH）。轉 PlantUML 圖另需 Java 或 Docker（`make diagrams`）。
+
+```bash
+make hooks            # clone 後一次：pre-push 鉤子擋推 main／dev
+uv sync --group dev   # 門禁工具依賴
+make dev              # 啟動（缺依賴自動安裝）
+make test             # 單元測試：server、門禁腳本、前端
+make gate-pr          # 開 PR 前的門禁，CI 跑同一套
+make help             # 全部指令
+```
+
+| 位置 | 內容 |
+|---|---|
+| `server/quiz_server/` | 後端（FastAPI＋WebSocket）：`activity.py` 活動狀態、`judging.py` 搶答判定、`guided_notes.py` 匯入匯出、`views.py` 依角色裁切資料、`app.py` 路由 |
+| `web/src/` | 前端（React＋Vite）：`pages/` 各畫面、`api.ts` 呼叫後端、`live.ts` 即時連線 |
+| `contracts/api.md` | API 契約，兩組共用；要改先提規格修訂經負責人批准 |
+| `server/tests/`、`web/src/pages/*.test.tsx` | 測試 |
+| `specs/`、`diagrams/` | 各子功能規格（spec／plan／tasks／verification）與 PlantUML 圖 |
+
+改程式的流程：從 `origin/dev` 開分支 → 依 [`CLAUDE.md`](CLAUDE.md) 定檔（S／B／C）→ 開 PR 到 `dev`，門禁全綠才合併。詳見 [`docs/workflow.md`](docs/workflow.md)。
 
 ## 狀態
 
 | 卡 | 狀態 |
 |---|---|
 | 專案建置（治理文件、SpecKit 初始化、門禁、CI） | 已完成 |
-| 第一期子功能 `001-app-skeleton`～`005-guided-notes-export` | 已實作，見 `specs/` 各功能 `verification.md` 與 `diagrams/` |
+| 第一～三期子功能 `001-app-skeleton`～`009-team-mode` | 已合入 `dev`，見 `specs/` 各功能 `verification.md` 與 `diagrams/` |
 | 功能卡 | 見 [`docs/parity.md`](docs/parity.md) §4 |
