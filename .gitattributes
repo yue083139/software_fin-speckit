@@ -6,3 +6,5 @@
 *.pdf binary
 # Spec Kit 的 PowerShell 腳本保留 CRLF 以免 Windows PowerShell 5 解析出錯
 *.ps1 text eol=crlf
+# Windows 批次檔須為 CRLF，否則 cmd 會跳行解析
+*.cmd text eol=crlf

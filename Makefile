@@ -17,11 +17,15 @@ hooks: ## 安裝本機 git 鉤子（pre-push 拒推 main／dev）；clone 後執
 	git config core.hooksPath .githooks
 	@echo "core.hooksPath=$$(git config core.hooksPath)"
 
-dev: ## 建置前端並啟動伺服器（http://127.0.0.1:8000，終端機會印出老師頁網址）
+dev: web/node_modules/.package-lock.json ## 一行啟動：缺前端依賴先自動安裝（伺服器依賴由 uv run 自動同步），再建置前端並啟動 http://127.0.0.1:8000
 	$(WEB) run build
 	$(SRV) python -m quiz_server
 
-web-install: ## 依 package-lock.json 安裝前端依賴（clone 後與 CI 執行）
+web-install: ## 依 package-lock.json 重新安裝前端依賴（CI 用；make dev 缺依賴時會自動安裝）
+	$(WEB) ci --no-fund --no-audit
+
+# npm 每次安裝都會改寫 node_modules/.package-lock.json；它不存在或比鎖檔舊（例如拉到新的鎖檔）才重裝
+web/node_modules/.package-lock.json: web/package-lock.json
 	$(WEB) ci --no-fund --no-audit
 
 test: ## 全部單元測試：server、門禁腳本、前端；認 pytest 末行「N passed」與 vitest「Tests … passed」
