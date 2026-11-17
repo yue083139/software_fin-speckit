@@ -36,7 +36,7 @@ from .google_auth import (
     GoogleSession,
     state_digest,
 )
-from .guided_notes import GuidedNotesError, grids_to_xlsx, parse_grids, write_answers
+from .guided_notes import GuidedNotesError, grids_to_xlsx, parse_grids, rename_sheets, write_answers
 from .phases import Phase, PhaseError
 from .sources import MAX_BYTES, SourceError, check_upload, parse_sheet_url
 from .views import view_for
@@ -242,7 +242,13 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
         act.require_preparing()
         sheet_id, gid = parse_sheet_url(body.url)
         title, copy_id, grids, notes = await google_sheets.import_copy(gs, sheet_id, gid, parse_grids)
-        await act.load_questions(grids_to_xlsx(grids), title, notes=notes, sheet_id=copy_id)
+        try:
+            data, xlsx_sheets = grids_to_xlsx(grids)
+            await act.load_questions(data, title, notes=notes, sheet_id=copy_id, xlsx_sheets=xlsx_sheets)
+        except Exception:
+            # 副本已建立但沒採用（例：等 Google 回應時老師已開始搶答 ⇒ 409）：刪掉，不留孤兒副本
+            await google_sheets.delete_copy(gs, copy_id)
+            raise
         log.info("匯入 Google 試算表副本：%d 題", len(act.questions))
         return {"source": act.source_name, "count": len(act.questions),
                 "sheet_url": google_sheets.sheet_url(copy_id)}
@@ -297,7 +303,8 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
             raise PhaseError("搶答結束後才能匯出")
         if act.notes is None or act.source_bytes is None:
             raise PhaseError("尚未匯入題目")
-        data = write_answers(act.source_bytes, act.notes, results.winning_answers(act))
+        notes = rename_sheets(act.notes, act.source_xlsx_sheets) if act.source_xlsx_sheets else act.notes
+        data = write_answers(act.source_bytes, notes, results.winning_answers(act))
         name = export_filename(act.source_name)
         disposition = f"attachment; filename=\"guided-notes-result.xlsx\"; filename*=UTF-8''{quote(name)}"
         return Response(data, media_type=XLSX_MEDIA, headers={"Content-Disposition": disposition})

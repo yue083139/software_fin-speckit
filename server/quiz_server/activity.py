@@ -122,6 +122,8 @@ class Activity:
         self.source_name: str | None = None
         # Google 來源時為匯入時建立的副本 id（guided-notes-sheets-sync D3）；上傳 xlsx 為 None
         self.source_sheet_id: str | None = None
+        # Google 來源：{Google 分頁名: xlsx 備援檔分頁名}（xlsx 不允許 / : 等字元，實作輪評審）
+        self.source_xlsx_sheets: dict[str, str] | None = None
         self.mode: Mode = MODES[DEFAULT_MODE]
         self.submissions: dict[int, list[Submission]] = {}
         self.judgments: dict[int, dict[str, bool]] = {}  # 題號 → 組別 → 正確否（game-mode-framework D3）
@@ -255,7 +257,7 @@ class Activity:
 
     # ---- 題目 ----
     async def load_questions(self, data: bytes, name: str, notes: ParsedNotes | None = None,
-                             sheet_id: str | None = None) -> None:
+                             sheet_id: str | None = None, xlsx_sheets: dict[str, str] | None = None) -> None:
         """`notes` 已由呼叫端解析時（Google 來源）直接採用；`sheet_id` 為副本 id，上傳 xlsx 為 None。"""
         async with self._lock:
             self._require(Phase.PREPARING)
@@ -264,6 +266,7 @@ class Activity:
             await self._checkpoint()
             self.notes, self.source_bytes, self.source_name = notes, data, name
             self.source_sheet_id = sheet_id
+            self.source_xlsx_sheets = xlsx_sheets
             self.attrs = {q.number: QuestionAttrs() for q in notes.questions}  # 新題目清單：設定歸零
             self._clear_answers()
             await self._bump()

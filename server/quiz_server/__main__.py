@@ -17,7 +17,8 @@ def load_env(path: Path = ENV_FILE) -> None:
     """讀 repo 根目錄 `.env`（GOOGLE_CLIENT_ID 等）；不覆蓋既有環境變數（guided-notes-sheets-sync D1）。"""
     if not path.is_file():
         return
-    for line in path.read_text(encoding="utf-8").splitlines():
+    # utf-8-sig：Windows 編輯器存的 .env 可能帶 BOM，否則第一個變數會被略過（實作輪評審）
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
         m = ENV_LINE.match(line)
         if m and m.group(1) not in os.environ:
             os.environ[m.group(1)] = m.group(2).strip('"').strip("'")

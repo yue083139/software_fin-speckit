@@ -37,8 +37,11 @@ App -> App : 解析 sheet_id（非 docs.google.com ⇒ 400，不發請求）
 alt 未登入
   App --> W : 401「請先以 Google 帳號登入」
 end
-App -> GS : import_copy(session, sheet_id, gid)
-GS -> G : spreadsheets.get（原檔標題）
+App -> GS : import_copy(session, sheet_id, gid, parse_grids)
+GS -> G : spreadsheets.get（原檔標題＋各分頁 sheetId）
+alt gid 不在原檔分頁中
+  App --> W : 400「找不到連結指定的分頁」（不建立副本）
+end
 GS -> G : Drive files.copy（「<標題>-搶答結果」）
 G --> GS : copyId
 GS -> G : spreadsheets.get（副本；includeGridData、值＋合併）
@@ -49,7 +52,12 @@ alt 解析失敗
   GS -> G : Drive files.delete(copyId)（盡力）
   App --> W : 400
 end
-App -> Act : load_questions(grids_to_xlsx(grids), 標題, notes, sheet_id=copyId)
+App -> GN : grids_to_xlsx(grids)（分頁名淨化，回傳對照表）
+App -> Act : load_questions(xlsx, 標題, notes, sheet_id=copyId, xlsx_sheets)
+alt 採用失敗（例：已開始搶答 ⇒ 409）
+  App -> G : Drive files.delete(copyId)（盡力）
+  App --> W : 409
+end
 App --> W : {source, count, sheet_url}
 
 == 寫回（ended） ==

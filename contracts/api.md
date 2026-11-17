@@ -33,13 +33,13 @@
 | `POST /api/teacher/release` | 老師 | `{team}` | `{released}`；撤銷該組憑證（組隊時撤銷該組全部裝置、清草稿，並換新邀請碼——新碼只在老師 view；team-mode 語意補充） | 401；404 |
 | `POST /api/teacher/team-play` | 老師 | `{enabled}` | `{team_play}`；值改變時撤銷所有組別憑證、邀請碼與草稿，值不變不動；重置保留（team-mode） | 401；409 非 preparing；422 格式錯誤 |
 | `POST /api/teacher/import` | 老師 | `multipart/form-data`，欄位 `file`（.xlsx，≤5 MB） | `{source, count}`；取代題目並清空作答 | 400 檔案或格式不符；401；409 非 preparing |
-| `POST /api/teacher/import-url` | 老師 | `{url}`（`https://docs.google.com/spreadsheets/d/<id>/…`；須已以 Google 帳號登入） | `{source, count, sheet_url}`：先以 Drive 複製一份「<原標題>-搶答結果」，再以 Sheets API 讀取並解析**副本**；`sheet_url` 為副本連結（guided-notes-sheets-sync 語意改變，負責人 2026-11-17 批准） | 依序：401 老師金鑰；409 非 preparing；400 連結不符、分頁不存在或解析錯誤（解析錯誤時盡力刪除副本）；401「請先以 Google 帳號登入」「Google 登入已過期，請重新登入」；502 Google 錯誤。登入檢查前不發任何對外請求 |
+| `POST /api/teacher/import-url` | 老師 | `{url}`（`https://docs.google.com/spreadsheets/d/<id>/…`；須已以 Google 帳號登入） | `{source, count, sheet_url}`：先以 Drive 複製一份「<原標題>-搶答結果」，再以 Sheets API 讀取並解析**副本**；`sheet_url` 為副本連結（guided-notes-sheets-sync 語意改變，負責人 2026-11-17 批准） | 依序：401 老師金鑰；409 非 preparing；400 連結不符、分頁不存在（不建立副本）或解析錯誤；401「請先以 Google 帳號登入」「Google 登入已過期，請重新登入」；502 Google 錯誤。登入檢查前不發任何對外請求；副本建立後任何失敗都盡力刪除副本 |
 | `POST /api/teacher/export-sheet` | 老師 | — | `{url}`：把得主答案以 `RAW` 寫入匯入時建立的副本（分頁名中的 `'` 以 `''` 跳脫），原試算表不動（guided-notes-sheets-sync） | 依序：401 老師金鑰；409「搶答結束後才能匯出」「尚未匯入題目」「題目不是從 Google 試算表匯入，請改用下載 xlsx」；401 Google 未登入／已過期；502 Google 錯誤 |
 | `GET /api/teacher/google` | 老師 | — | `{configured, signed_in, email}`（不含任何權杖；guided-notes-sheets-sync） | 401 |
 | `POST /api/teacher/google/login` | 老師 | — | `{url}`（Google 授權網址：授權碼＋PKCE S256、`access_type=offline`、`prompt=consent`、scope `openid email spreadsheets drive`）；設 cookie `qz_gstate`＝`sha256(state)`（`HttpOnly`、`SameSite=Lax`、`Path=/api/google`、10 分鐘） | 401；400「伺服器未設定 Google OAuth 用戶端」 |
 | `GET /api/google/callback?code&state` | 任何人（以 `state`＋cookie 綁定發起登入的老師瀏覽器） | — | HTML「登入完成，可關閉此分頁」；清 cookie | 400 HTML「登入失敗，請回老師頁重新登入」：`state` 非伺服器發出、過期、已用過、cookie 不符或帶 `error`；回應不回顯任何查詢參數 |
 | `POST /api/teacher/google/logout` | 老師 | — | `{signed_in: false}`；以表單本體向 Google 撤銷權杖（失敗也清空本機） | 401 |
-| `GET /api/teacher/export` | 老師 | — | xlsx 檔（原 Guided Notes，得主答案寫入作答格、一律為文字；題目來自 Google 試算表時為副本的值與合併、不含格式，作下載備援——guided-notes-sheets-sync）；`Content-Disposition` 含 `filename*=UTF-8''<原檔名>-搶答結果.xlsx` | 401；409 非 ended 或尚未匯入 |
+| `GET /api/teacher/export` | 老師 | — | xlsx 檔（原 Guided Notes，得主答案寫入作答格、一律為文字；題目來自 Google 試算表時為副本的值與合併、不含格式，作下載備援；xlsx 不允許的分頁名稱字元 `\ / : * ? [ ]` 換成「_」——guided-notes-sheets-sync）；`Content-Disposition` 含 `filename*=UTF-8''<原檔名>-搶答結果.xlsx` | 401；409 非 ended 或尚未匯入 |
 | `POST /api/teacher/start` | 老師 | — | `{phase}` | 401；409 階段不符或尚未匯入題目 |
 | `POST /api/teacher/end` | 老師 | — | `{phase}`（判定模式為 `judging`，經典與時間計分為 `ended`） | 401；409 非 answering，或時間計分尚有未揭曉的題目 |
 | `POST /api/teacher/question-settings` | 老師 | `{question, multiplier?, time_limit?}`（倍率 1 或 2；時限 5–120 秒；至少一欄，只給一欄時另一欄不動——mode-timed-scoring 語意補充） | `{question, multiplier, time_limit}`；重新匯入清除、重置保留 | 401；404 題號不存在；409 非 preparing；422 值超出範圍或兩欄皆無 |

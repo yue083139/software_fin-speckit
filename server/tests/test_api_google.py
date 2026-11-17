@@ -232,3 +232,38 @@ def test_import_error_order(gclient, fake):
     r = gclient.post("/api/teacher/import-url", json={"url": URL}, headers=H)
     assert r.status_code == 401
     assert fake.calls == []
+
+
+@pytest.mark.parametrize("title", ["11/17 學習單", "Q1:Q2", "[備]", "O'Brien"])
+def test_sheet_names_invalid_in_xlsx_still_import(gclient, fake, title):
+    """Google 允許、xlsx 不允許的分頁名稱：匯入、寫回與下載備援都要成功（實作輪紅隊＋架構）。"""
+    fake.sheets[0]["properties"]["title"] = title
+    sign_in(gclient, H)
+    r = gclient.post("/api/teacher/import-url", json={"url": URL}, headers=H)
+    assert r.status_code == 200, r.text
+    _play_and_end(gclient)
+    assert gclient.post("/api/teacher/export-sheet", headers=H).status_code == 200
+    assert fake.writes[0]["data"][0]["range"] == "'" + title.replace("'", "''") + "'!H5"
+    r = gclient.get("/api/teacher/export", headers=H)
+    assert r.status_code == 200
+    import io
+
+    import openpyxl
+    ws = openpyxl.load_workbook(io.BytesIO(r.content)).worksheets[0]
+    assert ws["H5"].value == "CPU" and ws["G5"].value == "（1）"
+    assert fake.deleted == []
+
+
+def test_copy_deleted_when_not_adopted(gclient, fake, activity, monkeypatch):
+    """副本建立後若沒被採用（例：老師已開始搶答 ⇒ 409），要刪除副本，不留孤兒。"""
+    from quiz_server.phases import PhaseError
+
+    sign_in(gclient, H)
+
+    async def boom(*a, **k):
+        raise PhaseError("只能在準備階段操作")
+
+    monkeypatch.setattr(activity, "load_questions", boom)
+    r = gclient.post("/api/teacher/import-url", json={"url": URL}, headers=H)
+    assert r.status_code == 409
+    assert fake.deleted == [COPY_ID]

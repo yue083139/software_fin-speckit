@@ -26,6 +26,7 @@ class SheetNotFoundError <<ValueError>>
 
 class google_sheets <<module>> {
   + import_copy(session, sheet_id, gid, parse) : (title, copy_id, list[SheetsGrid], ParsedNotes)
+  + delete_copy(session, copy_id) : None  // 盡力刪除，吞掉錯誤
   + write_answers(session, copy_id, notes, answers) : str  // 副本網址
 }
 
@@ -43,7 +44,8 @@ class SheetsGrid
 class guided_notes <<module>> {
   + parse_grids(grids : list[Grid]) : ParsedNotes
   + parse_workbook(data : bytes) : ParsedNotes
-  + grids_to_xlsx(grids) : bytes  // Google 來源的下載備援（值＋合併）
+  + grids_to_xlsx(grids) : (bytes, {Google 分頁名: xlsx 分頁名})  // 下載備援，分頁名淨化
+  + rename_sheets(notes, names) : ParsedNotes
   + fill(slot, answer) : str
   + write_answers(original, notes, answers) : bytes
 }
@@ -62,6 +64,7 @@ class Activity {
   source_name : str
   source_bytes : bytes | None
   source_sheet_id : str | None
+  source_xlsx_sheets : dict | None
 }
 
 Grid <|.. OpenpyxlGrid

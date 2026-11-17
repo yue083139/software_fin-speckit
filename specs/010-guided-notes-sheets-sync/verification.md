@@ -20,15 +20,15 @@
 | sequence | 匯入：require_preparing → 解析 id → 原檔標題 → files.copy → 讀副本 → 解析；失敗刪副本 | `app.import_url`、`google_sheets.import_copy`；`test_import_copies_first_then_reads_the_copy`、`test_parse_failure_deletes_copy` | 一致 |
 | sequence | 寫回：非 ended 409 → batchUpdate（副本、RAW、`'` 跳脫）→ `{url}` | `app.export_sheet`、`google_sheets.write_answers`；`test_write_targets_only_the_copy_with_raw`、`test_sheet_name_quote_is_escaped` | 一致 |
 
-偏離：實作中把類別圖的 `begin()` 回傳、`import_copy` 參數與回傳、例外類別、`grids_to_xlsx` 依程式補齊（圖改，行為不變）。
+偏離：①實作中把類別圖的 `begin()` 回傳、`import_copy` 參數與回傳、例外類別、`grids_to_xlsx` 依程式補齊（圖改，行為不變）；②實作輪評審後：R1 換新失敗立即 401、R3 gid 複製前檢查與副本未被採用即刪、R4 備援 xlsx 分頁名淨化——已回改 research 並同步改類別圖（`grids_to_xlsx` 回傳對照表、`rename_sheets`、`delete_copy`、`source_xlsx_sheets`）與時序圖（`import_copy` 四參數、gid 400 不建副本、採用失敗刪副本）。
 
 ## 門禁（`make gate`，退出碼 0）
 
 ```
 All checks passed!
 All checks passed!
-261 passed, 1 warning in 27.83s
-58 passed in 7.13s
+266 passed, 1 warning in 15.66s
+58 passed in 6.26s
  Test Files  8 passed (8)
       Tests  38 passed (38)
 gate-zh-hant: 0 處簡體字

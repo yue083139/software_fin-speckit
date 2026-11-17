@@ -11,6 +11,7 @@
 | `Slot`（改語意） | `cell`、`label` | R5：子題可為標籤右側格，此時 `label=""`、`display` 取標籤格文字 |
 | `Activity`（增） | `source_sheet_id: str \| None` | 匯入時建立的副本 id；上傳 xlsx 為 `None`；重新匯入覆寫 |
 | `Activity`（改） | `source_bytes: bytes \| None` | Google 來源時為副本格狀資料轉成的 xlsx（只含值與合併），供下載備援 |
+| `Activity`（增） | `source_xlsx_sheets: dict[str, str] \| None` | Google 分頁名 → xlsx 備援檔分頁名（淨化 `\ / : * ? [ ]`） |
 | `GoogleAuthError`（新） | — | API 層轉 401 |
 | `GoogleApiError`（新） | — | API 層轉 502，只帶 Google 錯誤 `status` |
 

@@ -8,7 +8,7 @@
 - [x] T001 探針 `probes/google_sheets_probe.py` 原樣輸出 `probes/results/2026-11-17-google-sheets.txt`（四步皆 OK）
 - [x] T002 三張圖 `make diagrams`、`make gate-diagrams` 綠
 - [x] T003 提案輪評審（紅隊＋架構雙通道，1 輪，與 OpenSpec 組同批，皆 CLEARED 0 阻斷）；藥方併入 v1.2；負責人 2026-11-17 裁定並批准契約（R7）
-- [ ] T004 探針補 `openid email`、refresh 換新、撤銷（表單本體）三步；負責人重跑，輸出存 `probes/results/`，回填 R1 證偽欄
+- [x] T004 探針補 `openid email`、refresh 換新、撤銷（表單本體）三步；負責人重跑，輸出存 `probes/results/`，回填 R1 證偽欄
 
 ## Phase 1: User Story 1 - Google 登入 (P1) 🎯
 

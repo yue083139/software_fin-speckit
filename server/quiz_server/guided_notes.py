@@ -9,7 +9,7 @@ import io
 import re
 import unicodedata
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Protocol
 
 import openpyxl
@@ -240,12 +240,33 @@ def _parse_sheet(grid: Grid, merged: dict, header: tuple[int, int, int, int | No
     return ParsedNotes(grid.title, questions)
 
 
-def grids_to_xlsx(grids: Sequence[Grid]) -> bytes:
-    """格狀資料轉成只含值與合併的 xlsx（Google 來源的下載備援，guided-notes-sheets-sync D4）。"""
+XLSX_BAD_TITLE = re.compile(r"[\\/:*?\[\]]")
+XLSX_TITLE_MAX = 31
+
+
+def _xlsx_title(title: str, used: set[str]) -> str:
+    """Google 允許、xlsx 不允許的分頁名稱字元換成「_」並截到 31 字；重名加序號（實作輪評審）。"""
+    base = XLSX_BAD_TITLE.sub("_", title).strip("'")[:XLSX_TITLE_MAX] or "工作表"
+    name, n = base, 2
+    while name.lower() in used:
+        suffix = f"_{n}"
+        name, n = base[: XLSX_TITLE_MAX - len(suffix)] + suffix, n + 1
+    used.add(name.lower())
+    return name
+
+
+def grids_to_xlsx(grids: Sequence[Grid]) -> tuple[bytes, dict[str, str]]:
+    """格狀資料轉成只含值與合併的 xlsx（Google 來源的下載備援，guided-notes-sheets-sync D4）。
+
+    回傳 (xlsx, {Google 分頁名: xlsx 分頁名})；寫回 Google 仍用原名，只有下載備援用對照後的名稱。
+    """
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
+    used: set[str] = set()
+    names: dict[str, str] = {}
     for grid in grids:
-        ws = wb.create_sheet(grid.title)
+        names[grid.title] = _xlsx_title(grid.title, used)
+        ws = wb.create_sheet(names[grid.title])
         for row in range(1, grid.max_row + 1):
             for col in range(1, grid.max_column + 1):
                 value = grid.cell(row, col)
@@ -258,7 +279,14 @@ def grids_to_xlsx(grids: Sequence[Grid]) -> bytes:
                            end_row=m.max_row, end_column=m.max_col)
     out = io.BytesIO()
     wb.save(out)
-    return out.getvalue()
+    return out.getvalue(), names
+
+
+def rename_sheets(notes: ParsedNotes, names: dict[str, str]) -> ParsedNotes:
+    """把作答格的分頁名換成 xlsx 備援檔裡的名稱（座標不變）。"""
+    return ParsedNotes(names.get(notes.sheet, notes.sheet), tuple(
+        Question(q.number, tuple(replace(s, sheet=names.get(s.sheet, s.sheet)) for s in q.slots))
+        for q in notes.questions))
 
 
 def fill(slot: Slot, answer: str) -> str:

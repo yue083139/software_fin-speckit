@@ -101,12 +101,19 @@ async def import_copy(session: GoogleSession, sheet_id: str, gid: str | None,
             grids = [SheetsGrid(s) for s in sheets]
             notes = parse(grids)
         except (GuidedNotesError, GoogleApiError):
-            try:
-                await c.request("DELETE", f"{DRIVE}/{copy_id}", headers=_auth(token))
-            except httpx.HTTPError:
-                pass
+            await delete_copy(session, copy_id)
             raise
     return title, copy_id, grids, notes
+
+
+async def delete_copy(session: GoogleSession, copy_id: str) -> None:
+    """盡力刪除匯入失敗留下的副本；任何錯誤都吞掉，不影響原本的錯誤回應。"""
+    try:
+        token = await session.token()
+        async with session.client() as c:
+            await c.request("DELETE", f"{DRIVE}/{copy_id}", headers=_auth(token))
+    except Exception:  # noqa: BLE001, S110 刪副本只是清理，失敗不得蓋掉原錯誤
+        pass
 
 
 def _a1(sheet: str, cell: str) -> str:
