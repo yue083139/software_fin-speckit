@@ -10,8 +10,8 @@ package "web" {
 
 package "server/quiz_server" {
   [app.py\n/api/teacher/google*・/api/google/callback\nimport-url・export-sheet・export] as App
-  [google_auth.GoogleSession\nPKCE・state 一次性 10 分鐘\n權杖只在記憶體] as Auth
-  [google_sheets\nread_grid・copy_and_write] as GS
+  [google_auth.GoogleSession\nPKCE・state 一次性 10 分鐘＋cookie 綁定\n權杖只在記憶體] as Auth
+  [google_sheets\nimport_copy・write_answers] as GS
   [guided_notes\nGrid 介面・parse・D5 子題填空格\nwrite_answers（xlsx）] as Notes
   [sources\ncheck_upload・sheet_id 解析] as Src
   [activity.Activity\nnotes・source_sheet_id・source_bytes] as Act
@@ -34,7 +34,7 @@ App --> Notes
 App --> Act
 Auth --> G_OAuth : 授權碼＋code_verifier 換權杖
 GS --> G_Sheets : spreadsheets.get（值＋合併）\nvalues:batchUpdate（RAW）
-GS --> G_Drive : 複製原試算表
+GS --> G_Drive : 匯入時複製原試算表
 GS --> Notes : Grid
 note bottom of Auth
   權杖不進任何 view、API 回應、

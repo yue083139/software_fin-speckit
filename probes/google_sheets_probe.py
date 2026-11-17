@@ -12,12 +12,15 @@
   2 讀取：spreadsheets.get 取值與合併 → 記憶體內工作表 → 現行解析器；與 group.xlsx 夾具逐題比對（D2）
   3 複製：候選 A Drive files.copy；候選 B Sheets create＋sheets.copyTo；比對合併範圍（D3）
   4 寫入：對候選 A 副本以 RAW 寫「=1+1」，讀回確認是文字（D3）
+  5 換新：以 refresh token 換新 access token（D1，v1.2）
+  6 撤銷：撤銷端點，權杖放表單本體（D1，v1.2）
 輸出不印權杖、授權碼與試算表 id（以前 4 碼＋…遮蔽）；副本留在雲端硬碟，名稱含「探針」，可手動刪除。
 """
 import base64
 import hashlib
 import http.server
 import io
+import json
 import os
 import re
 import secrets
@@ -39,7 +42,8 @@ AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 端點網址，不是密碼
 SHEETS = "https://sheets.googleapis.com/v4/spreadsheets"
 DRIVE = "https://www.googleapis.com/drive/v3/files"
-SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive"
+SCOPES = "openid email https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive"
+REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 FIXTURE = ROOT / "tests" / "fixtures" / "guided-notes" / "group.xlsx"
 
 
@@ -56,7 +60,7 @@ def load_env() -> None:
                 os.environ[m.group(1)] = m.group(2).strip('"')
 
 
-def step1_login(client_id: str, secret: str) -> str:
+def step1_login(client_id: str, secret: str) -> dict:
     verifier = secrets.token_urlsafe(64)
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     state = secrets.token_urlsafe(32)
@@ -98,8 +102,14 @@ def step1_login(client_id: str, secret: str) -> str:
           f"scope：{body.get('scope')}；expires_in：{body.get('expires_in')}")
     if r.status_code != 200:
         sys.exit(f"1 登入 FAIL：{body.get('error')}")
+    payload = body.get("id_token", "").split(".")
+    email = None
+    if len(payload) == 3:
+        seg = payload[1] + "=" * (-len(payload[1]) % 4)
+        email = json.loads(base64.urlsafe_b64decode(seg)).get("email")
+    print(f"  id_token 有 email：{bool(email)}（{mask(email or '')}）")
     print("1 登入 OK")
-    return body["access_token"]
+    return body
 
 
 def grid_to_workbook(sheet: dict) -> bytes:
@@ -143,7 +153,8 @@ def main() -> None:
     sid = m.group(1)
     print(f"試算表 id：{mask(sid)}")
 
-    token = step1_login(client_id, secret)
+    tokens = step1_login(client_id, secret)
+    token = tokens["access_token"]
     client = httpx.Client(headers={"Authorization": f"Bearer {token}"}, timeout=20)
 
     fields = "properties.title,sheets(properties(title,sheetId),merges,data.rowData.values.formattedValue)"
@@ -191,9 +202,26 @@ def main() -> None:
         r = client.get(f"{SHEETS}/{copy_a}/values/{rng}", params={"valueRenderOption": "UNFORMATTED_VALUE"})
         got = r.json().get("values", [[None]])[0][0]
         r0 = client.get(f"{SHEETS}/{sid}/values/{rng}", params={"valueRenderOption": "UNFORMATTED_VALUE"})
+        r0.raise_for_status()  # 讀取失敗不得被當成「原檔未被寫入」
         orig = r0.json().get("values", [[None]])[0][0]
-        print(f"  副本讀回：{got!r}；原檔同格：{orig!r}（原檔應未被寫入）")
+        print(f"  副本讀回：{got!r}；原檔同格（HTTP {r0.status_code}）：{orig!r}（原檔應未被寫入）")
         print(f"4 寫入 {'OK' if got == '=1+1' else 'FAIL'}")
+    r = httpx.post(TOKEN_URL, data={
+        "client_id": client_id, "client_secret": secret,
+        "refresh_token": tokens.get("refresh_token", ""), "grant_type": "refresh_token",
+    }, timeout=15)
+    print(f"5 換新：HTTP {r.status_code}；有 access_token：{'access_token' in r.json()}；"
+          f"新 token 與舊不同：{r.json().get('access_token') not in (None, token)}")
+    print(f"5 換新 {'OK' if r.status_code == 200 else 'FAIL'}")
+    # 權杖放表單本體，不放網址（D1 v1.2：網址會進 httpx 例外訊息與日誌）
+    r = httpx.post(REVOKE_URL, data={"token": tokens.get("refresh_token", token)}, timeout=15)
+    print(f"6 撤銷：HTTP {r.status_code}")
+    r2 = httpx.post(TOKEN_URL, data={
+        "client_id": client_id, "client_secret": secret,
+        "refresh_token": tokens.get("refresh_token", ""), "grant_type": "refresh_token",
+    }, timeout=15)
+    print(f"  撤銷後再換新：HTTP {r2.status_code}；error：{r2.json().get('error')}")
+    print(f"6 撤銷 {'OK' if r.status_code == 200 and r2.status_code != 200 else 'FAIL'}")
     print("完成（副本留在雲端硬碟，名稱含「探針」）")
 
 

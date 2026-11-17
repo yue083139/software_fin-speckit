@@ -12,7 +12,7 @@ class GoogleSession {
   + configured : bool
   + signed_in : bool
   + begin() : str  // 授權網址
-  + complete(state, code) : None
+  + complete(state, code, cookie) : None
   + token() : str  // 過期前 60 秒自動換新
   + logout() : None
 }
@@ -21,8 +21,8 @@ class GoogleAuthError <<ValueError>>
 class GoogleApiError <<ValueError>>
 
 class google_sheets <<module>> {
-  + read_grid(session, sheet_id, gid) : (title, list[Grid])
-  + copy_and_write(session, sheet_id, name,\n  notes, answers) : str  // 副本網址
+  + import_copy(session, sheet_id, gid) : (title, copy_id, list[Grid])
+  + write_answers(session, copy_id, notes, answers) : str  // 副本網址
 }
 
 interface Grid {

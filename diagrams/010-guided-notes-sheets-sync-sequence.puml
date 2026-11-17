@@ -1,5 +1,5 @@
 @startuml 010-guided-notes-sheets-sync-sequence
-title 010 guided-notes-sheets-sync：時序圖（登入 → 匯入 → 寫回副本）
+title 010 guided-notes-sheets-sync：時序圖（登入 → 匯入並複製 → 寫回副本）（v1.2）
 
 actor "老師" as T
 participant "web" as W
@@ -15,13 +15,13 @@ T -> W : 按「以 Google 帳號登入」
 W -> App : POST /api/teacher/google/login（X-Teacher-Key）
 App -> S : begin()
 S --> App : 授權網址（state、code_challenge）
-App --> W : {url}
+App --> W : {url}＋Set-Cookie qz_gstate＝sha256(state)（HttpOnly、SameSite=Lax）
 W -> G : 新分頁開授權網址
 T -> G : 同意
 G -> App : GET /api/google/callback?code&state
-App -> S : complete(state, code)
-alt state 不存在、過期或已用過
-  App --> G : 400（不換權杖）
+App -> S : complete(state, code, cookie)
+alt state 不存在、過期、已用過、cookie 不符或帶 error
+  App --> G : 400 固定文案（不回顯參數、不換權杖）
 end
 S -> G : POST token（code＋code_verifier＋client_secret）
 G --> S : access_token、refresh_token
@@ -37,13 +37,20 @@ App -> App : 解析 sheet_id（非 docs.google.com ⇒ 400，不發請求）
 alt 未登入
   App --> W : 401「請先以 Google 帳號登入」
 end
-App -> GS : read_grid(session, sheet_id, gid)
-GS -> G : spreadsheets.get（includeGridData、fields＝值＋合併）
+App -> GS : import_copy(session, sheet_id, gid)
+GS -> G : spreadsheets.get（原檔標題）
+GS -> G : Drive files.copy（「<標題>-搶答結果」）
+G --> GS : copyId
+GS -> G : spreadsheets.get（副本；includeGridData、值＋合併）
 G --> GS : 格狀資料
 GS -> GN : parse_grids(SheetsGrid…)
 GN --> GS : ParsedNotes（表頭與合併定位；D5 子題填空格）
-App -> Act : load_notes(notes, 標題, sheet_id)
-App --> W : {source, count}
+alt 解析失敗
+  GS -> G : Drive files.delete(copyId)（盡力）
+  App --> W : 400
+end
+App -> Act : load_notes(notes, 標題, copyId)
+App --> W : {source, count, sheet_url}
 
 == 寫回（ended） ==
 T -> W : 按「匯出到 Google 試算表」
@@ -51,10 +58,8 @@ W -> App : POST /api/teacher/export-sheet
 alt 非 ended
   App --> W : 409
 end
-App -> GS : copy_and_write(session, sheet_id, 「<標題>-搶答結果」, notes, 得主答案)
-GS -> G : Drive files.copy
-G --> GS : copyId
-GS -> G : values:batchUpdate（RAW；'<分頁>'!<作答格>）
+App -> GS : write_answers(session, copyId, notes, 得主答案)
+GS -> G : values:batchUpdate（副本；RAW；'<分頁>'!<作答格>，' 跳脫為 ''）
 App --> W : {url（副本）}
 W --> T : 顯示副本連結（原試算表不變）
 @enduml

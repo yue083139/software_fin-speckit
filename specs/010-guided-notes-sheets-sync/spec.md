@@ -2,7 +2,7 @@
 
 **Feature Branch**: `010-guided-notes-sheets-sync`
 **Created**: 2026-11-17
-**Status**: Draft（v1.1；待提案輪評審與負責人裁定，契約改動待批）
+**Status**: Approved（v1.2；提案輪紅隊＋架構皆 CLEARED，負責人 2026-11-17 裁定並批准契約）
 **Input**: 2026-11-17 課程公告補充說明：「Guided Notes 以 Google Sheets 的形式儲存」指系統需直接串接自己雲端線上的 Google Sheets 進行讀寫，而非下載成 .xlsx 檔在本地端離線處理。負責人 2026-11-17 裁：OAuth 讓老師登入 Google；保留 xlsx 上傳當備援；先複製一份再寫；題組子題 G／H 欄寫入口徑（PR #18 followup）併入本卡。
 **需求編號**：R-02、R-05｜**parity**：`docs/parity.md` §4 `guided-notes-sheets-sync`｜**檔位**：S（Guided Notes 解析與寫回口徑、`contracts/`、憑證 Google API、跨元件架構取捨）
 **圖表**：`diagrams/010-guided-notes-sheets-sync-{component,class,sequence}.puml`
@@ -20,7 +20,7 @@
 **Acceptance Scenarios**:
 
 1. **Given** 已設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`，**When** 老師登入並同意，**Then** `GET /api/teacher/google` 回 `signed_in: true` 與帳號 email。
-2. **Given** 回呼帶伺服器未發出、已過期（10 分鐘）或已用過的 `state`，**When** 呼叫回呼，**Then** 回 400，不換權杖，登入狀態不變。
+2. **Given** 回呼帶伺服器未發出、已過期（10 分鐘）、已用過，或與發起登入瀏覽器的 cookie 不符的 `state`，**When** 呼叫回呼，**Then** 回 400 固定文案（不回顯查詢參數），不換權杖，登入狀態不變。
 3. **Given** 未設定 OAuth 用戶端，**When** 老師開老師頁，**Then** Google 區塊停用並提示；`POST /api/teacher/google/login` 回 400「伺服器未設定 Google OAuth 用戶端」。
 4. **Given** 已登入，**When** 老師按登出，**Then** 伺服器撤銷並清空權杖，狀態回未登入。
 
@@ -28,13 +28,13 @@
 
 ### User Story 2 - 從雲端試算表直接匯入 (Priority: P1)
 
-已登入的老師貼上試算表連結，伺服器以 Sheets API 直接讀取儲存格值與合併範圍，沿用現行表頭與合併範圍定位規則解析題目，不下載 xlsx 檔。
+已登入的老師貼上試算表連結，伺服器先以 Drive 複製一份「<原標題>-搶答結果」副本，再以 Sheets API 直接讀取副本的儲存格值與合併範圍，沿用現行表頭與合併範圍定位規則解析題目，不下載 xlsx 檔。
 
-**Independent Test**: 以三份夾具轉成的 Sheets 格狀資料替身匯入，題目清單與作答格位置與上傳同一份 xlsx 相同；全程不對 `/export?format=xlsx` 發請求。
+**Independent Test**: 以四份夾具轉成的 Sheets 格狀資料替身匯入，題目清單與作答格位置與上傳同一份 xlsx 相同；全程不對 `/export?format=xlsx` 發請求。
 
 **Acceptance Scenarios**:
 
-1. **Given** 已登入、準備階段，**When** 貼上「題組＋單題」範本副本的連結並匯入，**Then** 題目為 4 題、第 1、2 題各 2 子題，作答格位置與上傳 `group.xlsx` 相同。
+1. **Given** 已登入、準備階段，**When** 貼上「題組＋單題」範本副本的連結並匯入，**Then** 題目為 4 題、第 1、2 題各 2 子題，作答格位置與上傳 `group.xlsx` 相同，回應含副本連結 `sheet_url`。
 2. **Given** 未登入，**When** 以連結匯入，**Then** 回 401「請先以 Google 帳號登入」，0 次對外請求。
 3. **Given** 連結不是 `https://docs.google.com/spreadsheets/d/<id>` 形式，**When** 匯入，**Then** 回 400，0 次對外請求。
 4. **Given** 搶答中，**When** 匯入，**Then** 回 409，0 次對外請求。
@@ -44,14 +44,15 @@
 
 ### User Story 3 - 結束後寫回雲端試算表的副本 (Priority: P1)
 
-搶答結束後，題目來自 Google 試算表時，老師按「匯出到 Google 試算表」，伺服器複製一份原試算表（名稱「<原標題>-搶答結果」），把每題得主答案寫入副本的填空格，回傳副本連結；原試算表不動。另保留「下載 xlsx」備援。
+搶答結束後，題目來自 Google 試算表時，老師按「匯出到 Google 試算表」，伺服器把每題得主答案寫入匯入時建立的副本的填空格，回傳副本連結；原試算表不動。另保留「下載 xlsx」備援。
 
-**Independent Test**: 替身 Drive／Sheets 端點收到一次 `files.copy` 與一次 `values:batchUpdate`；寫入範圍只含作答格、`valueInputOption=RAW`；不對原試算表發出任何寫入。
+**Independent Test**: 匯入時替身 Drive 收到一次 `files.copy`、Sheets 讀的是副本；寫回時只收到一次對副本的 `values:batchUpdate`，寫入範圍只含作答格、`valueInputOption=RAW`；原試算表 id 在匯入後 0 次請求。
 
 **Acceptance Scenarios**:
 
 1. **Given** 以連結匯入、已結束，**When** 按「匯出到 Google 試算表」，**Then** 回 `{url}`（副本），副本填空格為得主答案，原試算表 0 次寫入。
 2. **Given** 得主答案為「=1+1」，**When** 寫回，**Then** 副本該格為文字「=1+1」。
+6. **Given** 匯入後老師在原試算表插入一列，**When** 結束後寫回，**Then** 答案寫入副本中匯入時解析出的填空格，不對原試算表發出請求。
 3. **Given** 非 ended，**When** 寫回，**Then** 回 409。
 4. **Given** 未登入，**When** 寫回，**Then** 回 401，0 次對外請求。
 5. **Given** 題目來自上傳 xlsx，**When** 寫回 Google 試算表，**Then** 回 409「題目不是從 Google 試算表匯入，請改用下載 xlsx」；下載 xlsx 照常。
@@ -78,10 +79,10 @@
 
 ### Functional Requirements
 
-- **FR-001**：系統 MUST 支援老師以 Google 帳號 OAuth 2.0 授權碼流程＋PKCE 登入與登出；回呼 MUST 只接受伺服器為已驗證老師請求發出、未過期、未用過的 `state`。
+- **FR-001**：系統 MUST 支援老師以 Google 帳號 OAuth 2.0 授權碼流程＋PKCE（`prompt=consent`）登入與登出；回呼 MUST 只接受伺服器為已驗證老師請求發出、未過期、未用過，且與發起瀏覽器 cookie 相符的 `state`，MUST NOT 回顯查詢參數。
 - **FR-002**：以連結匯入 MUST 以 Sheets API 直接讀取雲端試算表的值與合併範圍，MUST NOT 下載 xlsx 檔；未登入 MUST 回 401。
 - **FR-003**：Sheets 來源與 xlsx 來源 MUST 經同一套表頭與合併範圍定位規則解析（不寫死座標）。
-- **FR-004**：寫回 Google 試算表 MUST 先複製原試算表，只寫入副本，原試算表 MUST NOT 被修改；寫入 MUST 以文字（`RAW`）儲存。
+- **FR-004**：以連結匯入時 MUST 先複製原試算表並解析副本；寫回 MUST 只寫入該副本，原試算表 MUST NOT 被修改；寫入 MUST 以文字（`RAW`）儲存。
 - **FR-005**：上傳 xlsx 匯入與下載 xlsx 匯出 MUST 保留為備援，不需登入。
 - **FR-006**：MUST 移除未登入的公開連結下載（`/export?format=xlsx`）。
 - **FR-007**：access token、refresh token、授權碼與 client secret MUST 只存在伺服器記憶體，MUST NOT 出現在任何 API 回應、WebSocket 訊息或日誌。
@@ -92,7 +93,7 @@
 
 - **GoogleSession**：老師的 Google 登入狀態與權杖（記憶體，單一老師）。
 - **Grid**：解析器讀取的最小工作表介面（openpyxl 工作表與 Sheets 格狀資料各一個實作）。
-- **Activity.source_sheet_id**：題目來自 Google 試算表時的試算表 id；上傳 xlsx 時為空。
+- **Activity.source_sheet_id**：題目來自 Google 試算表時，匯入時建立的副本 id；上傳 xlsx 時為空。
 
 ## Success Criteria *(mandatory)*
 
