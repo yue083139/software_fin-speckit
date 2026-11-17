@@ -1,0 +1,72 @@
+@startuml 010-guided-notes-sheets-sync-class
+title 010 guided-notes-sheets-sync：類別圖
+
+class GoogleSession {
+  - client_id : str
+  - client_secret : str
+  - _pending : dict[state, (code_verifier, 到期時刻)]
+  - _access_token : str
+  - _refresh_token : str
+  - _expires_at : float
+  + email : str | None
+  + configured : bool
+  + signed_in : bool
+  + begin() : str  // 授權網址
+  + complete(state, code) : None
+  + token() : str  // 過期前 60 秒自動換新
+  + logout() : None
+}
+
+class GoogleAuthError <<ValueError>>
+class GoogleApiError <<ValueError>>
+
+class google_sheets <<module>> {
+  + read_grid(session, sheet_id, gid) : (title, list[Grid])
+  + copy_and_write(session, sheet_id, name,\n  notes, answers) : str  // 副本網址
+}
+
+interface Grid {
+  + title : str
+  + max_row : int
+  + max_column : int
+  + cell(row, col) : object
+  + merges : list[(min_row, min_col, max_row, max_col)]
+}
+
+class OpenpyxlGrid
+class SheetsGrid
+
+class guided_notes <<module>> {
+  + parse_grids(grids : list[Grid]) : ParsedNotes
+  + parse_workbook(data : bytes) : ParsedNotes
+  + fill(slot, answer) : str
+  + write_answers(original, notes, answers) : bytes
+}
+
+class Slot <<frozen dataclass>> {
+  sheet
+  cell  // D5：子題可能是標籤右側格
+  label
+  placeholder
+  display
+  reference
+}
+
+class Activity {
+  notes : ParsedNotes
+  source_name : str
+  source_bytes : bytes | None
+  source_sheet_id : str | None
+}
+
+Grid <|.. OpenpyxlGrid
+Grid <|.. SheetsGrid
+google_sheets ..> GoogleSession : token()
+google_sheets ..> SheetsGrid
+google_sheets ..> Slot : 依 sheet＋cell 寫副本
+guided_notes ..> Grid
+guided_notes ..> Slot
+GoogleSession ..> GoogleAuthError
+google_sheets ..> GoogleApiError
+Activity ..> Slot
+@enduml

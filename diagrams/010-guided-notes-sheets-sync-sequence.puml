@@ -1,0 +1,60 @@
+@startuml 010-guided-notes-sheets-sync-sequence
+title 010 guided-notes-sheets-sync：時序圖（登入 → 匯入 → 寫回副本）
+
+actor "老師" as T
+participant "web" as W
+participant "app.py" as App
+participant "GoogleSession" as S
+participant "google_sheets" as GS
+participant "guided_notes" as GN
+participant "Activity" as Act
+participant "Google" as G
+
+== 登入 ==
+T -> W : 按「以 Google 帳號登入」
+W -> App : POST /api/teacher/google/login（X-Teacher-Key）
+App -> S : begin()
+S --> App : 授權網址（state、code_challenge）
+App --> W : {url}
+W -> G : 新分頁開授權網址
+T -> G : 同意
+G -> App : GET /api/google/callback?code&state
+App -> S : complete(state, code)
+alt state 不存在、過期或已用過
+  App --> G : 400（不換權杖）
+end
+S -> G : POST token（code＋code_verifier＋client_secret）
+G --> S : access_token、refresh_token
+App --> T : 「登入完成，可關閉此分頁」
+W -> App : GET /api/teacher/google（輪詢）
+App --> W : {configured, signed_in, email}
+
+== 匯入（preparing） ==
+T -> W : 貼試算表連結、按「從 Google 試算表匯入」
+W -> App : POST /api/teacher/import-url {url}
+App -> Act : require_preparing()
+App -> App : 解析 sheet_id（非 docs.google.com ⇒ 400，不發請求）
+alt 未登入
+  App --> W : 401「請先以 Google 帳號登入」
+end
+App -> GS : read_grid(session, sheet_id, gid)
+GS -> G : spreadsheets.get（includeGridData、fields＝值＋合併）
+G --> GS : 格狀資料
+GS -> GN : parse_grids(SheetsGrid…)
+GN --> GS : ParsedNotes（表頭與合併定位；D5 子題填空格）
+App -> Act : load_notes(notes, 標題, sheet_id)
+App --> W : {source, count}
+
+== 寫回（ended） ==
+T -> W : 按「匯出到 Google 試算表」
+W -> App : POST /api/teacher/export-sheet
+alt 非 ended
+  App --> W : 409
+end
+App -> GS : copy_and_write(session, sheet_id, 「<標題>-搶答結果」, notes, 得主答案)
+GS -> G : Drive files.copy
+G --> GS : copyId
+GS -> G : values:batchUpdate（RAW；'<分頁>'!<作答格>）
+App --> W : {url（副本）}
+W --> T : 顯示副本連結（原試算表不變）
+@enduml

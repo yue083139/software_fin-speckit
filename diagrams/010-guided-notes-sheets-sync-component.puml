@@ -1,0 +1,43 @@
+@startuml 010-guided-notes-sheets-sync-component
+title 010 guided-notes-sheets-sync：組件圖
+
+package "web" {
+  [Teacher.GooglePanel\n登入／登出・登入狀態] as GP
+  [ImportPanel\n從 Google 試算表匯入（需登入）\n上傳 xlsx（備援）] as IP
+  [PhaseControls\n匯出到 Google 試算表・下載 xlsx（備援）] as PC
+  [api.ts] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\n/api/teacher/google*・/api/google/callback\nimport-url・export-sheet・export] as App
+  [google_auth.GoogleSession\nPKCE・state 一次性 10 分鐘\n權杖只在記憶體] as Auth
+  [google_sheets\nread_grid・copy_and_write] as GS
+  [guided_notes\nGrid 介面・parse・D5 子題填空格\nwrite_answers（xlsx）] as Notes
+  [sources\ncheck_upload・sheet_id 解析] as Src
+  [activity.Activity\nnotes・source_sheet_id・source_bytes] as Act
+}
+
+cloud "Google" {
+  [OAuth 2.0\naccounts.google.com・oauth2.googleapis.com] as G_OAuth
+  [Sheets API v4] as G_Sheets
+  [Drive API v3\nfiles.copy] as G_Drive
+}
+
+GP --> Api
+IP --> Api
+PC --> Api
+Api --> App : X-Teacher-Key
+App --> Auth : 登入、回呼、取權杖
+App --> Src
+App --> GS
+App --> Notes
+App --> Act
+Auth --> G_OAuth : 授權碼＋code_verifier 換權杖
+GS --> G_Sheets : spreadsheets.get（值＋合併）\nvalues:batchUpdate（RAW）
+GS --> G_Drive : 複製原試算表
+GS --> Notes : Grid
+note bottom of Auth
+  權杖不進任何 view、API 回應、
+  WebSocket 訊息或日誌
+end note
+@enduml
