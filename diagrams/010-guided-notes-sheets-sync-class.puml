@@ -2,8 +2,8 @@
 title 010 guided-notes-sheets-sync：類別圖
 
 class GoogleSession {
-  - client_id : str
-  - client_secret : str
+  - _client_id : str
+  - _client_secret : str
   - _pending : dict[state, (code_verifier, 到期時刻)]
   - _access_token : str
   - _refresh_token : str
@@ -11,17 +11,21 @@ class GoogleSession {
   + email : str | None
   + configured : bool
   + signed_in : bool
-  + begin() : str  // 授權網址
-  + complete(state, code, cookie) : None
+  + status() : dict  // configured・signed_in・email（無權杖）
+  + begin() : (授權網址, state)  // 呼叫端設 cookie＝sha256(state)
+  + complete(state, code, cookie, error) : None
   + token() : str  // 過期前 60 秒自動換新
   + logout() : None
 }
 
-class GoogleAuthError <<ValueError>>
-class GoogleApiError <<ValueError>>
+class GoogleConfigError <<ValueError>>
+class GoogleAuthError <<Exception>>
+class GoogleCallbackError <<Exception>>
+class GoogleApiError <<Exception>>
+class SheetNotFoundError <<ValueError>>
 
 class google_sheets <<module>> {
-  + import_copy(session, sheet_id, gid) : (title, copy_id, list[Grid])
+  + import_copy(session, sheet_id, gid, parse) : (title, copy_id, list[SheetsGrid], ParsedNotes)
   + write_answers(session, copy_id, notes, answers) : str  // 副本網址
 }
 
@@ -39,6 +43,7 @@ class SheetsGrid
 class guided_notes <<module>> {
   + parse_grids(grids : list[Grid]) : ParsedNotes
   + parse_workbook(data : bytes) : ParsedNotes
+  + grids_to_xlsx(grids) : bytes  // Google 來源的下載備援（值＋合併）
   + fill(slot, answer) : str
   + write_answers(original, notes, answers) : bytes
 }
@@ -67,6 +72,9 @@ google_sheets ..> Slot : 依 sheet＋cell 寫副本
 guided_notes ..> Grid
 guided_notes ..> Slot
 GoogleSession ..> GoogleAuthError
+GoogleSession ..> GoogleConfigError
+GoogleSession ..> GoogleCallbackError
+google_sheets ..> SheetNotFoundError
 google_sheets ..> GoogleApiError
 Activity ..> Slot
 @enduml

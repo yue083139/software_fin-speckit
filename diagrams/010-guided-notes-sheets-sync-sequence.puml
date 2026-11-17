@@ -49,7 +49,7 @@ alt 解析失敗
   GS -> G : Drive files.delete(copyId)（盡力）
   App --> W : 400
 end
-App -> Act : load_notes(notes, 標題, copyId)
+App -> Act : load_questions(grids_to_xlsx(grids), 標題, notes, sheet_id=copyId)
 App --> W : {source, count, sheet_url}
 
 == 寫回（ended） ==

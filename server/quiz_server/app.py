@@ -20,15 +20,25 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import results
+from . import google_sheets, results
 from .activity import Activity, AlreadySubmittedError, InviteCodeError, TeamTakenError
-from .guided_notes import GuidedNotesError, write_answers
+from .google_auth import (
+    COOKIE_NAME,
+    STATE_TTL,
+    GoogleApiError,
+    GoogleAuthError,
+    GoogleCallbackError,
+    GoogleConfigError,
+    GoogleSession,
+    state_digest,
+)
+from .guided_notes import GuidedNotesError, grids_to_xlsx, parse_grids, write_answers
 from .phases import Phase, PhaseError
-from .sources import MAX_BYTES, SourceError, check_upload, download_sheet
+from .sources import MAX_BYTES, SourceError, check_upload, parse_sheet_url
 from .views import view_for
 
 log = logging.getLogger("quiz_server")
@@ -84,6 +94,12 @@ class JudgeBody(BaseModel):
 
 
 XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+COOKIE_PATH = "/api/google"
+# 回呼頁只用固定文案，不回顯任何查詢參數（guided-notes-sheets-sync D1：避免反射型 XSS 偷老師金鑰）
+CALLBACK_OK = ("<!doctype html><meta charset=utf-8><title>登入完成</title>"
+               "<p>登入完成，可關閉此分頁，回到老師頁。</p>")
+CALLBACK_FAIL = ("<!doctype html><meta charset=utf-8><title>登入失敗</title>"
+                 "<p>登入失敗，請回老師頁重新登入。</p>")
 
 
 def export_filename(source: str | None) -> str:
@@ -97,9 +113,13 @@ def resolve_teacher_key(explicit: str | None = None) -> str:
 
 def create_app(activity: Activity | None = None, teacher_key: str | None = None,
                static_dir: Path | None = DEFAULT_STATIC,
-               http_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
+               http_transport: httpx.AsyncBaseTransport | None = None,
+               google: GoogleSession | None = None) -> FastAPI:
     app = FastAPI(title="課堂搶答系統")
     act = activity or Activity()
+    gs = google or GoogleSession(os.environ.get("GOOGLE_CLIENT_ID"), os.environ.get("GOOGLE_CLIENT_SECRET"),
+                                 transport=http_transport)
+    app.state.google = gs
     secret = resolve_teacher_key(teacher_key)
     app.state.activity = act
 
@@ -134,6 +154,19 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
     @app.exception_handler(SourceError)
     async def _bad_source(_: Request, exc: ValueError) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=400)
+
+    @app.exception_handler(GoogleConfigError)
+    @app.exception_handler(google_sheets.SheetNotFoundError)
+    async def _google_bad_request(_: Request, exc: ValueError) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+    @app.exception_handler(GoogleAuthError)
+    async def _google_auth(_: Request, exc: GoogleAuthError) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=401)
+
+    @app.exception_handler(GoogleApiError)
+    async def _google_api(_: Request, exc: GoogleApiError) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=502)
 
     @app.exception_handler(ValueError)
     async def _value_error(_: Request, exc: ValueError) -> JSONResponse:
@@ -205,11 +238,58 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
 
     @app.post("/api/teacher/import-url", dependencies=teacher)
     async def import_url(body: UrlBody) -> dict[str, Any]:
-        act.require_preparing()  # 先擋階段，避免搶答中還對外發請求
-        data = await download_sheet(body.url, transport=http_transport)
-        await act.load_questions(data, "Google 試算表.xlsx")
-        log.info("匯入 Google 試算表：%d 題", len(act.questions))
-        return {"source": act.source_name, "count": len(act.questions)}
+        # 錯誤先後：409 階段 → 400 連結 → 401 Google 登入 → 502（D7）；登入檢查前不發對外請求
+        act.require_preparing()
+        sheet_id, gid = parse_sheet_url(body.url)
+        title, copy_id, grids, notes = await google_sheets.import_copy(gs, sheet_id, gid, parse_grids)
+        await act.load_questions(grids_to_xlsx(grids), title, notes=notes, sheet_id=copy_id)
+        log.info("匯入 Google 試算表副本：%d 題", len(act.questions))
+        return {"source": act.source_name, "count": len(act.questions),
+                "sheet_url": google_sheets.sheet_url(copy_id)}
+
+    @app.post("/api/teacher/export-sheet", dependencies=teacher)
+    async def export_sheet() -> dict[str, str]:
+        if act.phase is not Phase.ENDED:
+            raise PhaseError("搶答結束後才能匯出")
+        if act.notes is None:
+            raise PhaseError("尚未匯入題目")
+        if act.source_sheet_id is None:
+            raise PhaseError("題目不是從 Google 試算表匯入，請改用下載 xlsx")
+        url = await google_sheets.write_answers(gs, act.source_sheet_id, act.notes,
+                                                results.winning_answers(act))
+        log.info("寫回 Google 試算表副本：活動 v%s", act.version)
+        return {"url": url}
+
+    @app.get("/api/teacher/google", dependencies=teacher)
+    async def google_status() -> dict[str, Any]:
+        return gs.status()
+
+    @app.post("/api/teacher/google/login", dependencies=teacher)
+    async def google_login() -> JSONResponse:
+        url, state = gs.begin()
+        resp = JSONResponse({"url": url})
+        # cookie 綁定發起登入的瀏覽器：拿到授權網址的他人無法在自己的瀏覽器完成回呼（D1 v1.2）
+        resp.set_cookie(COOKIE_NAME, state_digest(state), max_age=STATE_TTL, path=COOKIE_PATH,
+                        httponly=True, samesite="lax")
+        return resp
+
+    @app.get("/api/google/callback")
+    async def google_callback(request: Request) -> HTMLResponse:
+        q = request.query_params
+        try:
+            await gs.complete(q.get("state"), q.get("code"), request.cookies.get(COOKIE_NAME), q.get("error"))
+        except (GoogleCallbackError, GoogleApiError):
+            resp = HTMLResponse(CALLBACK_FAIL, status_code=400)
+        else:
+            log.info("老師已以 Google 帳號登入")
+            resp = HTMLResponse(CALLBACK_OK)
+        resp.delete_cookie(COOKIE_NAME, path=COOKIE_PATH)
+        return resp
+
+    @app.post("/api/teacher/google/logout", dependencies=teacher)
+    async def google_logout() -> dict[str, bool]:
+        await gs.logout()
+        return {"signed_in": False}
 
     @app.get("/api/teacher/export", dependencies=teacher)
     async def export() -> Response:

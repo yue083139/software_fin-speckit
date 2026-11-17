@@ -1,11 +1,16 @@
-"""匯入端點（guided-notes-import D5–D7）。連結下載一律以 httpx MockTransport 替身，不連網。"""
+"""匯入端點（guided-notes-import D5–D7、guided-notes-sheets-sync D4、D7）。
+
+Google 一律以 MockTransport 替身，不連網。
+"""
 import httpx
 import pytest
 from conftest import TEACHER_KEY
 from fastapi.testclient import TestClient
+from google_fake import CLIENT_ID, CLIENT_SECRET
 
 from quiz_server.app import create_app
-from quiz_server.sources import XLSX_TYPE, SourceError, export_url
+from quiz_server.google_auth import GoogleSession
+from quiz_server.sources import XLSX_TYPE, SourceError, parse_sheet_url
 
 SHEET_ID = "1PXXwWiBKJNpPkLRoJLMzZWsAh4Jzn2bThHTeRAiq3Hg"
 EDIT_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid=0"
@@ -63,14 +68,13 @@ def test_upload_rejected_while_answering(client, fixture_bytes, teacher_headers,
 
 
 @pytest.mark.parametrize("url,expected", [
-    (EDIT_URL, f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=xlsx&gid=0"),
-    (f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?usp=sharing",
-     f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=xlsx"),
-    (f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid=abc",
-     f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=xlsx"),
+    (EDIT_URL, (SHEET_ID, "0")),
+    (f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?usp=sharing", (SHEET_ID, None)),
+    (f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit#gid=abc", (SHEET_ID, None)),
+    (f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?gid=123#x", (SHEET_ID, "123")),
 ])
-def test_export_url_rewrite(url, expected):
-    assert export_url(url) == expected
+def test_parse_sheet_url(url, expected):
+    assert parse_sheet_url(url) == expected
 
 
 @pytest.mark.parametrize("url", [
@@ -81,9 +85,9 @@ def test_export_url_rewrite(url, expected):
     "https://docs.google.com/spreadsheets/d/short/edit",
     "https://docs.google.com/document/d/" + SHEET_ID + "/edit",
 ])
-def test_export_url_rejects(url):
+def test_parse_sheet_url_rejects(url):
     with pytest.raises(SourceError):
-        export_url(url)
+        parse_sheet_url(url)
 
 
 def _client_with(activity, handler):
@@ -93,7 +97,8 @@ def _client_with(activity, handler):
         calls.append(str(request.url))
         return handler(request)
 
-    app = create_app(activity=activity, teacher_key=TEACHER_KEY, http_transport=httpx.MockTransport(record))
+    google = GoogleSession(CLIENT_ID, CLIENT_SECRET, transport=httpx.MockTransport(record))
+    app = create_app(activity=activity, teacher_key=TEACHER_KEY, google=google)
     return TestClient(app), calls
 
 
@@ -101,50 +106,12 @@ def import_url(c, url=EDIT_URL):
     return c.post("/api/teacher/import-url", json={"url": url}, headers={"X-Teacher-Key": TEACHER_KEY})
 
 
-def test_import_url_follows_google_redirect(activity, fixture_bytes):
-    data = fixture_bytes("group.xlsx")
-
-    def handler(req: httpx.Request) -> httpx.Response:
-        if req.url.host == "docs.google.com":
-            return httpx.Response(307, headers={"location": "https://doc-0s-1c.googleusercontent.com/export/x"})
-        return httpx.Response(200, headers={"content-type": XLSX_TYPE}, content=data)
-
-    c, calls = _client_with(activity, handler)
+def test_import_url_requires_google_sign_in_and_sends_no_request(activity):
+    c, calls = _client_with(activity, lambda req: httpx.Response(500))
     with c:
         r = import_url(c)
-    assert r.status_code == 200 and r.json()["count"] == 4
-    assert calls[0].startswith(f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=xlsx")
-
-
-def test_import_url_redirect_to_foreign_host_is_refused(activity):
-    def handler(req: httpx.Request) -> httpx.Response:
-        return httpx.Response(302, headers={"location": "http://127.0.0.1:9/internal"})
-
-    c, calls = _client_with(activity, handler)
-    with c:
-        r = import_url(c)
-    assert r.status_code == 400 and "非 Google" in r.json()["detail"]
-    assert all("127.0.0.1" not in u for u in calls)
-
-
-def test_import_url_private_sheet(activity):
-    def handler(req: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, headers={"content-type": "text/html"}, content=b"<html>login</html>")
-
-    c, _ = _client_with(activity, handler)
-    with c:
-        r = import_url(c)
-    assert r.status_code == 400 and "知道連結者可檢視" in r.json()["detail"]
-
-
-def test_import_url_too_large(activity):
-    def handler(req: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, headers={"content-type": XLSX_TYPE}, content=b"0" * (5 * 1024 * 1024 + 1))
-
-    c, _ = _client_with(activity, handler)
-    with c:
-        r = import_url(c)
-    assert r.status_code == 400 and "5 MB" in r.json()["detail"]
+    assert r.status_code == 401 and r.json()["detail"] == "請先以 Google 帳號登入"
+    assert calls == [] and activity.questions == ()
 
 
 def test_import_url_bad_host_sends_no_request(activity):
@@ -161,3 +128,8 @@ def test_import_url_rejected_while_answering_sends_no_request(activity, fixture_
         c.post("/api/teacher/start", headers={"X-Teacher-Key": TEACHER_KEY})
         r = import_url(c)
     assert r.status_code == 409 and calls == []
+
+
+def test_upload_does_not_need_google(client, fixture_bytes, activity):
+    assert upload(client, fixture_bytes("group.xlsx")).status_code == 200
+    assert activity.source_sheet_id is None

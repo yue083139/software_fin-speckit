@@ -120,6 +120,8 @@ class Activity:
         self.notes: ParsedNotes | None = None
         self.source_bytes: bytes | None = None  # 匯入當下的原檔，供匯出寫回（guided-notes-import D6）
         self.source_name: str | None = None
+        # Google 來源時為匯入時建立的副本 id（guided-notes-sheets-sync D3）；上傳 xlsx 為 None
+        self.source_sheet_id: str | None = None
         self.mode: Mode = MODES[DEFAULT_MODE]
         self.submissions: dict[int, list[Submission]] = {}
         self.judgments: dict[int, dict[str, bool]] = {}  # 題號 → 組別 → 正確否（game-mode-framework D3）
@@ -252,12 +254,16 @@ class Activity:
             await self._bump()
 
     # ---- 題目 ----
-    async def load_questions(self, data: bytes, name: str) -> None:
+    async def load_questions(self, data: bytes, name: str, notes: ParsedNotes | None = None,
+                             sheet_id: str | None = None) -> None:
+        """`notes` 已由呼叫端解析時（Google 來源）直接採用；`sheet_id` 為副本 id，上傳 xlsx 為 None。"""
         async with self._lock:
             self._require(Phase.PREPARING)
-            notes = parse_workbook(data)  # 解析失敗拋 GuidedNotesError，狀態不變
+            if notes is None:
+                notes = parse_workbook(data)  # 解析失敗拋 GuidedNotesError，狀態不變
             await self._checkpoint()
             self.notes, self.source_bytes, self.source_name = notes, data, name
+            self.source_sheet_id = sheet_id
             self.attrs = {q.number: QuestionAttrs() for q in notes.questions}  # 新題目清單：設定歸零
             self._clear_answers()
             await self._bump()

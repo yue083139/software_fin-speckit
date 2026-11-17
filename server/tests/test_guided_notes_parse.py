@@ -23,8 +23,12 @@ def test_group_template(fixture_bytes):
     notes = parse_workbook(fixture_bytes("group.xlsx"))
     assert [q.number for q in notes.questions] == [1, 2, 3, 4]
     assert [len(q.slots) for q in notes.questions] == [2, 2, 1, 1]
-    assert _cells(notes)[0] == [("學習單", "G5"), ("學習單", "G6")]
-    assert [s.label for s in notes.questions[0].slots] == ["（1）", "（2）"]
+    # guided-notes-sheets-sync D5：作答表頭 G4:H4 橫跨兩欄、子題 G 欄為標籤、H 欄空白 ⇒ H 欄為填空格
+    assert _cells(notes)[0] == [("學習單", "H5"), ("學習單", "H6")]
+    assert _cells(notes)[1] == [("學習單", "H8"), ("學習單", "H9")]
+    assert _cells(notes)[2:] == [[("學習單", "G11")], [("學習單", "G13")]]
+    assert [s.label for s in notes.questions[0].slots] == ["", ""]
+    assert [s.display for s in notes.questions[0].slots] == ["（1）", "（2）"]
     assert notes.questions[0].is_group and not notes.questions[2].is_group
 
 
@@ -105,3 +109,18 @@ def test_reference_column(fixture_bytes):
 def test_templates_have_no_reference(fixture_bytes, name):
     notes = parse_workbook(fixture_bytes(name))
     assert all(s.reference is None for q in notes.questions for s in q.slots)
+
+
+def test_d5_right_cell_must_be_inside_header_span():
+    """作答表頭沒有橫向合併 ⇒ 標籤右側格不算填空格（不寫死欄位，只依表頭合併欄寬）。"""
+    data = _book({"A1": "題號", "B1": "作答", "A2": 1, "B2": "（1）", "A3": None, "B3": "（2）"},
+                 merges=("A2:A3",))
+    notes = parse_workbook(data)
+    assert [s.cell for s in notes.questions[0].slots] == ["B2", "B3"]
+
+
+def test_d5_right_cell_with_content_is_not_blank():
+    data = _book({"A1": "題號", "B1": "作答", "A2": 1, "B2": "（1）", "C2": "已填", "B3": "（2）"},
+                 merges=("B1:C1", "A2:A3"))
+    notes = parse_workbook(data)
+    assert [s.cell for s in notes.questions[0].slots] == ["B2", "C3"]

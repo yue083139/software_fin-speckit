@@ -26,7 +26,7 @@
 
 | 事項 | 我傾向 | 阻塞否 |
 |---|---|---|
-| Guided Notes 匯入／匯出管道 | **xlsx 檔往返為主**：老師在 Google Sheets「檔案→下載→xlsx」匯入；系統輸出填好答案的 xlsx，老師以「檔案→匯入→取代試算表」放回 Google Sheets。另支援貼上「知道連結者可檢視」的 Sheets 網址直接匯入（`/export?format=xlsx`，免憑證，已實測可下載範本）。**直接寫回 Google Sheets** 需 OAuth／服務帳戶，列為選做卡，憑證只走環境變數 | 阻塞匯入卡的 design，不阻塞骨架 |
+| Guided Notes 匯入／匯出管道 | **xlsx 檔往返為主**：老師在 Google Sheets「檔案→下載→xlsx」匯入；系統輸出填好答案的 xlsx，老師以「檔案→匯入→取代試算表」放回 Google Sheets。另支援貼上「知道連結者可檢視」的 Sheets 網址直接匯入（`/export?format=xlsx`，免憑證，已實測可下載範本）。**直接寫回 Google Sheets** 需 OAuth／服務帳戶，列為選做卡，憑證只走環境變數。**（2026-11-17 課程補充說明後改為直接串接 Google Sheets，負責人裁 OAuth，見 §4 `guided-notes-sheets-sync`）** | 阻塞匯入卡的 design，不阻塞骨架 |
 | 搶答成功的判定單位 | 以**題**為單位：每題最先送出的組別得該題；題組（X-01）以整組為單位同時送出、同時判定 | 阻塞作答卡 |
 | 「最快」的時間基準 | **伺服器接收順序**（單一事件迴圈內遞增序號），不採信客戶端時間戳 | 阻塞作答卡 |
 | 核心卡是否預留遊戲模式擴充點（`docs/trd-game-modes.md` §2） | **是**：`app-skeleton` 的階段狀態機可插入「判定中」階段、`buzz-answering` 的判定寫成 `ScoringRule` 策略；只留介面不做模式 | 阻塞 `app-skeleton`、`buzz-answering` 的設計 |
@@ -37,11 +37,11 @@
 | 卡名 | 涵蓋需求 | 摘要 | OpenSpec 狀態 | SpecKit 狀態 |
 |---|---|---|---|---|
 | `app-skeleton` | R-01、R-11 | 前後端骨架；老師（啟動時產生的老師金鑰）／學生（選組取得組別憑證，一組一台裝置，老師可釋放）進場；預設 4 組、可設 2–12 組；階段狀態機（準備→搶答中→已結束，預留判定中）；WebSocket 只在該連線的畫面內容改變時推送 | 已合入 | 已合入 |
-| `guided-notes-import` | R-02、X-01 | 匯入 xlsx（≤5 MB）或「知道連結者可檢視」的 Sheets 連結；表頭別名（題號／編號／題次／No、作答／答案／回答／Answer）定位欄，題號格縱向合併範圍定位題組；只在準備階段；學生只看到題號與子題標籤 | 已合入 | 已合入 |
+| `guided-notes-import` | R-02、X-01 | 匯入 xlsx（≤5 MB）或「知道連結者可檢視」的 Sheets 連結（連結匯入已由 `guided-notes-sheets-sync` 改為登入後以 Sheets API 讀取副本）；表頭別名（題號／編號／題次／No、作答／答案／回答／Answer）定位欄，題號格縱向合併範圍定位題組；只在準備階段；學生只看到題號與子題標籤 | 已合入 | 已合入 |
 | `buzz-answering` | R-03、R-06、R-07、R-09、R-10 | 須先匯入題目才能開始；全部題目同時開放；每組每題只能送出一次（不可修改）；題組一次送出全部子題；答案 ≤200 字、不可空白或含控制字元；順位依伺服器接收序；搶答中學生看不到他組是否送出與順位 | 已合入 | 已合入 |
 | `results-view` | R-04、R-08 | 老師即時看「題號 × 組別」表（答案、順位、得主、各組得題數）；學生只在結束後看到每題得主、得主答案、全部組別答案與順位、各組得題數 | 已合入 | 已合入 |
 | `guided-notes-export` | R-05 | 只在結束後可匯出；每題得主答案寫回原檔作答格（佔位符取代、否則接在標籤後，一律存為文字）；無人搶答題不變；檔名 `<原檔名>-搶答結果.xlsx` | 已合入 | 已合入 |
-| `guided-notes-sheets-sync` | R-02、R-05 | 依 2026-11-17 課程補充說明，Guided Notes 直接串接雲端 Google Sheets 讀寫：老師以 Google 帳號 OAuth 登入（權杖只存伺服器記憶體）；匯入時先以 Drive 複製一份「<原標題>-搶答結果」副本，以 Sheets API 讀取副本的值與合併範圍沿用現行解析，結束後寫回同一份副本、原檔不動；OAuth `state` 以 cookie 綁定瀏覽器；保留上傳／下載 xlsx 當備援，移除公開連結下載；題組子題答案寫入標籤格右側、仍在作答表頭欄寬內的空白格 | 提案中 | 未開 |
+| `guided-notes-sheets-sync` | R-02、R-05 | 依 2026-11-17 課程補充說明，Guided Notes 直接串接雲端 Google Sheets 讀寫：老師以 Google 帳號 OAuth 登入（權杖只存伺服器記憶體）；匯入時先以 Drive 複製一份「<原標題>-搶答結果」副本，以 Sheets API 讀取副本的值與合併範圍沿用現行解析，結束後寫回同一份副本、原檔不動；OAuth `state` 以 cookie 綁定瀏覽器；保留上傳／下載 xlsx 當備援，移除公開連結下載；題組子題答案寫入標籤格右側、仍在作答表頭欄寬內的空白格 | 已實作（待合入） | 已實作（待合入） |
 | `csv-export` | X-02 | 題號、組別、答案、搶答順位匯出 CSV | 未開 | 未開 |
 | `fair-ranking` | X-03 | 公平順位機制：已搶答成功的組別下一題延遲計入順位（併入模式框架，見 `docs/trd-game-modes.md`） | 未開 | 未開 |
 | `game-mode-framework` | X-04 | 老師在準備階段選模式（經典搶答／只計對錯）；只計對錯：全部題目同時開放、每組每題可送出一次，結束後進入**判定中**，老師逐筆標正確／錯誤（匯入檔若有參考答案欄則預填建議，老師可「採用全部建議」），全部判定完才能揭曉；正確得 1 分，得主＝最早送出的正確答案（匯出寫回它）；判定中學生只看到自己組的送出；參考答案與判定建議永不送往學生端；經典搶答行為不變（TRD T-01～T-04、T-06、M3） | 已合入 | 已合入 |
@@ -72,3 +72,4 @@
 | 2026-11-14 | `team-mode` | 負責人批准契約四處語意補充（「批，合」，記於 OpenSpec #14、SpecKit #13 留言）；兩組皆合入 `dev`（OpenSpec #12–#14；SpecKit #11–#13），`dev` 上 server、web/src、contracts 逐字相同；人工驗證交組員（`docs/manual-verification.md` 場次 E） | 兩組（負責人裁定） | 已確認 |
 | 2026-11-17 | `guided-notes-sheets-sync` | 課程公告補充：Guided Notes 須直接串接雲端 Google Sheets 讀寫。負責人裁：OAuth 老師登入、保留 xlsx 上傳備援、先複製再寫、題組子題 G／H 欄寫入口徑併入本卡；開卡 v1.0 草稿（探針待 OAuth 用戶端建立後執行） | OpenSpec 組（負責人裁定） | SpecKit 組同日同批起稿（`specs/010-guided-notes-sheets-sync/`） |
 | 2026-11-17 | `guided-notes-sheets-sync` | 提案輪評審（v1.2，紅隊＋架構皆 CLEARED 0 阻斷）；負責人裁：匯入時就複製（解析與寫回同一份副本，免原檔被改後座標錯位）、OAuth `state` 以 cookie 綁定瀏覽器、批准 `contracts/api.md` 改動、副本名稱與題組子題規則照傾向；`docs/requirements.md` §4 記課程補充說明與 R-05 解讀 | 兩組（負責人裁定） | 同一會話兩組同批修訂 |
+| 2026-11-17 | `guided-notes-sheets-sync` | 兩組實作完成、程式碼逐字相同（server、web/src、contracts）；`make gate` 兩組皆綠；真棧以負責人 Google 帳號走完登入、匯入（複製後讀副本）、寫回副本，原檔未被寫入（`probes/results/2026-11-17-sheets-sync-real-stack.txt`）；人工驗證場次 A2、A5 待組員重驗 | 兩組 | 同一會話兩組同批實作 |

@@ -47,7 +47,7 @@ server/quiz_server/google_auth.py（新）   # GoogleSession：PKCE、state、�
 server/quiz_server/google_sheets.py（新） # import_copy、SheetsGrid、write_answers
 server/quiz_server/guided_notes.py        # Grid、OpenpyxlGrid、parse_grids、R5 子題填空格
 server/quiz_server/sources.py             # 刪 export_url、download_sheet；保留 check_upload、sheet_id 解析
-server/quiz_server/activity.py            # source_sheet_id、load_notes
+server/quiz_server/activity.py            # source_sheet_id；load_questions 可帶已解析的 notes 與副本 id
 server/quiz_server/app.py                 # R7 端點
 server/quiz_server/__main__.py            # 讀 .env
 server/tests/test_google_sheets.py（新）、test_api_google.py（新）、test_isolation.py（增）、

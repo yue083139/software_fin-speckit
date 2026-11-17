@@ -47,6 +47,9 @@ def test_zh_hant_covers_untracked_new_file(repo: Path):
     "AKIA" + "ABCDEFGH12345678",
     "AIza" + "B" * 35,
     "ghp_" + "c" * 36,
+    "GOCSPX-" + "Ab1Cd2Ef3Gh4Ij5Kl6Mn7Op8Qr",
+    "ya29." + "a0AfB_" + "x" * 30,
+    "1//" + "0eXyZ" + "q" * 30,
     "-----BEGIN " + "PRIVATE KEY-----",
 ])
 def test_secrets_flags_real_shapes(repo: Path, secret: str):
@@ -57,7 +60,8 @@ def test_secrets_flags_real_shapes(repo: Path, secret: str):
 
 
 @pytest.mark.parametrize(
-    "fixture", ["sk-" + "0" * 24, "AKIA" + "0" * 16, "AIza" + "0" * 35, "ghp_" + "0" * 36]
+    "fixture", ["sk-" + "0" * 24, "AKIA" + "0" * 16, "AIza" + "0" * 35, "ghp_" + "0" * 36,
+                "GOCSPX-" + "0" * 28, "ya29." + "0" * 40, "1//" + "0" * 40, "http://127.0.0.1//" + "a" * 30]
 )
 def test_secrets_passes_zero_fixtures(repo: Path, fixture: str):
     (repo / "conf.txt").write_text(f"key={fixture}\n", encoding="utf-8")

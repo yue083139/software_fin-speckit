@@ -101,3 +101,14 @@ export function loadToken(): string {
     return "";
   }
 }
+
+// Google 帳號登入狀態（guided-notes-sheets-sync D1、D6）：權杖只在伺服器，前端只看得到是否登入與帳號
+export interface GoogleStatus {
+  configured: boolean;
+  signed_in: boolean;
+  email: string | null;
+}
+
+export async function googleStatus(key: string): Promise<GoogleStatus> {
+  return (await parse(await fetch("/api/teacher/google", { headers: { "X-Teacher-Key": key } }))) as GoogleStatus;
+}

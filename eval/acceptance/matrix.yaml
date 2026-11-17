@@ -18,7 +18,7 @@ rows:
   - id: M-003
     需求: R-02
     聲明: 匯入任一份合規 Guided Notes 後題數與原檔一致，不依賴固定座標（至少三份版面不同的夾具）
-    守門: server/tests/test_guided_notes_parse.py（single、group、variant 三份夾具）；server/tests/test_api_import.py
+    守門: server/tests/test_guided_notes_parse.py（single、group、variant 三份夾具）；server/tests/test_api_import.py；server/tests/test_google_sheets.py::test_sheets_grid_parses_same_as_xlsx（四份夾具，Google Sheets 格狀資料與 xlsx 解析等價）、test_number_column_uses_effective_value；server/tests/test_api_google.py::test_import_url_reads_copy（guided-notes-sheets-sync：直接讀雲端試算表副本）
     狀態: covered
     卡: guided-notes-import
   - id: M-004
@@ -35,8 +35,8 @@ rows:
     卡: buzz-answering
   - id: M-006
     需求: R-05
-    聲明: 匯出的 Guided Notes 中每題作答格填入搶答成功的答案，其餘格內容與格式不變
-    守門: server/tests/test_guided_notes_export.py（三份夾具往返、公式形式答案存為文字）；server/tests/test_api_export.py；probes/results/2026-11-11-e2e-flow.txt
+    聲明: 匯出的 Guided Notes 中每題作答格填入搶答成功的答案。xlsx 來源：其餘格內容與格式不變；Google 來源：答案以 Sheets API 寫入匯入時建立的副本、副本其餘格不被寫入、原試算表 0 次寫入；Google 來源的 xlsx 下載備援只保證值與合併（guided-notes-sheets-sync）
+    守門: server/tests/test_guided_notes_export.py（三份夾具往返、公式形式答案存為文字、題組子題寫入標籤右側填空格）；server/tests/test_api_export.py；probes/results/2026-11-11-e2e-flow.txt；server/tests/test_google_sheets.py::test_write_targets_only_the_copy_with_raw、test_sheet_name_quote_is_escaped；server/tests/test_api_google.py::test_export_sheet_writes_copy；probes/results/2026-11-17-google-sheets.txt
     狀態: covered
     卡: guided-notes-export
   - id: M-007
@@ -117,3 +117,9 @@ rows:
     守門: server/tests/test_isolation.py::test_team_draft_isolated、test_other_team_draft_sends_nothing、test_drafts_only_in_answering、test_invalid_token_gets_no_team_fields、test_invite_code_not_sent_to_students_while_answering；server/tests/test_team_mode.py::test_draft_rules、test_teacher_view_has_no_drafts
     狀態: covered
     卡: team-mode
+  - id: M-020
+    需求: R-02、R-05、R-09、P-06
+    聲明: Google 權杖、授權碼與 client secret 只在伺服器記憶體，永不出現在學生或老師的 view、任何 API 回應與日誌；OAuth 回呼只接受伺服器發出、未過期、未用過且與發起瀏覽器 cookie 相符的 state，回呼頁不回顯查詢參數
+    守門: server/tests/test_isolation.py::test_google_tokens_never_reach_students_or_logs；server/tests/test_api_google.py::test_forged_state_rejected、test_state_replay_rejected、test_state_expires、test_other_browser_without_cookie_rejected、test_callback_does_not_echo_params、test_logout_revokes_with_token_in_body；ops/tests/test_gates.py::test_secrets_flags_real_shapes（GOCSPX-、ya29.、1// 形狀）
+    狀態: covered
+    卡: guided-notes-sheets-sync
