@@ -50,4 +50,4 @@
 - [x] T052 文件：`docs/requirements.md` §4、`docs/product-trd.md`、`README.md`、`.env.example`、`docs/manual-verification.md` 場次 A2、A5
 - [x] T053 `make gate` 原樣輸出；逐圖核對寫入 `verification.md`
 - [x] T054 真棧：`make dev` 實際登入、匯入、寫回一次，輸出存 `probes/results/`
-- [ ] T055 人工驗證交組員；`docs/parity.md` 狀態更新、`make gate-parity SIBLING=../software_fin-openspec` 綠
+- [ ] T055 人工驗證交組員（2026-11-19 jinny 重驗；A5 第 16 步逐題紀錄待補，見 `verification.md`）；`docs/parity.md` 狀態更新、`make gate-parity SIBLING=../software_fin-openspec` 綠
