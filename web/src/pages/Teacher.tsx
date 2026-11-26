@@ -8,9 +8,9 @@ import {
   TableOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { Alert, Checkbox, Input, Menu, QRCode, Radio, Result, Tag } from "antd";
+import { Alert, Button, Checkbox, Input, Menu, QRCode, Radio, Result, Tag } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, type GoogleStatus, googleStatus, teacherDownload, teacherPost, teacherUpload } from "../api";
+import { ApiError, type GoogleStatus, isBadTeacherKey, googleStatus, teacherDownload, teacherPost, teacherUpload } from "../api";
 import { clearTeacherKey } from "../route";
 import { GooglePanel } from "./GooglePanel";
 import { ImportPanel } from "./ImportPanel";
@@ -261,6 +261,24 @@ export function NotLocalNotice() {
   );
 }
 
+export const BAD_KEY = "老師金鑰錯誤";
+
+export function BadKeyNotice() {
+  return (
+    <Shell>
+      <GlassHeader title="課堂搶答・老師工作檯" />
+      <div className="qz-narrow">
+        <Result
+          status="error"
+          title={BAD_KEY}
+          subTitle="請用啟動伺服器時終端機印出的完整老師頁網址重新開啟，或回首頁重新輸入金鑰。"
+          extra={<Button href="#/">回首頁</Button>}
+        />
+      </div>
+    </Shell>
+  );
+}
+
 type Upload = (file: File) => void;
 
 export function TeacherPanel({
@@ -347,8 +365,8 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
   }, [closedCode]);
   const setError = (e: string | Error) => {
     if (e instanceof ApiError && e.status === 403 && e.message === NOT_LOCAL) setNotLocal(true);
-    else if (e instanceof ApiError && e.status === 401) {
-      // teacher-key-hidden：金鑰錯誤就清掉本分頁存的金鑰，回首頁重新輸入
+    else if (isBadTeacherKey(e)) {
+      // teacher-key-hidden：只有金鑰錯誤（不含 Google 未登入的 401）才清掉本分頁存的金鑰
       clearTeacherKey();
       setBadKey(true);
     }
@@ -384,7 +402,7 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
         .catch((e: unknown) => {
           // 開頁就會查 Google 狀態：經公開網址時這裡最先收到 403；金鑰錯誤（401）也在這裡最先發現
           if (e instanceof ApiError && e.status === 403 && e.message === NOT_LOCAL) setNotLocal(true);
-          else if (e instanceof ApiError && e.status === 401) {
+          else if (isBadTeacherKey(e)) {
             clearTeacherKey();
             setBadKey(true);
           }
@@ -452,15 +470,7 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
       .finally(() => setExporting(false));
   };
   if (closedCode === 4403 || notLocal) return <NotLocalNotice />;
-  if (closedCode === 4401 || badKey)
-    return (
-      <Shell>
-        <GlassHeader title="課堂搶答・老師工作檯" />
-        <div className="qz-narrow">
-          <Alert type="error" showIcon message="老師金鑰錯誤，請回首頁重新輸入。" />
-        </div>
-      </Shell>
-    );
+  if (closedCode === 4401 || badKey) return <BadKeyNotice />;
   const teacherView = view?.role === "teacher" ? view : null;
   return (
     <Shell>
