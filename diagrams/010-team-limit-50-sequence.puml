@@ -1,0 +1,31 @@
+@startuml 010-team-limit-50-sequence
+title 010 team-limit-50：時序圖（設定 50 組與邊界拒絕）
+
+actor "老師" as T
+actor "第50組學生" as S50
+participant "Teacher" as Web
+participant "app.py" as App
+participant "Activity" as Act
+participant "views" as Views
+
+T -> Web : 在準備階段輸入 50
+Web -> App : 設定組數 {count: 50}
+App -> Act : set_teams(50)
+Act -> Act : 驗證 2 <= 50 <= 50
+Act -> Act : 建立第1組至第50組\n撤銷舊身分、邀請碼與草稿
+Act --> App : 50 組
+App -> Views : 重算各連線畫面
+App --> Web : 顯示第1組至第50組
+
+S50 -> App : 選擇第50組加入
+App -> Act : join(第50組)
+Act --> App : 第50組身分
+App --> S50 : 進入第50組學生畫面
+
+T -> Web : 輸入 51
+Web -> App : 設定組數 {count: 51}
+App -> Act : set_teams(51)
+Act --> App : 拒絕超出範圍
+App --> Web : 顯示 2–50 範圍錯誤
+note right of Act : 原 50 組與既有狀態不變
+@enduml

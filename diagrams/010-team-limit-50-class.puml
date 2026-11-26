@@ -1,0 +1,39 @@
+@startuml 010-team-limit-50-class
+title 010 team-limit-50：類別圖
+
+class Activity {
+  {static} MIN_TEAMS : int = 2
+  {static} MAX_TEAMS : int = 50
+  {static} DEFAULT_TEAMS : int = 4
+  + teams : list[str]
+  - _tokens : dict[str, str]
+  - _codes : dict[str, str]
+  + drafts : dict[str, dict]
+  + set_teams(count)  ' 只在 preparing；2 <= count <= 50
+  + join(team) : str
+  + release(team)
+}
+
+class TeacherTeamsRequest {
+  + count : int
+}
+
+class TeacherView {
+  + teams : list[str]
+  + devices : map
+}
+
+class StudentView {
+  + teams : list[str]
+  + team : str | None
+}
+
+TeacherTeamsRequest --> Activity : set_teams(count)
+TeacherView ..> Activity : 讀完整 1–50 組
+StudentView ..> Activity : 依身分裁切
+note right of Activity
+  合法改組數撤銷所有 tokens；
+  組隊時另清除 codes 與 drafts。
+  每組裝置上限仍為 6。
+end note
+@enduml

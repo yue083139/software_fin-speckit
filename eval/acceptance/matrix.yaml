@@ -117,3 +117,21 @@ rows:
     守門: server/tests/test_isolation.py::test_team_draft_isolated、test_other_team_draft_sends_nothing、test_drafts_only_in_answering、test_invalid_token_gets_no_team_fields、test_invite_code_not_sent_to_students_while_answering；server/tests/test_team_mode.py::test_draft_rules、test_teacher_view_has_no_drafts
     狀態: covered
     卡: team-mode
+  - id: M-020
+    需求: R-01、R-11
+    聲明: 老師只在準備階段可把組數設為 2–50；1、51 與格式錯誤不改狀態；合法改組數撤銷所有組別身分、邀請碼與草稿
+    守門: server/tests/test_api_skeleton.py；server/tests/test_phases.py
+    狀態: uncovered
+    卡: team-limit-50
+  - id: M-021
+    需求: R-01、R-09、R-10、X-04
+    聲明: 50 組開啟組隊時最多 300 台可同時連線且最終狀態一致；每組仍最多 6 台；搶答中不洩漏其他 49 組答案，50 組並發順位無重號且恰一得主
+    守門: server/tests/test_team_mode.py；server/tests/test_isolation.py；server/tests/test_submit.py；probes/results/2026-11-27-team-limit-50-capacity.txt
+    狀態: uncovered
+    卡: team-limit-50
+  - id: M-022
+    需求: R-01、R-04、R-08
+    聲明: 50 組下學生選組、老師管理與結果表保留全部組別，使用者在 768 px 視窗可捲動並於 30 秒內操作第 50 組
+    守門: web/src/pages/team-limit.test.tsx；specs/010-team-limit-50/verification.md
+    狀態: uncovered
+    卡: team-limit-50
