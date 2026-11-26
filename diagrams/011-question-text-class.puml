@@ -24,13 +24,15 @@ class ParsedNotes <<frozen dataclass>> {
 
 class guided_notes <<module>> {
   + QUESTION_ALIASES = ("題目", "題目敘述", "問題", "題幹", "question")
-  - _find_header(grid, merged) : (header_row, number_col, answer_col, reference_col, question_col | None)
+  + Header = (表頭列, 題號欄, 作答欄, 參考答案欄 | None, 題目欄 | None)
+  - _find_header(grid, merged) : Header | None
   - _prompt(grid, merged, row, col) : str  // 縱向合併只取錨點列；1.0 轉為 "1"
   + parse_grids(grids) : ParsedNotes
   + write_answers(...)  // 不讀 prompt
 }
 
 class views <<module>> {
+  - _prompt_visible(a, number, teacher) : bool  // 老師恆真；學生依 R2
   + question_outline(a, teacher: bool) : list[dict]
   + teacher_view(a) : dict  // questions[].prompts 恆帶
   + student_view(a, team) : dict  // 依 R2 帶或不帶
@@ -48,4 +50,10 @@ Question "1" *-- "1..*" Slot
 guided_notes ..> ParsedNotes : 產生
 views ..> Activity : 讀
 Activity o-- ParsedNotes : notes
+class Prompts <<web/src/pages/Prompts.tsx>> {
+  + PromptText(text)  // 空字串不渲染
+  + promptsOf(questions, number) : 字串陣列
+  + PromptSummary(prompts, labels)
+}
+Prompts ..> views : 顯示 questions 的 prompts（不重算可見性）
 @enduml

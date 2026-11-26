@@ -38,3 +38,25 @@ describe("學生作答", () => {
     expect(screen.queryByText("搶答送出")).toBeNull();
   });
 });
+
+describe("題目敘述（question-text D5）", () => {
+  it("有敘述時顯示在子題輸入欄上方", () => {
+    const view: StudentView = {
+      ...base,
+      questions: [
+        { number: 1, labels: ["（1）", "（2）"], prompts: ["大腦英文簡稱？", "作業系統稱為？"] },
+        { number: 3, labels: [""], prompts: ["電腦使用幾進位？"] },
+      ],
+    };
+    render(<StudentPanel view={view} onSubmit={async () => {}} />);
+    expect(screen.getByText("大腦英文簡稱？")).toBeInTheDocument();
+    expect(screen.getByText("作業系統稱為？")).toBeInTheDocument();
+    expect(screen.getByText("電腦使用幾進位？")).toBeInTheDocument();
+  });
+
+  it("伺服器沒帶或為空字串時不顯示敘述段", () => {
+    const view: StudentView = { ...base, questions: [{ number: 3, labels: [""], prompts: [""] }] };
+    const { container } = render(<StudentPanel view={view} onSubmit={async () => {}} />);
+    expect(container.querySelector(".prompt")).toBeNull();
+  });
+});

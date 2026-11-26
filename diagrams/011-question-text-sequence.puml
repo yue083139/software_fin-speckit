@@ -1,5 +1,5 @@
 @startuml 011-question-text-sequence
-title 011 question-text：時序圖（匯入讀敘述 → 準備階段不送 → 開始後送給學生）（v1.0）
+title 011 question-text：時序圖（匯入讀敘述 → 準備階段不送 → 開始後送給學生）（v1.1）
 
 actor "老師" as T
 participant "web（老師）" as WT
@@ -16,7 +16,7 @@ WT -> App : POST /api/teacher/import（或 import-url）
 App -> GN : parse_grids(grids)
 GN -> GN : _find_header：題號欄・作答欄・參考答案欄・題目欄（可選）
 loop 每個子題
-  GN -> GN : Slot.prompt ← 該列題目欄值（縱向合併非錨點列 ""）
+  GN -> GN : Slot.prompt ← _prompt(該列題目欄)（縱向合併非錨點列 ""）
 end
 GN --> App : ParsedNotes
 App -> Act : load_questions(notes)

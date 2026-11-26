@@ -11,12 +11,30 @@ from .modes import MODES
 from .phases import Phase
 
 
-def question_outline(a: Activity) -> list[dict[str, Any]]:
-    """題號與子題標籤；不含作答格座標與原檔內容（guided-notes-import D7）。"""
-    # 倍率不是他組資訊，學生也看得到（question-settings D3）
-    return [{"number": q.number, "labels": [s.display for s in q.slots],
-             "multiplier": a.attrs_of(q.number).multiplier,
-             "time_limit": a.attrs_of(q.number).time_limit} for q in a.questions]
+def _prompt_visible(a: Activity, number: int, teacher: bool) -> bool:
+    """question-text D2：學生只在搶答開始後看得到敘述，逐題模式只看得到已開放過的題。
+
+    預設不給（fail-closed）：日後新增的階段不在下列條件中就不帶。
+    """
+    if teacher or a.phase is Phase.ENDED:
+        return True
+    if a.phase not in (Phase.ANSWERING, Phase.JUDGING):
+        return False
+    return not a.mode.sequential or number in a.rounds
+
+
+def question_outline(a: Activity, teacher: bool) -> list[dict[str, Any]]:
+    """題號、子題標籤與依階段開放的題目敘述；不含作答格座標與原檔其他內容（guided-notes-import D7）。"""
+    outline = []
+    for q in a.questions:
+        # 倍率不是他組資訊，學生也看得到（question-settings D3）
+        item: dict[str, Any] = {"number": q.number, "labels": [s.display for s in q.slots],
+                                "multiplier": a.attrs_of(q.number).multiplier,
+                                "time_limit": a.attrs_of(q.number).time_limit}
+        if _prompt_visible(a, q.number, teacher):
+            item["prompts"] = [s.prompt for s in q.slots]
+        outline.append(item)
+    return outline
 
 
 def round_view(a: Activity) -> dict[str, Any] | None:
@@ -50,7 +68,7 @@ def teacher_view(a: Activity) -> dict[str, Any]:
         "devices": {t: a.devices(t) for t in a.teams},
         "invite_codes": {t: c for t in a.teams if (c := a.invite_code(t))},  # 老師看得到邀請碼，看不到草稿
         "source": a.source_name,
-        "questions": question_outline(a),
+        "questions": question_outline(a, teacher=True),
         "mode": mode_info(a, teacher=True),
         "round": round_view(a),
         "modes": [{"key": m.key, "label": m.label} for m in MODES.values()],
@@ -74,7 +92,7 @@ def student_view(a: Activity, team: str | None) -> dict[str, Any]:
         "phase": a.phase.value,
         "team": team,
         "team_valid": True,
-        "questions": question_outline(a),
+        "questions": question_outline(a, teacher=False),
         "mode": mode_info(a, teacher=False),
         "round": round_view(a),
         "score_label": score_label(a),

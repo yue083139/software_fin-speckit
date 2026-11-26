@@ -20,6 +20,8 @@ NUMBER_ALIASES = ("題號", "編號", "題次", "no", "no.", "#")
 ANSWER_ALIASES = ("作答", "答案", "回答", "answer")
 # 可選欄（game-mode-framework D4）：只產生判定建議；不含「答案」以免與作答欄別名衝突
 REFERENCE_ALIASES = ("參考答案", "正確答案", "標準答案", "解答", "answerkey")
+# 可選欄（question-text D1）：題目敘述只給學生看，不參與定位與寫回
+QUESTION_ALIASES = ("題目", "題目敘述", "問題", "題幹", "question")
 HEADER_SCAN_ROWS = 50
 PLACEHOLDER = re.compile(r"[_＿]{3,}")
 NUMBER_TEXT = re.compile(r"^(\d+)[.、]?$")
@@ -68,6 +70,7 @@ class Slot:
     placeholder: bool
     display: str  # 給學生看的子題標籤
     reference: str | None = None  # 同列參考答案欄的值；只供老師與判定建議，永不送往學生
+    prompt: str = ""  # 同列題目欄的敘述（question-text D1）；學生何時看得到由 views 決定
 
 
 @dataclass(frozen=True)
@@ -99,9 +102,12 @@ def _merged_index(grid: Grid) -> dict[tuple[int, int], Range]:
     return index
 
 
-def _find_header(grid: Grid, merged: dict) -> tuple[int, int, int, int | None] | None:
+Header = tuple[int, int, int, int | None, int | None]  # 表頭列、題號欄、作答欄、參考答案欄、題目欄
+
+
+def _find_header(grid: Grid, merged: dict) -> Header | None:
     for row in range(1, min(grid.max_row, HEADER_SCAN_ROWS) + 1):
-        number_col = answer_col = reference_col = None
+        number_col = answer_col = reference_col = question_col = None
         for col in range(1, grid.max_column + 1):
             value = grid.cell(row, col)
             if value is None:
@@ -115,8 +121,11 @@ def _find_header(grid: Grid, merged: dict) -> tuple[int, int, int, int | None] |
             elif reference_col is None and text in REFERENCE_ALIASES:
                 rng = merged.get((row, col))
                 reference_col = rng.min_col if rng else col
+            elif question_col is None and text in QUESTION_ALIASES:
+                rng = merged.get((row, col))
+                question_col = rng.min_col if rng else col
         if number_col is not None and answer_col is not None:
-            return row, number_col, answer_col, reference_col
+            return row, number_col, answer_col, reference_col, question_col
     return None
 
 
@@ -129,6 +138,21 @@ def _reference(grid: Grid, merged: dict, row: int, col: int | None) -> str | Non
     value = grid.cell(row, rng.min_col if rng else col)
     text = "" if value is None else str(value).strip()
     return text or None
+
+
+def _prompt(grid: Grid, merged: dict, row: int, col: int | None) -> str:
+    """D1：該列題目欄的敘述；縱向合併的非錨點列為空，避免同一段敘述在題組每個子題重複。"""
+    if col is None:
+        return ""
+    rng = merged.get((row, col))
+    if rng is not None and rng.min_row != row:
+        return ""
+    value = grid.cell(row, rng.min_col if rng else col)
+    if value is None or isinstance(value, bool):
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
 
 
 def _as_number(value: object) -> int | None:
@@ -188,11 +212,11 @@ def _blank_fill_cell(grid: Grid, merged: dict, header_answer: Range | None,
     return right
 
 
-def _parse_sheet(grid: Grid, merged: dict, header: tuple[int, int, int, int | None]) -> ParsedNotes:
-    header_row, number_col, answer_col, reference_col = header
+def _parse_sheet(grid: Grid, merged: dict, header: Header) -> ParsedNotes:
+    header_row, number_col, answer_col, reference_col, question_col = header
     header_answer = merged.get((header_row, answer_col))
-    # (座標, 寫回保留的標籤, 是否佔位符, 參考答案, 顯示用標籤)
-    raw: list[tuple[int, list[tuple[str, str, bool, str | None, str]]]] = []
+    # (座標, 寫回保留的標籤, 是否佔位符, 參考答案, 顯示用標籤, 題目敘述)
+    raw: list[tuple[int, list[tuple[str, str, bool, str | None, str, str]]]] = []
     for row in range(header_row + 1, grid.max_row + 1):
         rng = merged.get((row, number_col))
         if rng is not None and (rng.min_row, rng.min_col) != (row, number_col):
@@ -201,7 +225,7 @@ def _parse_sheet(grid: Grid, merged: dict, header: tuple[int, int, int, int | No
         if number is None:
             continue
         rows = range(rng.min_row, rng.max_row + 1) if rng else range(row, row + 1)
-        slots: list[tuple[str, str, bool, str | None, str]] = []
+        slots: list[tuple[str, str, bool, str | None, str, str]] = []
         seen: set[tuple[int, int]] = set()
         for r in rows:
             arng = merged.get((r, answer_col))
@@ -214,13 +238,14 @@ def _parse_sheet(grid: Grid, merged: dict, header: tuple[int, int, int, int | No
             value = grid.cell(*anchor)
             label = "" if value is None else str(value)
             ref = _reference(grid, merged, r, reference_col)
+            prompt = _prompt(grid, merged, r, question_col)
             target = _blank_fill_cell(grid, merged, header_answer, anchor, label)
             if target is not None:
                 coord = f"{get_column_letter(target[1])}{target[0]}"
-                slots.append((coord, "", False, ref, label))
+                slots.append((coord, "", False, ref, label, prompt))
             else:
                 coord = f"{get_column_letter(anchor[1])}{anchor[0]}"
-                slots.append((coord, label, bool(PLACEHOLDER.search(label)), ref, label))
+                slots.append((coord, label, bool(PLACEHOLDER.search(label)), ref, label, prompt))
         if not slots:
             raise GuidedNotesError(f"第 {number} 題找不到作答格")
         raw.append((number, slots))
@@ -232,8 +257,8 @@ def _parse_sheet(grid: Grid, merged: dict, header: tuple[int, int, int, int | No
         raise GuidedNotesError("題號重複：" + "、".join(map(str, dupes)))
     questions = tuple(
         Question(number, tuple(
-            Slot(grid.title, coord, label, ph, _display(shown, ph, i, len(slots) > 1), ref)
-            for i, (coord, label, ph, ref, shown) in enumerate(slots, 1)
+            Slot(grid.title, coord, label, ph, _display(shown, ph, i, len(slots) > 1), ref, prompt)
+            for i, (coord, label, ph, ref, shown, prompt) in enumerate(slots, 1)
         ))
         for number, slots in raw
     )

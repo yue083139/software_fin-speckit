@@ -1,6 +1,6 @@
 # 011 question-text 介面契約
 
-**狀態：待負責人批准（research R3）**；批准後實作時同批改 [`/contracts/api.md`](../../../contracts/api.md)。
+**狀態：負責人 2026-11-26 照傾向批准（research R3）**；實作時同批改 [`/contracts/api.md`](../../../contracts/api.md)。
 
 | 位置 | 增加 | 規則 |
 |---|---|---|

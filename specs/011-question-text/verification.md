@@ -1,4 +1,4 @@
-# Verification: 011 question-text（v1.0）
+# Verification: 011 question-text（v1.1）
 
 知識時點：2026-11-26；分支 `011-question-text`。實作後 server、web/src、contracts 須與 OpenSpec 組 `feat/question-text` 逐字相同（`make gate-parity` 0 處不一致）。
 
@@ -12,7 +12,7 @@
 
 ## 評審紀錄
 
-（提案輪、實作輪結論）
+提案輪：紅隊 0B/2M/2m、架構 0B/0M/5m，皆 0 阻斷，藥方併入 v1.1。實作輪：**待實作輪評審**。
 
 ## 人工驗證（需求 P-05）
 

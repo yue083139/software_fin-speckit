@@ -1,4 +1,5 @@
-import type { QuestionResult, RankedAnswer } from "../types";
+import { PromptSummary, promptsOf } from "./Prompts";
+import type { QuestionOutline, QuestionResult, RankedAnswer } from "../types";
 
 export type Judge = (question: number, team: string, correct: boolean) => void;
 
@@ -44,8 +45,10 @@ export function Board({
   winnerTag = "搶答成功",
   onJudge,
   judgeQuestion,
+  questions,
 }: {
   board: QuestionResult[];
+  questions?: QuestionOutline[];
   teams: string[];
   scores: Record<string, number>;
   scoreLabel?: string;
@@ -73,6 +76,7 @@ export function Board({
                 {q.number}
                 {q.labels.length > 1 && <span className="muted">（題組）</span>}
                 {q.multiplier === 2 && <span className="tag">×2</span>}
+                <PromptSummary prompts={promptsOf(questions, q.number)} labels={q.labels} />
                 {q.reference?.some((x) => x != null) && (
                   <div className="muted">參考答案：{q.reference.map((x) => x ?? "—").join(" ／ ")}</div>
                 )}
@@ -127,9 +131,11 @@ export function StudentResults({
   scores,
   scoreLabel = "得題數",
   winnerTag = "搶答成功",
+  questions,
 }: {
   team: string;
   results: QuestionResult[];
+  questions?: QuestionOutline[];
   scores: Record<string, number>;
   scoreLabel?: string;
   winnerTag?: string;
@@ -155,6 +161,7 @@ export function StudentResults({
             <h3>
               第 {q.number} 題{q.multiplier === 2 && <span className="tag">雙倍分數</span>}
             </h3>
+            <PromptSummary prompts={promptsOf(questions, q.number)} labels={q.labels} />
             {q.winner ? (
               <p className={q.winner.team === team ? "ok" : undefined}>
                 {winnerTag}：{q.winner.team}（{formatAnswers(q.labels, q.winner.answers)}）

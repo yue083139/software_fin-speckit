@@ -3,6 +3,8 @@
 **Branch**: `011-question-text` | **Date**: 2026-11-26 | **Spec**: [spec.md](spec.md)
 **藍圖**：`diagrams/011-question-text-{component,class,sequence}.puml`
 
+**v1.1（提案輪評審，紅隊 0B/2M/2m、架構 0B/0M/5m，皆 0 阻斷）**：紅隊——子題標籤（`labels`）取自作答格原文，作答格寫「…稱為 ____」時題目文字會經標籤在準備階段送出（現行行為）⇒ R2 明寫敘述＝題目欄、登記有意不改；驗收 SC-004 掃整個目錄會被 `"S256"` 誤中 ⇒ 限縮兩檔並附負例；行號 105→110。架構——修改的需求漏列倍率與時限 ⇒ 補（FR-005）；探針檔缺指令與合併範圍 ⇒ 探針入庫 `probes/question_text_probe.py` 重跑；情境漏第 2 題、「結束後全帶」「老師任何階段」無守門 ⇒ 補情境與 `test_prompts_all_after_timed_end`。**負責人 2026-11-26 指示全部做完再測**：契約改動照傾向批准。
+
 ## Summary
 
 1. **題目欄為可選欄，以表頭別名定位，逐子題讀取**：別名「題目／題目敘述／問題／題幹／question」；每個子題取所在那一列的題目欄值（題組每個子題各有一段）／代價：沒有題目欄的檔照常匯入、敘述為空字串／可被四份夾具證偽（R1）。
@@ -10,7 +12,7 @@
 3. **契約只增欄位**：`questions[].prompts`（與 `labels` 對齊）；學生看不到的題不帶此鍵（fail-closed）／可被 `test_isolation.py` 新增負例證偽（R3）。
 4. **寫回與匯出不變**：敘述只讀不寫／可被既有匯出往返測試證偽（R4）。
 
-**矩陣落點**：M-003（R-02）聲明不變，守門加 `test_guided_notes_parse.py::test_prompts_*`；新增 M-021（X-04）「題目敘述只在開放作答後送給學生」，守門 `server/tests/test_isolation.py::test_prompts_hidden_until_open`、`test_prompts_sequential_only_opened`。
+**矩陣落點**：M-003（R-02）聲明不變，守門加 `test_guided_notes_parse.py::test_prompts_*`；新增 M-021（X-04）「題目敘述只在開放作答後送給學生」，守門 `server/tests/test_isolation.py::test_prompts_hidden_until_open`（含老師準備階段即有）、`test_prompts_sequential_only_opened`、`test_prompts_all_after_timed_end`（時間計分只開過第 1 題就結束，結果頁每題都帶）。
 
 **merge 三問第三問**：R-02 寫「不要求匯入題目敘述」，本功能屬 X-04；負責人 2026-11-26 驗證時指出學生只見題號無從作答。期限 2026-11-30，影片須與程式一致，故在錄影前做。
 
@@ -20,7 +22,7 @@
 **Primary Dependencies**: 無新增
 **Storage**: `Slot.prompt`（記憶體，隨匯入結果）
 **Testing**: pytest（四份夾具＋openpyxl 合成負例）、vitest
-**Constraints**: `contracts/api.md` 改動須負責人批准（R3）；OpenSpec 組同批，server／web 程式逐字相同
+**Constraints**: `contracts/api.md` 改動負責人 2026-11-26 照傾向批准（R3）；OpenSpec 組同批，server／web 程式逐字相同
 
 ## Constitution Check
 
@@ -40,10 +42,11 @@
 ### Source Code (repository root)
 
 ```text
-server/quiz_server/guided_notes.py   # QUESTION_ALIASES、表頭找題目欄、Slot.prompt
-server/quiz_server/views.py          # question_outline(a, teacher) 依 R2 帶 prompts
+server/quiz_server/guided_notes.py   # QUESTION_ALIASES、Header 五元組、_prompt、Slot.prompt
+server/quiz_server/views.py          # _prompt_visible、question_outline(a, teacher) 依 R2 帶 prompts
+probes/question_text_probe.py（新）  # 夾具表頭、題目欄逐列全文與合併範圍
 server/tests/test_guided_notes_parse.py（增）、test_isolation.py（增）、test_api_skeleton.py（增）
-web/src/types.ts、pages/AnswerForm.tsx、Student.tsx、Teacher.tsx、Results.tsx
+web/src/types.ts、pages/Prompts.tsx（新：PromptText、promptsOf、PromptSummary）、AnswerForm.tsx、Student.tsx、Teacher.tsx、Results.tsx
 web/src/pages/answer.test.tsx（增）、results.test.tsx（增）
 contracts/api.md、eval/acceptance/matrix.yaml、docs/manual-verification.md 場次 A
 ```
