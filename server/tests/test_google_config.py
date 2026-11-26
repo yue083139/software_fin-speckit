@@ -167,3 +167,45 @@ def test_reconfigure_clears_pending_state():
     s.reconfigure(OTHER_ID, VALID_SECRET)
     with pytest.raises(GoogleCallbackError):
         asyncio.run(s.complete(state, CODE, state_digest(state)))
+
+
+def _refresh_session(on_request):
+    """已登入且 access token 已過期、帶 refresh token 的 session；續期請求時呼叫 on_request(session)。"""
+    holder: dict[str, GoogleSession] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        on_request(holder["s"])
+        return httpx.Response(200, json={"access_token": "ya29." + "1" * 40, "expires_in": 3600})
+
+    clock = [1000.0]
+    s = GoogleSession(VALID_ID, VALID_SECRET, transport=httpx.MockTransport(handler), clock=lambda: clock[0])
+    holder["s"] = s
+    s._access_token = ACCESS
+    s._refresh_token = "1//" + "0" * 40
+    s._expires_at = 900.0  # 已過期 ⇒ token() 會續期
+    return s
+
+
+@pytest.mark.parametrize("interrupt", ["logout", "reconfigure"])
+def test_refresh_discarded_when_session_changes_midway(interrupt):
+    """續期的 await 期間登出或換設定 ⇒ 新權杖不落地（easy-setup 實作輪紅隊次要）。"""
+    from quiz_server.google_auth import GoogleAuthError
+
+    def on_request(s: GoogleSession) -> None:
+        if interrupt == "logout":
+            s._generation += 1  # 與 logout() 同效果，不在同步 handler 內跑 async
+            s._clear()
+        else:
+            s.reconfigure(OTHER_ID, VALID_SECRET)
+
+    s = _refresh_session(on_request)
+    with pytest.raises(GoogleAuthError):
+        asyncio.run(s.token())
+    assert s.signed_in is False
+
+
+def test_logout_bumps_generation():
+    s = GoogleSession(VALID_ID, VALID_SECRET, transport=httpx.MockTransport(lambda r: httpx.Response(200)))
+    before = s._generation
+    asyncio.run(s.logout())
+    assert s._generation == before + 1

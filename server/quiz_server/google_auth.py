@@ -180,18 +180,24 @@ class GoogleSession:
                 return self._access_token
             self._clear()
             raise GoogleAuthError(EXPIRED)
+        generation = self._generation
         try:
             body = await self._token_request({
                 "client_id": self._client_id, "client_secret": self._client_secret,
                 "refresh_token": self._refresh_token, "grant_type": "refresh_token"})
         except GoogleApiError:
-            self._clear()
+            if generation == self._generation:
+                self._clear()
             raise GoogleAuthError(EXPIRED) from None
+        if generation != self._generation:
+            # 續期等待期間已登出或換了設定：新權杖不得落地（easy-setup 實作輪紅隊）
+            raise GoogleAuthError(NOT_SIGNED_IN)
         self._store(body)
         return self._access_token  # type: ignore[return-value]
 
     async def logout(self) -> None:
         token = self._refresh_token or self._access_token
+        self._generation += 1  # 作廢進行中的換權杖與續期（easy-setup 實作輪紅隊）
         self._clear()
         if not token:
             return
