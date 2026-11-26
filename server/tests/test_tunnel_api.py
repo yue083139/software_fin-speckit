@@ -72,14 +72,25 @@ def test_open_then_close(activity):
 
 
 def test_open_pushes_to_teacher_websocket(activity):
-    with client_for(activity, FakeTunnel()) as c, \
+    # 推播只送「醒來時」的最新 view：start 瞬間完成時 starting 與 on 可能合併成一則（CI 實測）。
+    # 先擋住 start，確定收到 starting 再放行，才驗得到兩段狀態
+    t = FakeTunnel()
+    t.gate.clear()
+    with client_for(activity, t) as c, \
             c.websocket_connect(f"/ws?role=teacher&key={TEACHER_KEY}") as ws:
         assert ws.receive_json()["view"]["tunnel"] == "off"
-        c.post("/api/teacher/tunnel", headers=H)
-        seen = []
-        while not seen or seen[-1] != "on":
-            seen.append(ws.receive_json()["view"]["tunnel"])
-        assert seen[0] == "starting" and seen[-1] == "on"
+        result: list[int] = []
+
+        def post() -> None:
+            result.append(c.post("/api/teacher/tunnel", headers=H).status_code)
+
+        poster = threading.Thread(target=post)
+        poster.start()
+        assert ws.receive_json()["view"]["tunnel"] == "starting"
+        t.gate.set()
+        assert ws.receive_json()["view"]["tunnel"] == "on"
+        poster.join(5)
+        assert result == [200]
 
 
 def test_cloudflared_missing_503(activity):
