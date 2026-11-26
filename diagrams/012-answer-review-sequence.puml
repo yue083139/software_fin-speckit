@@ -1,0 +1,54 @@
+@startuml 012-answer-review-sequence
+title 012 answer-review：時序圖（結束後檢查 → 學生同步 → 匯出）
+
+actor "老師" as T
+participant "web（老師）" as W
+participant "app.py" as App
+participant "Activity" as Act
+participant "ClassicBuzzRule" as Rule
+participant "views" as V
+participant "web（學生）" as S
+participant "google_sheets" as GS
+participant "Google" as G
+
+== 經典搶答 ended：檢查第 n 題 ==
+T -> W : 對候選（第2組）按「答錯」
+W -> App : POST /api/teacher/review {n, "第2組", false}
+App -> Act : review(n, "第2組", False)
+activate Act
+Act -> Act : 鎖內：模式 classic？階段 ended？題號存在？
+Act -> Rule : rank(submissions[n], judgments[n])
+Rule --> Act : 候選＝第2組（correct=None）
+alt 已鎖定（候選 correct=True）
+  Act --> App : PhaseError「本題已鎖定，請先重設本題」
+  App --> W : 409
+else 無候選
+  App --> W : 409「本題沒有可檢查的答案」
+else team ≠ 候選（例：連點第二下）
+  App --> W : 409「這一組不是目前要檢查的答案，請重新整理」
+end
+Act -> Act : judgments[n]["第2組"] = False
+Act -> Act : _bump()
+deactivate Act
+App --> W : {question, team, correct}
+V -> Rule : rank ⇒ 候選＝順位 2（第1組）
+V --> W : 老師 view（board 得主＝第1組）
+V --> S : 學生 view（results 得主＝第1組、第2組 ✗）
+T -> W : 對第1組按「答對」
+W -> App : POST /api/teacher/review {n, "第1組", true}
+App -> Act : review ⇒ 鎖定
+T -> W : （誤按時）「重設本題」
+W -> App : POST /api/teacher/review-reset {n}
+App -> Act : 清空 judgments[n] ⇒ 回到順位 1
+
+== 匯出 ==
+T -> W : 「匯出到 Google 試算表」
+W -> App : POST /api/teacher/export-sheet
+App -> GS : write_answers(copy_id, notes, winning_answers)
+GS -> G : values:batchUpdate（RAW，全部作答格；無得主寫原標籤）
+G --> GS : 200
+App --> W : {url}（「<原標題>_作答情況」）
+T -> W : 「下載 xlsx」
+W -> App : GET /api/teacher/export
+App --> W : <原檔名>_作答情況.xlsx（由原檔重產）
+@enduml

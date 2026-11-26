@@ -1,0 +1,75 @@
+@startuml 012-answer-review-class
+title 012 answer-review：類別圖
+
+class Activity {
+  phase: Phase
+  mode: Mode
+  submissions: dict[int, list[Submission]]
+  judgments: dict[int, dict[str, bool]]  ' 共用；經典只在 ended 寫入
+  --
+  + review(number, team, correct) : None
+  + review_reset(number) : None
+  + review_candidate(number) : Ranked | None
+  - _clear_answers()  ' 重新匯入、重置一併清空
+  - _bump()
+}
+
+interface ScoringRule {
+  + rank(submissions, judgments, attrs) : list[Ranked]
+  + team_scores(teams, ranked) : dict[str, int]
+}
+
+class ClassicBuzzRule {
+  name = "classic"
+  + rank(...)  ' 候選＝依 seq 第一個判定不為 False 者
+}
+
+class Ranked {
+  team: str
+  answers: tuple[str, ...]
+  seq: int
+  rank: int
+  is_winner: bool
+  score: int
+  correct: bool | None
+}
+
+class "results" as Results <<module>> {
+  + build(a, teacher) : list[dict]
+  + team_scores(a) : dict[str, int]
+  + winning_answers(a) : dict[int, tuple[str, ...]]
+}
+
+class "google_sheets" as GS <<module>> {
+  COPY_SUFFIX = "_作答情況"
+  + import_copy(...)
+  + write_answers(session, copy_id, notes, answers)  ' 全部作答格；無得主寫 slot.label
+}
+
+class "app" as App <<module>> {
+  + export_filename(source) : str  ' <stem>_作答情況.xlsx
+  POST /api/teacher/review {question, team, correct}
+  POST /api/teacher/review-reset {question}
+}
+
+class ReviewBody {
+  question: int
+  team: str
+  correct: bool
+}
+
+class ReviewResetBody {
+  question: int
+}
+
+ScoringRule <|.. ClassicBuzzRule
+ClassicBuzzRule ..> Ranked
+Activity --> ScoringRule : rule
+Results ..> Activity
+Results ..> ScoringRule
+App ..> Activity
+App ..> Results
+App ..> GS
+App ..> ReviewBody
+App ..> ReviewResetBody
+@enduml
