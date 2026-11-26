@@ -1,3 +1,4 @@
+import { btn } from "../test-utils";
 import { render, screen } from "@testing-library/react";
 import { TeacherPanel } from "./Teacher";
 import { StudentPanel } from "./Student";
@@ -48,7 +49,7 @@ describe("判定畫面", () => {
 
   it("尚有未判定時揭曉鈕停用，判完才可按", () => {
     const { unmount } = render(<TeacherPanel view={base} act={() => {}} upload={() => {}} />);
-    expect(screen.getByText("揭曉結果")).toBeDisabled();
+    expect(btn("揭曉結果")).toBeDisabled();
     expect(screen.getByText("得分")).toBeInTheDocument();
     unmount();
     const calls: string[] = [];

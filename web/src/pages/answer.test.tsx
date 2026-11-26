@@ -1,3 +1,4 @@
+import { allBtn } from "../test-utils";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { StudentPanel } from "./Student";
 import type { StudentView } from "../types";
@@ -18,7 +19,7 @@ describe("學生作答", () => {
   it("題組要填滿全部子題才可送出，送出帶全部答案", () => {
     const calls: [number, string[]][] = [];
     render(<StudentPanel view={base} onSubmit={async (q, a) => void calls.push([q, a])} />);
-    const buttons = screen.getAllByText("搶答送出");
+    const buttons = allBtn("搶答送出");
     fireEvent.change(screen.getByLabelText("第 1 題 （1）"), { target: { value: "CPU" } });
     expect(buttons[0]).toBeDisabled();
     fireEvent.change(screen.getByLabelText("第 1 題 （2）"), { target: { value: "作業系統" } });

@@ -20,5 +20,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
+    // antd 在 jsdom 首次渲染要 5–11 秒（樣式注入與元件初始化），預設 5 秒會時綠時紅（web-workbench 評審）
+    testTimeout: 30000,
+    hookTimeout: 30000,
   },
 });

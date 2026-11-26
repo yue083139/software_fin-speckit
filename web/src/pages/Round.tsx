@@ -1,3 +1,4 @@
+import { Table } from "antd";
 import { useEffect, useState } from "react";
 import type { LeaderRow, RoundInfo } from "../types";
 
@@ -33,23 +34,17 @@ export function Leaderboard({ rows, team }: { rows: LeaderRow[]; team?: string }
   if (rows.length === 0) return null;
   const withScores = rows.some((r) => r.score !== undefined);
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>名次</th>
-          <th>組別</th>
-          {withScores && <th>累積分數</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.team} className={r.team === team ? "winner" : undefined}>
-            <td>{r.rank}</td>
-            <td>{r.team}</td>
-            {withScores && <td>{r.score}</td>}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <Table<LeaderRow>
+      rowKey="team"
+      size="small"
+      pagination={false}
+      dataSource={rows}
+      rowClassName={(r) => (r.team === team ? "winner" : "")}
+      columns={[
+        { title: "名次", dataIndex: "rank", width: 72 },
+        { title: "組別", dataIndex: "team" },
+        ...(withScores ? [{ title: "累積分數", dataIndex: "score" }] : []),
+      ]}
+    />
   );
 }
