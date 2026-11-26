@@ -1,0 +1,30 @@
+@startuml 011-question-text-component
+title 011 question-text：組件圖
+
+package "web" {
+  [Student.AnswerForm\n子題輸入欄上方顯示敘述\n（該子題敘述非空才顯示）] as AF
+  [Teacher\n題目清單・即時作答表\n題號旁顯示敘述] as TP
+  [Results\n結束後題號旁顯示敘述] as RS
+  [types.ts\nQuestionOutline.prompts?（字串陣列）] as Ty
+}
+
+package "server/quiz_server" {
+  [guided_notes\nQUESTION_ALIASES・_find_header 找題目欄\nSlot.prompt（逐子題、縱向合併只取錨點列）] as Notes
+  [views\nquestion_outline(a, teacher)\n依身分與階段帶 prompts] as Views
+  [activity.Activity\nquestions・phase・mode・rounds] as Act
+  [guided_notes.write_answers\ngoogle_sheets.write_answers\n（不讀 prompt）] as WB
+}
+
+AF --> Ty
+TP --> Ty
+RS --> Ty
+Ty ..> Views : WebSocket view\nquestions[].prompts
+Views --> Act : phase、mode.sequential、rounds
+Act --> Notes : notes.questions[].slots[].prompt
+WB --> Notes : cell・label・placeholder
+note bottom of Views
+  學生預設不帶 prompts（fail-closed）：
+  preparing 不帶；逐題模式只帶已開放題；
+  ended 全帶。老師恆帶。
+end note
+@enduml

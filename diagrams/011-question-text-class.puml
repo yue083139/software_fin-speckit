@@ -1,0 +1,51 @@
+@startuml 011-question-text-class
+title 011 question-text：類別圖
+
+class Slot <<frozen dataclass>> {
+  + sheet : str
+  + cell : str
+  + label : str
+  + placeholder : bool
+  + display : str
+  + reference : str | None
+  + prompt : str = ""  // 新增：該子題所在列的題目欄值
+}
+
+class Question <<frozen dataclass>> {
+  + number : int
+  + slots : tuple[Slot, ...]
+  + is_group : bool
+}
+
+class ParsedNotes <<frozen dataclass>> {
+  + sheet : str
+  + questions : tuple[Question, ...]
+}
+
+class guided_notes <<module>> {
+  + QUESTION_ALIASES = ("題目", "題目敘述", "問題", "題幹", "question")
+  - _find_header(grid, merged) : (header_row, number_col, answer_col, reference_col, question_col | None)
+  - _prompt(grid, merged, row, col) : str  // 縱向合併只取錨點列；1.0 轉為 "1"
+  + parse_grids(grids) : ParsedNotes
+  + write_answers(...)  // 不讀 prompt
+}
+
+class views <<module>> {
+  + question_outline(a, teacher: bool) : list[dict]
+  + teacher_view(a) : dict  // questions[].prompts 恆帶
+  + student_view(a, team) : dict  // 依 R2 帶或不帶
+}
+
+class Activity {
+  + phase : Phase
+  + mode : Mode  // mode.sequential
+  + rounds : dict[int, Round]  // 已開放過的題號
+  + questions : tuple[Question, ...]
+}
+
+ParsedNotes "1" *-- "many" Question
+Question "1" *-- "1..*" Slot
+guided_notes ..> ParsedNotes : 產生
+views ..> Activity : 讀
+Activity o-- ParsedNotes : notes
+@enduml
