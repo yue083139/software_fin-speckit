@@ -12,7 +12,7 @@
 
 ## 評審紀錄
 
-提案輪：紅隊 0B/2M/2m、架構 0B/0M/5m，皆 0 阻斷，藥方併入 v1.1。實作輪：**待實作輪評審**。
+提案輪：紅隊 0B/2M/2m、架構 0B/0M/5m，皆 0 阻斷，藥方併入 v1.1。實作輪：紅隊 CLEARED（1 次要）、架構 CLEARED（2 次要），兩組程式碼逐字相同，紀錄見 OpenSpec 組 `openspec/changes/question-text/verification.md`；人工驗證待負責人整合後測試。
 
 ## 人工驗證（需求 P-05）
 
