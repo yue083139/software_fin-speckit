@@ -126,7 +126,7 @@
 | A2 | `guided-notes-import` | ✅ | 2026-11-19 以 `guided-notes-sheets-sync` 重驗第 6 步（Google 登入→從試算表匯入→建立副本）✅。 |
 | A3 | `buzz-answering` | ✅ | |
 | A4 | `results-view` | ✅ | |
-| A5 | `guided-notes-export` | ✅ | 2026-11-19 以 `guided-notes-sheets-sync` 重驗第 16～18 步 ✅：匯出到 Google 試算表副本，題組答案在標籤右邊（H 欄）、G 欄標籤不變、沒人搶的題空白、原試算表未變；下載 xlsx 備援答案位置相同；上傳 xlsx 來源時提示「題目不是從 Google 試算表匯入，請改用下載 xlsx」，備援檔題組答案在 H 欄。原 G／H 欄觀察已由本卡解決。第 16 步逐題紀錄待補（與當時 A3 劇本不一致，見本卡 `verification.md`）。 |
+| A5 | `guided-notes-export` | ✅ | 2026-11-19 以 `guided-notes-sheets-sync` 重驗第 16～18 步 ✅：匯出到 Google 試算表副本，題組答案在標籤右邊（H 欄）、G 欄標籤不變、沒人搶的題空白、原試算表未變；下載 xlsx 備援答案位置相同；上傳 xlsx 來源時提示「題目不是從 Google 試算表匯入，請改用下載 xlsx」，備援檔題組答案在 H 欄。原 G／H 欄觀察已由本卡解決。2026-11-23 依修正後 A3 重跑第 16 步 ✅：副本第 1 題空白、第 2 題第2組（題組答案在 H 欄）、第 3 題「甲」、第 4 題第3組，原試算表未變。 |
 | B | `game-mode-framework` | ✅ | |
 | C | `question-settings` | ✅ | |
 | D | `mode-timed-scoring` | ✅ | |
