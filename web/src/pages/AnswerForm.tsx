@@ -2,6 +2,8 @@ import { PromptText } from "./Prompts";
 import { useEffect, useRef, useState } from "react";
 import type { Draft as DraftRow, QuestionOutline } from "../types";
 import { DoubleTag } from "./ImportPanel";
+import { Alert, Input } from "antd";
+import { Btn, Section } from "../ui";
 
 export type Submit = (question: number, answers: string[]) => Promise<unknown>;
 export type Draft = (question: number, answers: string[]) => void;
@@ -85,22 +87,25 @@ function QuestionCard({
   };
   const showDraft = onDraft && teamDraft && teamDraft.some((v) => v !== "") && teamDraft.join("\u0000") !== values.join("\u0000");
   return (
-    <section className="card">
+    <Section>
       <h3>
         第 {question.number} 題{question.labels.length > 1 ? "（題組）" : ""}
         <DoubleTag multiplier={question.multiplier} />
       </h3>
       {submitted ? (
-        <p className="ok">
-          已送出：{submitted.map((a, i) => `${question.labels[i] ?? ""}${a}`).join(" ／ ")}
-        </p>
+        <Alert
+          type="success"
+          showIcon
+          message={<span className="ok">已送出：{submitted.map((a, i) => `${question.labels[i] ?? ""}${a}`).join(" ／ ")}</span>}
+        />
       ) : (
-        <>
+        <div className="stack">
           {question.labels.map((label, i) => (
-            <label key={i}>
+            <label key={i} className="qz-answer-row">
               <PromptText text={question.prompts?.[i]} />
-              {label || "答案"}
-              <input
+              <span className="qz-answer-label">{label || "答案"}</span>
+              <Input
+                size="large"
                 aria-label={`第 ${question.number} 題 ${label || "答案"}`}
                 value={values[i]}
                 maxLength={200}
@@ -109,19 +114,19 @@ function QuestionCard({
             </label>
           ))}
           {showDraft && (
-            <p className="muted">
+            <p className="muted" style={{ margin: 0 }}>
               組內草稿：{teamDraft.map((a, i) => `${question.labels[i] ?? ""}${a}`).join(" ／ ")}{" "}
-              <button className="small" onClick={() => setValues([...teamDraft])}>
+              <Btn size="small" onClick={() => setValues([...teamDraft])}>
                 套用
-              </button>
+              </Btn>
             </p>
           )}
-          <button disabled={!ready || busy} onClick={send}>
+          <Btn type="primary" size="large" block disabled={!ready || busy} loading={busy} onClick={send}>
             搶答送出
-          </button>
-          {error && <p className="error">{error}</p>}
-        </>
+          </Btn>
+          {error && <Alert type="error" showIcon message={<span className="error">{error}</span>} />}
+        </div>
       )}
-    </section>
+    </Section>
   );
 }

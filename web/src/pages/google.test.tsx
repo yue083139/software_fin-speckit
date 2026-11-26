@@ -1,3 +1,4 @@
+import { btn } from "../test-utils";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { GooglePanel } from "./GooglePanel";
 import { TeacherPanel } from "./Teacher";
@@ -44,7 +45,7 @@ describe("老師頁匯入與匯出", () => {
     fireEvent.change(screen.getByLabelText("Google 試算表連結"), {
       target: { value: "https://docs.google.com/spreadsheets/d/x/edit" },
     });
-    expect(screen.getByText("從 Google 試算表匯入")).toBeDisabled();
+    expect(btn("從 Google 試算表匯入")).toBeDisabled();
     expect(screen.getByText("先以 Google 帳號登入才能從試算表匯入。")).toBeInTheDocument();
     expect(screen.getByText("上傳 xlsx")).toBeInTheDocument();
   });
@@ -76,6 +77,6 @@ describe("老師頁匯入與匯出", () => {
       "href",
       "https://docs.google.com/spreadsheets/d/copy/edit",
     );
-    expect(screen.getByText("下載 xlsx（備援）")).toBeEnabled();
+    expect(btn("下載 xlsx（備援）")).toBeEnabled();
   });
 });

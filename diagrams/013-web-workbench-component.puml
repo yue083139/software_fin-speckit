@@ -1,0 +1,41 @@
+@startuml 013-web-workbench-component
+title 013 web-workbench：組件圖（前端改用 antd 工作檯版型；伺服器與契約不變）
+
+package "web/src（視覺單一出處）" {
+  component "theme.ts\npalette・quizTheme・cssVars" as Theme
+  component "styles.css\n背景光暈・玻璃頂欄與側欄・內容卡" as Css
+  component "main.tsx\nConfigProvider（zh_TW、quizTheme）\nReact 19 相容補丁" as Main
+  component "ui.tsx\nBtn・PhaseTag・Section・Backdrop・GlassHeader" as UI
+  component "Shell.tsx\n背景光暈＋內容層" as Shell
+}
+
+package "web/src/pages" {
+  component "Teacher\n玻璃頂欄＋左側導覽 Menu＋內容卡\nStudentLink（QRCode）" as Teacher
+  component "Student・AnswerForm\n置中窄版卡片\n題目敘述在輸入欄上方" as Student
+  component "Home\n選組大按鈕格・老師金鑰遮罩欄" as Home
+  component "Results・Round\nantd Table（作答表、名次表）" as Results
+  component "ImportPanel・GooglePanel" as Panels
+}
+
+package "antd 5.29.3" {
+  component "Layout元件：Menu・Card・Table\nButton・Input・Checkbox・Radio\nUpload・Alert・Tag・QRCode" as Antd
+}
+
+component "server（不變）\nWebSocket view・REST" as Server
+
+Main --> Theme
+Css ..> Theme : 讀 --qz-* 變量
+Teacher --> UI
+Student --> UI
+Home --> UI
+Results --> UI
+Panels --> UI
+Teacher --> Shell
+Student --> Shell
+Home --> Shell
+UI --> Antd
+Teacher --> Antd
+Results --> Antd
+Teacher ..> Server : 老師 view（含可選 student_url）
+Student ..> Server : 學生 view（不變）
+@enduml

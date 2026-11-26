@@ -1,4 +1,6 @@
+import { Tag } from "antd";
 import type { GoogleStatus } from "../api";
+import { Btn, Section } from "../ui";
 
 // 老師 Google 帳號登入（guided-notes-sheets-sync D1）：授權頁在新分頁開，登入完成後本頁輪詢狀態
 export function GooglePanel({
@@ -13,8 +15,11 @@ export function GooglePanel({
   onLogout: () => void;
 }) {
   return (
-    <section className="card">
-      <h2>Google 帳號</h2>
+    <Section
+      id="google"
+      title="Google 帳號"
+      extra={status?.signed_in ? <Tag color="success" className="qz-pill">已連線</Tag> : undefined}
+    >
       {status === null ? (
         <p className="muted">讀取登入狀態中…</p>
       ) : !status.configured ? (
@@ -27,14 +32,16 @@ export function GooglePanel({
           <span>
             已登入：<strong>{status.email ?? "Google 帳號"}</strong>
           </span>
-          <button onClick={onLogout}>登出 Google</button>
+          <Btn onClick={onLogout}>登出 Google</Btn>
         </div>
       ) : (
         <div className="row">
-          <button onClick={onLogin}>以 Google 帳號登入</button>
+          <Btn type="primary" onClick={onLogin}>
+            以 Google 帳號登入
+          </Btn>
           {waiting && <span className="muted">請在新分頁完成登入，完成後此處會自動更新。</span>}
         </div>
       )}
-    </section>
+    </Section>
   );
 }

@@ -1,3 +1,4 @@
+import { btn } from "../test-utils";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { TeamPicker } from "./Home";
@@ -43,15 +44,15 @@ describe("組隊：首頁", () => {
     const picks: [string, string][] = [];
     render(<TeamPicker teams={["第1組", "第2組"]} joined={["第1組"]} teamPlay onPick={(t, c) => picks.push([t, c])} />);
     fireEvent.change(screen.getByLabelText("邀請碼"), { target: { value: "abc234" } });
-    const btn = screen.getByText(/第1組/);
-    expect(btn).toBeEnabled();
-    btn.click();
+    const button = btn(/第1組/);
+    expect(button).toBeEnabled();
+    button.click();
     expect(picks).toEqual([["第1組", "abc234"]]);
   });
 
   it("非組隊時已加入的組別停用、沒有邀請碼欄", () => {
     render(<TeamPicker teams={["第1組"]} joined={["第1組"]} teamPlay={false} onPick={() => {}} />);
-    expect(screen.getByText(/第1組/)).toBeDisabled();
+    expect(btn(/第1組/)).toBeDisabled();
     expect(screen.queryByLabelText("邀請碼")).toBeNull();
   });
 });

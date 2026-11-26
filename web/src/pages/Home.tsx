@@ -1,3 +1,6 @@
+import { Alert, Input } from "antd";
+import { Shell } from "../Shell";
+import { Btn, GlassHeader, Section } from "../ui";
 import { useEffect, useState } from "react";
 import { joinTeam, publicInfo, saveToken } from "../api";
 
@@ -18,17 +21,17 @@ export function TeamPicker({
     <>
       <p>{teamPlay ? "選擇你的組別（組隊：同組可多台裝置，加入已有組員的組別要輸入邀請碼）：" : "選擇你的組別（每組一台裝置）："}</p>
       {teamPlay && (
-        <label>
-          邀請碼（向組員或老師索取）
-          <input value={code} onChange={(e) => setCode(e.target.value)} aria-label="邀請碼" maxLength={12} />
+        <label className="field" style={{ marginBottom: 12 }}>
+          <span className="field-label">邀請碼（向組員或老師索取）</span>
+          <Input size="large" value={code} onChange={(e) => setCode(e.target.value)} aria-label="邀請碼" maxLength={12} />
         </label>
       )}
       <div className="team-grid">
         {teams.map((t) => (
-          <button key={t} disabled={!teamPlay && joined.includes(t)} onClick={() => onPick(t, code)}>
+          <Btn key={t} disabled={!teamPlay && joined.includes(t)} onClick={() => onPick(t, code)}>
             {t}
             {joined.includes(t) && "（已加入）"}
-          </button>
+          </Btn>
         ))}
       </div>
     </>
@@ -61,23 +64,25 @@ export default function Home() {
       .catch((e: Error) => setError(e.message));
   };
   return (
-    <main className="page">
-      <h1>課堂搶答</h1>
-      {error && <p className="error">{error}</p>}
-      <section className="card">
-        <h2>我是學生</h2>
-        <TeamPicker teams={teams} joined={joined} teamPlay={teamPlay} onPick={pick} />
-      </section>
-      <section className="card">
-        <h2>我是老師</h2>
-        <label>
-          老師金鑰（啟動伺服器時印在終端機）
-          <input value={key} onChange={(e) => setKey(e.target.value)} aria-label="老師金鑰" />
-        </label>
-        <a className="button" href={`#/teacher?key=${encodeURIComponent(key)}`}>
-          進入老師頁
-        </a>
-      </section>
-    </main>
+    <Shell>
+      <GlassHeader title="課堂搶答" />
+      <main className="qz-narrow">
+        {error && <Alert type="error" showIcon message={error} />}
+        <Section title="我是學生">
+          <TeamPicker teams={teams} joined={joined} teamPlay={teamPlay} onPick={pick} />
+        </Section>
+        <Section title="我是老師">
+          <div className="stack">
+            <label className="field">
+              <span className="field-label">老師金鑰（啟動伺服器時印在終端機）</span>
+              <Input.Password value={key} onChange={(e) => setKey(e.target.value)} aria-label="老師金鑰" />
+            </label>
+            <Btn type="primary" href={`#/teacher?key=${encodeURIComponent(key)}`}>
+              進入老師頁
+            </Btn>
+          </div>
+        </Section>
+      </main>
+    </Shell>
   );
 }

@@ -1,3 +1,4 @@
+import { btn } from "../test-utils";
 import { render, screen } from "@testing-library/react";
 import { Board, StudentResults } from "./Results";
 import { TeacherPanel } from "./Teacher";
@@ -54,7 +55,7 @@ describe("匯出", () => {
 
   it("只有結束後可匯出", () => {
     const { unmount } = render(<TeacherPanel view={{ ...view, phase: "answering" }} act={() => {}} upload={() => {}} />);
-    expect(screen.getByText("下載 xlsx（備援）")).toBeDisabled();
+    expect(btn("下載 xlsx（備援）")).toBeDisabled();
     unmount();
     let clicked = 0;
     render(

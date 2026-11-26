@@ -1,3 +1,6 @@
+import { Alert, Tag } from "antd";
+import { Shell } from "../Shell";
+import { GlassHeader, PhaseTag, Section } from "../ui";
 import { studentDraft, studentSubmit } from "../api";
 import { useLiveView } from "../live";
 import { PHASE_LABEL, type StudentView } from "../types";
@@ -18,21 +21,29 @@ export function StudentPanel({
 }) {
   if (!view.team_valid)
     return (
-      <p className="error">
-        尚未加入組別或組別已被老師釋放，請<a href="#/">回首頁</a>重新選擇。
-      </p>
+      <Alert
+        type="warning"
+        showIcon
+        message={
+          <span className="error">
+            尚未加入組別或組別已被老師釋放，請<a href="#/">回首頁</a>重新選擇。
+          </span>
+        }
+      />
     );
   const questions = view.questions ?? [];
   const mine = view.my_submissions ?? [];
   return (
     <>
-      <section className="card">
-        <p>
-          組別：<strong>{view.team}</strong>
-        </p>
-        <p className="phase">
-          目前階段：<strong>{PHASE_LABEL[view.phase]}</strong>
-        </p>
+      <Section>
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <span>
+            組別：<strong>{view.team}</strong>
+          </span>
+          <span className="phase">
+            目前階段：<strong>{PHASE_LABEL[view.phase]}</strong>
+          </span>
+        </div>
         {view.team_play && (
           <p className="muted">
             組隊：組內任一人送出即代表全組，每題只能送出一次。
@@ -58,7 +69,7 @@ export function StudentPanel({
         )}
         {view.phase === "answering" && <p>搶答進行中：每題每組只能送出一次，送出後不能修改。</p>}
         {view.phase === "judging" && <p>老師判定中，揭曉前看不到其他組的答案。</p>}
-      </section>
+      </Section>
       {view.phase === "answering" && view.mode?.sequential && (
         <TimedPanel view={view} onSubmit={onSubmit} onDraft={onDraft} />
       )}
@@ -92,10 +103,10 @@ export function TimedPanel({ view, onSubmit, onDraft }: { view: StudentView; onS
   const last = view.revealed?.[view.revealed.length - 1];
   return (
     <>
-      <section className="card">
+      <Section>
         <RoundStatus round={round} />
         {!round && <p>等待老師開放下一題…</p>}
-      </section>
+      </Section>
       {round?.state === "open" && (
         <AnswerForm
           questions={current}
@@ -106,14 +117,14 @@ export function TimedPanel({ view, onSubmit, onDraft }: { view: StudentView; onS
         />
       )}
       {last && (
-        <section className="card">
-          <h2>第 {last.question} 題揭曉</h2>
+        <Section>
+          <h3>第 {last.question} 題揭曉</h3>
           <p>
             {!last.submitted ? "本組未作答" : last.correct ? "本組答對" : "本組答錯"}，+{last.score} 分；本組累積{" "}
             <strong>{view.my_total ?? 0}</strong> 分
           </p>
           <Leaderboard rows={view.leaderboard ?? []} team={view.team ?? undefined} />
-        </section>
+        </Section>
       )}
     </>
   );
@@ -126,10 +137,22 @@ export default function Student({ token }: { token: string }) {
   const draft: Draft = (question, answers) => {
     studentDraft(token, question, answers).catch(() => {});
   };
+  const sv = view?.role === "student" ? view : null;
   return (
-    <main className="page">
-      <h1>學生頁</h1>
-      {view?.role === "student" ? <StudentPanel view={view} onSubmit={submit} onDraft={draft} /> : <p>連線中…</p>}
-    </main>
+    <Shell>
+      <GlassHeader title="課堂搶答">
+        {sv?.team && <Tag className="qz-pill">{sv.team}</Tag>}
+        {sv && <PhaseTag phase={sv.phase} />}
+      </GlassHeader>
+      <main className="qz-narrow">
+        {sv ? (
+          <StudentPanel view={sv} onSubmit={submit} onDraft={draft} />
+        ) : (
+          <Section>
+            <p>連線中…</p>
+          </Section>
+        )}
+      </main>
+    </Shell>
   );
 }
