@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { NotLocalNotice, StudentLink } from "./Teacher";
+import { BadKeyNotice, NotLocalNotice, StudentLink } from "./Teacher";
 
 describe("學生連結（student-qr D3）", () => {
   it("有 student_url 時 QR 值與顯示網址都等於它，不顯示本機提示", () => {
@@ -24,5 +24,13 @@ describe("老師頁不在本機（student-qr D2）", () => {
     render(<NotLocalNotice />);
     expect(screen.getByText("老師頁只能在本機開啟")).toBeInTheDocument();
     expect(screen.getByText(/http:\/\/127\.0\.0\.1:8000/)).toBeInTheDocument();
+  });
+});
+
+describe("老師金鑰錯誤提示（teacher-key-error）", () => {
+  it("4401 顯示金鑰錯誤與重開方式", () => {
+    render(<BadKeyNotice />);
+    expect(screen.getByText("老師金鑰錯誤")).toBeInTheDocument();
+    expect(screen.getByText(/終端機印出的完整老師頁網址/)).toBeInTheDocument();
   });
 });

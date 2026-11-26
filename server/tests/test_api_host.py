@@ -57,3 +57,34 @@ def test_student_url_only_in_teacher_view(activity, fixture_bytes):
     assert teacher_view(activity)["student_url"] == activity.public_url
     assert "student_url" not in student_view(activity, "第1組")
     assert "trycloudflare" not in str(student_view(activity, "第1組"))
+
+
+# teacher-key-error：金鑰錯誤先完成交握、不送任何訊息再以 4401 關閉，瀏覽器才拿得到 4401
+
+
+@pytest.mark.parametrize("query", ["/ws?role=teacher", "/ws?role=teacher&key=wrong"])
+def test_teacher_ws_bad_key_accepts_then_closes_4401(client, query):
+    with client.websocket_connect(query) as ws:  # 交握前就關的話，這裡會直接拋例外
+        with pytest.raises(WebSocketDisconnect) as exc:
+            ws.receive_text()  # 第一則就是關閉：關閉前沒有任何 view
+    assert exc.value.code == 4401
+
+
+def test_public_host_takes_precedence_over_bad_key(client):
+    with client.websocket_connect("/ws?role=teacher&key=wrong", headers=PUBLIC) as ws:
+        with pytest.raises(WebSocketDisconnect) as exc:
+            ws.receive_text()
+    assert exc.value.code == 4403
+
+
+def test_good_connection_unaffected_after_bad_key(client, teacher_headers, fixture_bytes):
+    with client.websocket_connect("/ws?role=teacher&key=wrong") as bad:
+        with pytest.raises(WebSocketDisconnect):
+            bad.receive_text()
+    # 錯金鑰連線關閉後，正常活動與推播不受影響
+    with client.websocket_connect(f"/ws?role=teacher&key={TEACHER_KEY}") as ws:
+        assert ws.receive_json()["view"]["role"] == "teacher"
+        upload = {"file": ("group.xlsx", fixture_bytes("group.xlsx"), "application/octet-stream")}
+        r = client.post("/api/teacher/import", headers=teacher_headers, files=upload)
+        assert r.status_code == 200
+        assert ws.receive_json()["view"]["source"] == "group.xlsx"

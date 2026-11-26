@@ -58,7 +58,7 @@
 
 ## WebSocket `/ws`
 
-- 老師金鑰錯誤 ⇒ 以代碼 `4401` 關閉；`role=teacher` 但 Host 不是本機或帶 Cloudflare 轉送標頭 ⇒ 先於金鑰檢查以 `4403` 關閉（student-qr）；`role` 不是 `teacher`／`student` ⇒ `1008` 關閉。
+- 老師金鑰錯誤 ⇒ 先完成交握、不送任何訊息，再以代碼 `4401` 關閉（teacher-key-error：交握前就拒絕時瀏覽器只拿得到 `1006`，無法顯示金鑰錯誤；`4403` 同此做法）；`role=teacher` 但 Host 不是本機或帶 Cloudflare 轉送標頭 ⇒ 先於金鑰檢查以 `4403` 關閉（student-qr）；`role` 不是 `teacher`／`student` ⇒ `1008` 關閉。
 - 連線後立即收到一則完整 view；之後**只在本連線自己的 view 內容改變時**才收到新訊息。
 - 訊息：`{"type": "state", "seq": <本連線自己的遞增序號，從 1 起>, "view": <view>}`。不含全域版本號。
 - 客戶端送來的文字一律忽略（僅供保持連線）。

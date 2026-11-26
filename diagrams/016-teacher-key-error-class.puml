@@ -1,0 +1,20 @@
+@startuml 016-teacher-key-error-class
+title 016 teacher-key-error：類別圖
+
+class "app（create_app）" as App {
+  +WS_UNAUTHORIZED = 4401
+  +WS_NOT_LOCAL = 4403
+  +ws(socket, role, key, token)
+}
+class "live" as Live {
+  +NO_RECONNECT : 4401 與 4403
+  +shouldReconnect(code) : bool
+  +useLiveView(query) : view 與 closedCode
+}
+class "Teacher" as Teacher {
+  +BadKeyNotice()
+  +NotLocalNotice()
+}
+Teacher ..> Live : 讀 closedCode
+Live ..> App : 連線並接收關閉碼
+@enduml

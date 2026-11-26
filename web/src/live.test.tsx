@@ -39,6 +39,14 @@ describe("useLiveView 重連（student-qr D2）", () => {
     expect(result.current.closedCode).toBe(4403);
   });
 
+  it("收到 4401（金鑰錯誤）後不再開新連線，且回報關閉碼（teacher-key-error）", () => {
+    const { result } = renderHook(() => useLiveView("role=teacher&key=wrong"));
+    act(() => FakeSocket.all[0].onclose?.({ code: 4401 }));
+    act(() => vi.advanceTimersByTime(5000));
+    expect(FakeSocket.all).toHaveLength(1);
+    expect(result.current.closedCode).toBe(4401);
+  });
+
   it("一般斷線（1006）1 秒後重連", () => {
     renderHook(() => useLiveView("role=student&token=t"));
     act(() => FakeSocket.all[0].onclose?.({ code: 1006 }));
