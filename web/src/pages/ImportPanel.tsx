@@ -1,19 +1,24 @@
 import { useState } from "react";
 import type { QuestionOutline, TeacherView } from "../types";
 
-// 老師匯入 Guided Notes：上傳 xlsx 或貼 Google 試算表連結（guided-notes-import）
+// 老師匯入 Guided Notes：已登入 Google 時直接讀雲端試算表（匯入時建立副本），上傳 xlsx 為備援
+// （guided-notes-import、guided-notes-sheets-sync D4）
 export function ImportPanel({
   view,
   onUpload,
   onUrl,
   onSettings,
   onTimeLimit,
+  googleReady = false,
+  sheetUrl,
 }: {
   view: TeacherView;
   onUpload: (file: File) => void;
   onUrl: (url: string) => void;
   onSettings?: (question: number, multiplier: number) => void;
   onTimeLimit?: (question: number, seconds: number) => void;
+  googleReady?: boolean;
+  sheetUrl?: string | null;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
@@ -24,6 +29,32 @@ export function ImportPanel({
       {locked && <p className="muted">只能在準備階段匯入。</p>}
       <div className="row">
         <input
+          style={{ flex: 1, minWidth: 260 }}
+          placeholder="https://docs.google.com/spreadsheets/d/…"
+          aria-label="Google 試算表連結"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+        <button disabled={locked || !googleReady || !url.trim()} onClick={() => onUrl(url.trim())}>
+          從 Google 試算表匯入
+        </button>
+      </div>
+      <p className="muted">
+        {googleReady
+          ? "匯入時會在你的雲端硬碟複製一份「<原標題>-搶答結果」，結束後答案寫進這份副本，原試算表不動；搶答結束前請勿改副本版面。"
+          : "先以 Google 帳號登入才能從試算表匯入。"}
+      </p>
+      {sheetUrl && (
+        <p>
+          副本：
+          <a href={sheetUrl} target="_blank" rel="noreferrer">
+            開啟 Google 試算表副本
+          </a>
+        </p>
+      )}
+      <div className="row">
+        <span className="muted">備援：</span>
+        <input
           type="file"
           accept=".xlsx"
           aria-label="Guided Notes 檔案"
@@ -31,18 +62,6 @@ export function ImportPanel({
         />
         <button disabled={locked || !file} onClick={() => file && onUpload(file)}>
           上傳 xlsx
-        </button>
-      </div>
-      <div className="row">
-        <input
-          style={{ flex: 1, minWidth: 260 }}
-          placeholder="https://docs.google.com/spreadsheets/d/…（知道連結者可檢視）"
-          aria-label="Google 試算表連結"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
-        <button disabled={locked || !url.trim()} onClick={() => onUrl(url.trim())}>
-          從連結匯入
         </button>
       </div>
       {view.source && (

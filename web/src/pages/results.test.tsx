@@ -54,13 +54,13 @@ describe("匯出", () => {
 
   it("只有結束後可匯出", () => {
     const { unmount } = render(<TeacherPanel view={{ ...view, phase: "answering" }} act={() => {}} upload={() => {}} />);
-    expect(screen.getByText("匯出 Guided Notes")).toBeDisabled();
+    expect(screen.getByText("下載 xlsx（備援）")).toBeDisabled();
     unmount();
     let clicked = 0;
     render(
       <TeacherPanel view={{ ...view, phase: "ended" }} act={() => {}} upload={() => {}} download={() => clicked++} />,
     );
-    screen.getByText("匯出 Guided Notes").click();
+    screen.getByText("下載 xlsx（備援）").click();
     expect(clicked).toBe(1);
   });
 });

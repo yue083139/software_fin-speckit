@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { teacherDownload, teacherPost, teacherUpload } from "../api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { type GoogleStatus, googleStatus, teacherDownload, teacherPost, teacherUpload } from "../api";
+import { GooglePanel } from "./GooglePanel";
 import { ImportPanel } from "./ImportPanel";
 import { Board, type Judge } from "./Results";
 import { Leaderboard, RoundStatus } from "./Round";
@@ -8,7 +9,17 @@ import { PHASE_LABEL, type TeacherView } from "../types";
 
 type Act = (path: string, body?: unknown) => void;
 
-export function PhaseControls({ view, act, download }: { view: TeacherView; act: Act; download: () => void }) {
+export function PhaseControls({
+  view,
+  act,
+  download,
+  exportSheet,
+}: {
+  view: TeacherView;
+  act: Act;
+  download: () => void;
+  exportSheet?: () => void;
+}) {
   return (
     <section className="card">
       <p className="phase">
@@ -56,8 +67,13 @@ export function PhaseControls({ view, act, download }: { view: TeacherView; act:
         <button disabled={view.phase !== "ended"} onClick={() => act("reset")}>
           重置活動
         </button>
+        {exportSheet && (
+          <button disabled={view.phase !== "ended" || !view.source} onClick={exportSheet}>
+            匯出到 Google 試算表
+          </button>
+        )}
         <button disabled={view.phase !== "ended" || !view.source} onClick={download}>
-          匯出 Guided Notes
+          下載 xlsx（備援）
         </button>
       </div>
       {view.mode?.sequential && view.phase === "answering" && (
@@ -78,7 +94,8 @@ export function PhaseControls({ view, act, download }: { view: TeacherView; act:
       )}
       {view.phase === "ended" && (
         <p className="muted">
-          匯出的 xlsx 已把每題搶答成功的答案寫入原填空格；放回 Google 試算表：檔案 → 匯入 → 上傳 → 取代試算表。
+          「匯出到 Google 試算表」把每題搶答成功的答案寫進匯入時建立的副本（原試算表不動）；下載的 xlsx
+          為備援，從 Google 匯入時只含值與合併、不含格式。
         </p>
       )}
     </section>
@@ -186,16 +203,22 @@ export function TeacherPanel({
   act,
   upload,
   download = () => {},
+  exportSheet,
+  google,
+  sheetUrl,
 }: {
   view: TeacherView;
   act: Act;
   upload: Upload;
   download?: () => void;
+  exportSheet?: () => void;
+  google?: { status: GoogleStatus | null; waiting: boolean; login: () => void; logout: () => void };
+  sheetUrl?: string | null;
 }) {
   const judge: Judge = (question, team, correct) => act("judge", { question, team, correct });
   return (
     <>
-      <PhaseControls view={view} act={act} download={download} />
+      <PhaseControls view={view} act={act} download={download} exportSheet={exportSheet} />
       <ModeSelector view={view} act={act} />
       <section className="card">
         <h2>作答狀況與結果</h2>
@@ -209,8 +232,13 @@ export function TeacherPanel({
           judgeQuestion={view.mode?.sequential ? view.round?.question : undefined}
         />
       </section>
+      {google && (
+        <GooglePanel status={google.status} waiting={google.waiting} onLogin={google.login} onLogout={google.logout} />
+      )}
       <ImportPanel
         view={view}
+        googleReady={!!google?.status?.signed_in}
+        sheetUrl={sheetUrl}
         onUpload={upload}
         onUrl={(url) => act("import-url", { url })}
         onSettings={(question, multiplier) => act("question-settings", { question, multiplier })}
@@ -238,6 +266,78 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     setError("");
     teacherDownload(teacherKey).catch((e: Error) => setError(e.message));
   };
+  const [gStatus, setGStatus] = useState<GoogleStatus | null>(null);
+  const [waiting, setWaiting] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null);
+  const pollUntil = useRef(0);
+  const refreshGoogle = useCallback(
+    () =>
+      googleStatus(teacherKey)
+        .then((s) => {
+          setGStatus(s);
+          if (s.signed_in) setWaiting(false);
+        })
+        .catch(() => undefined),
+    [teacherKey],
+  );
+  useEffect(() => {
+    void refreshGoogle();
+  }, [refreshGoogle]);
+  useEffect(() => {
+    if (!waiting) return;
+    // 授權在新分頁完成；這裡每 2 秒查一次，最多等 10 分鐘（state 有效期）
+    const timer = window.setInterval(() => {
+      if (Date.now() > pollUntil.current) setWaiting(false);
+      else void refreshGoogle();
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [waiting, refreshGoogle]);
+  const google = {
+    status: gStatus,
+    waiting,
+    login: () => {
+      setError("");
+      // 先同步開分頁（避免被擋彈出視窗），拿到授權網址後再導過去
+      const tab = window.open("", "_blank");
+      teacherPost("google/login", teacherKey)
+        .then((r) => {
+          const url = (r as { url: string }).url;
+          if (tab) tab.location.href = url;
+          else window.location.href = url;
+          pollUntil.current = Date.now() + 10 * 60 * 1000;
+          setWaiting(true);
+        })
+        .catch((e: Error) => {
+          tab?.close();
+          setError(e.message);
+        });
+    },
+    logout: () => {
+      setError("");
+      teacherPost("google/logout", teacherKey)
+        .then(() => refreshGoogle())
+        .catch((e: Error) => setError(e.message));
+    },
+  };
+  const actWithGoogle: Act = (path, body) => {
+    if (path !== "import-url") return act(path, body);
+    setError("");
+    teacherPost(path, teacherKey, body)
+      .then((r) => setSheetUrl((r as { sheet_url?: string }).sheet_url ?? null))
+      .catch((e: Error) => {
+        setError(e.message);
+        void refreshGoogle();
+      });
+  };
+  const exportSheet = () => {
+    setError("");
+    teacherPost("export-sheet", teacherKey)
+      .then((r) => setSheetUrl((r as { url: string }).url))
+      .catch((e: Error) => {
+        setError(e.message);
+        void refreshGoogle();
+      });
+  };
   if (closedCode === 4401)
     return (
       <main className="page">
@@ -248,7 +348,19 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     <main className="page">
       <h1>老師頁</h1>
       {error && <p className="error">{error}</p>}
-      {view?.role === "teacher" ? <TeacherPanel view={view} act={act} upload={upload} download={download} /> : <p>連線中…</p>}
+      {view?.role === "teacher" ? (
+        <TeacherPanel
+          view={view}
+          act={actWithGoogle}
+          upload={upload}
+          download={download}
+          exportSheet={exportSheet}
+          google={google}
+          sheetUrl={sheetUrl}
+        />
+      ) : (
+        <p>連線中…</p>
+      )}
     </main>
   );
 }

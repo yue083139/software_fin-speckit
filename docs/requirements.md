@@ -35,6 +35,8 @@
 ## 4. Guided Notes 格式
 
 - 以 Google Sheets 形式儲存；官方提供「單題」與「題組＋單題」兩份範本，副本在 `tests/fixtures/guided-notes/`（`single.xlsx`、`group.xlsx`，以 Google Sheets「下載為 xlsx」取得）。
+- **課程補充說明（2026-11-17 公告）**：「以 Google Sheets 的形式儲存」指系統需**直接串接自己雲端線上的 Google Sheets 進行讀寫**，而非下載成 .xlsx 檔在本地端離線處理。
+- **負責人解讀（2026-11-17 裁，卡 `guided-notes-sheets-sync`）**：老師以 Google 帳號 OAuth 登入；匯入時先複製一份「<原標題>-搶答結果」副本，解析與寫回都對該副本，原試算表不動——副本為原 Guided Notes 的完整複本，寫入副本即滿足 R-05「匯出至原 Guided Notes」；上傳／下載 xlsx 保留為備援。
 - 可自行修改範本以方便匯入／匯出（如在填空格加佔位符、題目敘述加記號）；自製測試用 Guided Notes 一律為**簡答題**。
 - **禁止靜態匯入／匯出**（如「第一題答案寫到 C19」）：助教會用另一份 Guided Notes 測試。
 

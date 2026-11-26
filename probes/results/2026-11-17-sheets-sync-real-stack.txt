@@ -1,0 +1,26 @@
+# 2026-11-17 真棧驗證：guided-notes-sheets-sync（make dev＋Chrome＋負責人 Google 帳號；試算表 id 遮蔽）
+# 啟動：QUIZ_TEACHER_KEY=<本機測試金鑰> make dev（.env 有 GOOGLE_CLIENT_ID／GOOGLE_CLIENT_SECRET）
+# 老師端以 Claude in Chrome 操作；學生端兩組以 httpx 呼叫 REST；Google 同意畫面由負責人本人按同意。
+
+1 老師頁：Google 帳號區顯示「以 Google 帳號登入」（configured=true）
+2 按登入 ⇒ 新分頁到 accounts.google.com，授權網址參數含
+  access_type=offline、code_challenge_method=S256、prompt=consent、
+  redirect_uri=http://127.0.0.1:8000/api/google/callback、scope=openid email …/auth/spreadsheets …/auth/drive
+3 負責人同意 ⇒ 新分頁標題「登入完成」；老師頁輪詢後顯示「已登入：<負責人帳號>」與「登出 Google」
+4 貼「題組＋單題」範本副本連結（https://docs.google.com/spreadsheets/d/1dk8…/edit）按「從 Google 試算表匯入」
+  ⇒ 題目來源「軟工期末專案_題組_範例 的副本」，共 4 題；第 1、2 題各 2 子題（（1）、（2））；出現「開啟 Google 試算表副本」
+  ⇒ 副本連結 https://docs.google.com/spreadsheets/d/1bVx…/edit
+5 開始搶答；學生 REST：
+  第1組 join 200；第2組 join 200
+  第1組 第 1 題 ["CPU","作業系統"] 200
+  第2組 第 3 題 ["=1+1"] 200
+  第1組 第 3 題 ["零"] 200
+  第2組 第 2 題 ["演算法","堆疊"] 200
+6 結束搶答 ⇒ 老師表：第 1 題得主第1組、第 2 題得主第2組、第 3 題得主第2組（=1+1，第 1 順位）、第 4 題無；得題數 1／2／0／0
+7 按「匯出到 Google 試算表」⇒ 無錯誤
+8 開副本（標題「軟工期末專案_題組_範例 的副本-搶答結果」）：
+  G5「（1）」H5「CPU」；G6「（2）」H6「作業系統」
+  G8「（1）」H8「演算法」；G9「（2）」H9「堆疊」
+  G11:H11「=1+1」（顯示為文字，非 2）；第 4 題作答格空白；表頭、合併、框線與原檔相同
+9 開原試算表（1dk8…）：H5、H6、H8、H9 空白，G11 空白——原檔未被寫入
+結果：登入、匯入（複製後讀副本）、寫回副本、原檔不動，全部符合 design D1–D5。

@@ -1,0 +1,73 @@
+@startuml 010-guided-notes-sheets-sync-sequence
+title 010 guided-notes-sheets-sync：時序圖（登入 → 匯入並複製 → 寫回副本）（v1.2）
+
+actor "老師" as T
+participant "web" as W
+participant "app.py" as App
+participant "GoogleSession" as S
+participant "google_sheets" as GS
+participant "guided_notes" as GN
+participant "Activity" as Act
+participant "Google" as G
+
+== 登入 ==
+T -> W : 按「以 Google 帳號登入」
+W -> App : POST /api/teacher/google/login（X-Teacher-Key）
+App -> S : begin()
+S --> App : 授權網址（state、code_challenge）
+App --> W : {url}＋Set-Cookie qz_gstate＝sha256(state)（HttpOnly、SameSite=Lax）
+W -> G : 新分頁開授權網址
+T -> G : 同意
+G -> App : GET /api/google/callback?code&state
+App -> S : complete(state, code, cookie)
+alt state 不存在、過期、已用過、cookie 不符或帶 error
+  App --> G : 400 固定文案（不回顯參數、不換權杖）
+end
+S -> G : POST token（code＋code_verifier＋client_secret）
+G --> S : access_token、refresh_token
+App --> T : 「登入完成，可關閉此分頁」
+W -> App : GET /api/teacher/google（輪詢）
+App --> W : {configured, signed_in, email}
+
+== 匯入（preparing） ==
+T -> W : 貼試算表連結、按「從 Google 試算表匯入」
+W -> App : POST /api/teacher/import-url {url}
+App -> Act : require_preparing()
+App -> App : 解析 sheet_id（非 docs.google.com ⇒ 400，不發請求）
+alt 未登入
+  App --> W : 401「請先以 Google 帳號登入」
+end
+App -> GS : import_copy(session, sheet_id, gid, parse_grids)
+GS -> G : spreadsheets.get（原檔標題＋各分頁 sheetId）
+alt gid 不在原檔分頁中
+  App --> W : 400「找不到連結指定的分頁」（不建立副本）
+end
+GS -> G : Drive files.copy（「<標題>-搶答結果」）
+G --> GS : copyId
+GS -> G : spreadsheets.get（副本；includeGridData、值＋合併）
+G --> GS : 格狀資料
+GS -> GN : parse_grids(SheetsGrid…)
+GN --> GS : ParsedNotes（表頭與合併定位；D5 子題填空格）
+alt 解析失敗
+  GS -> G : Drive files.delete(copyId)（盡力）
+  App --> W : 400
+end
+App -> GN : grids_to_xlsx(grids)（分頁名淨化，回傳對照表）
+App -> Act : load_questions(xlsx, 標題, notes, sheet_id=copyId, xlsx_sheets)
+alt 採用失敗（例：已開始搶答 ⇒ 409）
+  App -> G : Drive files.delete(copyId)（盡力）
+  App --> W : 409
+end
+App --> W : {source, count, sheet_url}
+
+== 寫回（ended） ==
+T -> W : 按「匯出到 Google 試算表」
+W -> App : POST /api/teacher/export-sheet
+alt 非 ended
+  App --> W : 409
+end
+App -> GS : write_answers(session, copyId, notes, 得主答案)
+GS -> G : values:batchUpdate（副本；RAW；'<分頁>'!<作答格>，' 跳脫為 ''）
+App --> W : {url（副本）}
+W --> T : 顯示副本連結（原試算表不變）
+@enduml

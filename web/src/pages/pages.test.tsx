@@ -55,7 +55,7 @@ describe("匯入", () => {
 
   it("搶答中不能匯入", () => {
     render(<TeacherPanel view={{ ...view, phase: "answering" }} act={() => {}} upload={() => {}} />);
-    expect(screen.getByText("從連結匯入")).toBeDisabled();
+    expect(screen.getByText("從 Google 試算表匯入")).toBeDisabled();
   });
 
   it("學生準備中看到題號清單", () => {

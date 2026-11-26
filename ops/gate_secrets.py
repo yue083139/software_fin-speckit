@@ -14,6 +14,11 @@ PATTERNS = {
     "AWS 存取金鑰": re.compile(r"AKIA([0-9A-Z]{16})"),
     "Google API 金鑰": re.compile(r"AIza([0-9A-Za-z_\-]{35})"),
     "GitHub 權杖": re.compile(r"gh[pousr]_([A-Za-z0-9]{36})"),
+    # guided-notes-sheets-sync D6：Google OAuth 用戶端密鑰、access token、refresh token
+    "Google OAuth 用戶端密鑰": re.compile(r"GOCSPX-([A-Za-z0-9_\-]{20,})"),
+    "Google access token": re.compile(r"ya29\.([A-Za-z0-9_\-]{20,})"),
+    # 前一字元不可是英數、「/」「:」「.」：避開 http://127.0.0.1// 這類網址
+    "Google refresh token": re.compile(r"(?<![\w/:.])1//([A-Za-z0-9_\-]{20,})"),
     "私鑰": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----()"),
 }
 
