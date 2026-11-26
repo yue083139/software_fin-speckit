@@ -19,4 +19,4 @@ Python 3.12／FastAPI WebSocket；React 19＋antd 5。只改 `server/quiz_server
 |---|---|
 | app.ws（金鑰錯誤分支） | `server/quiz_server/app.py` `ws()` |
 | useLiveView／NO_RECONNECT | `web/src/live.ts` |
-| BadKeyNotice | `web/src/pages/Teacher.tsx` |
+| BadKeyNotice（015 實作，本功能沿用） | `web/src/pages/Teacher.tsx` |

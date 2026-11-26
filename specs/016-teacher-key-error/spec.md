@@ -2,7 +2,7 @@
 
 **Feature Branch**: `016-teacher-key-error`
 **Created**: 2026-11-26
-**Status**: Draft（v1.0；與 OpenSpec 組 `openspec/changes/teacher-key-error/` 同批）
+**Status**: Approved（v1.1，評審後、與 `015-teacher-key-hidden` 合流；與 OpenSpec 組 `openspec/changes/teacher-key-error/` 同批）
 **Input**: `014-student-qr` verification followup——老師 WebSocket 金鑰錯誤在交握前就被拒，瀏覽器只拿到 1006，「老師金鑰錯誤」提示顯示不出來；負責人 2026-11-26 指示開小卡處理。
 **需求編號**：R-01｜**parity**：`docs/parity.md` §4 `teacher-key-error`｜**檔位**：B（介面提示與 WebSocket 關閉時機）
 **圖表**：`diagrams/016-teacher-key-error-{component,class,sequence}.puml`
@@ -26,7 +26,7 @@
 ### Edge Cases
 
 - 錯金鑰連線關閉後，正確金鑰的老師連線照常收到推播。
-- REST 401 行為與文案不變。
+- REST 401（需要老師金鑰）由 `015-teacher-key-hidden` 改為整頁 `BadKeyNotice`，本功能不再改。
 
 ## Requirements *(mandatory)*
 

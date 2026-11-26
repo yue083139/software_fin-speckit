@@ -11,6 +11,10 @@
 - Decision：本機檢查在金鑰檢查之前（沿用 014 R2）。
 - 證偽：`test_public_host_takes_precedence_over_bad_key`。
 
-## R3 老師頁整頁提示
-- Decision：`Teacher.tsx` 的 `BadKeyNotice`（antd `Result status="error"`），文案「老師金鑰錯誤」＋「請用啟動伺服器時終端機印出的完整老師頁網址重新開啟，或回首頁重新輸入金鑰。」；`live.ts` 既有 4401 不重連。
+## R3 老師頁整頁提示（沿用 015-teacher-key-hidden）
+- Decision：老師頁 `if (closedCode === 4401 || badKey) return <BadKeyNotice />;` 已由 015 實作（同名同文案）；`live.ts` 既有 4401 不重連。本功能不改元件，只補測試。
+
+## 與 015-teacher-key-hidden 合流
+- 015 先合入（SpecKit #28）；本功能 rebase 後 `Teacher.tsx` 以 dev 版為準，伺服器「先 accept 再 4401」是唯一行為變更。守門互補：M-001（本功能）、M-024（015）。
+- 評審：對抗 CLEARED（990 條並發錯金鑰連線無洩漏；非並發測試改名 `test_good_connection_unaffected_after_bad_key`）；架構 NOT CLEARED(0B/1M/1m)＝合流問題，已落。
 - 證偽：`qr.test.tsx`、`live.test.tsx` 新增例。

@@ -9,10 +9,10 @@
 ## Phase 1: User Story 1 (P1) 🎯
 - [x] T010 [US1] 測試先行：`server/tests/test_api_host.py` 三例（實作前 3 failed）；`web/src/live.test.tsx`、`web/src/pages/qr.test.tsx`
 - [x] T011 [US1] `server/quiz_server/app.py` 金鑰錯誤分支先 accept 再關
-- [x] T012 [US1] `web/src/pages/Teacher.tsx` `BadKeyNotice`
+- [x] T012 [US1] web 沿用 015 的 `BadKeyNotice`（合流後不改元件）
 - [x] T013 `contracts/api.md` 補述；矩陣 M-001 守門補
 
 ## Phase 2: 驗證
-- [ ] T020 `make gate` 綠、web 連跑兩次
-- [ ] T021 評審（架構全卡掃＋對抗 diff）
+- [x] T020 `make gate` 綠、web 連跑兩次
+- [x] T021 評審（架構全卡掃＋對抗 diff）
 - [ ] T022 人工驗證（負責人整合後）
