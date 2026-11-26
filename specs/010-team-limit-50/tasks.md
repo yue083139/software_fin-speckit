@@ -21,7 +21,7 @@ description: "010-team-limit-50 的相依排序實作任務"
 **Purpose**: 先完成 S 檔提案批准與兩組一致性前置，未通過前不得修改凍結契約或產品程式。
 
 - [x] T001 將 `team-limit-50` 卡與共用需求口徑同步到姊妹 repo，並更新 `docs/parity.md` 的同步狀態與證據
-- [ ] T002 依 S 檔流程完成提案輪紅隊與架構評審，將兩通道結論、藥方回驗及輪次記錄於 `specs/010-team-limit-50/verification.md`
+- [x] T002 依 S 檔流程完成提案輪紅隊與架構評審，將兩通道結論、藥方回驗及輪次記錄於 `specs/010-team-limit-50/verification.md`
 - [ ] T003 取得負責人對「`POST /api/teacher/teams` 合法範圍由 2–12 改為 2–50」的明確批准，將批准原文與日期補入 `specs/010-team-limit-50/contracts/api-change.md`
 - [ ] T004 依 `specs/010-team-limit-50/quickstart.md` 保存實作前 2–12 組既有回歸基線到 `specs/010-team-limit-50/verification.md`
 

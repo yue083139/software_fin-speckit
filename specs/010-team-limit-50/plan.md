@@ -34,7 +34,7 @@
 
 | 原則 | 本功能如何符合 | 結果 |
 |---|---|---|
-| I 需求即法律、兩組一致 | 對應 R-01、R-11；`docs/parity.md` 已登記 `team-limit-50`；OpenSpec 同名卡與共用檔同步列為送審前阻塞項 | ⚠️ 本 repo 已登記；姊妹 repo 尚待同步，未完成前不得送審 |
+| I 需求即法律、兩組一致 | 對應 R-01、R-11；`docs/parity.md` 已登記 `team-limit-50`；OpenSpec 已建立 `feat/team-limit-50` 並同步共用檔 | ✅ `make gate-parity SIBLING=../software_fin-openspec`：0 處不一致 |
 | II 作答隔離 | 仍只經 `student_view`；新增 50 組／300 台下每組 payload 不含其他 49 組答案的傳輸負例 | ✅ |
 | III 順位以伺服器為準 | 不改鎖與序號；新增 50 組同題並發 20 次的唯一順位與恰一得主測試 | ✅ |
 | IV Guided Notes 動態定位 | 不讀寫 Guided Notes 結構或作答格 | ✅ |
@@ -43,7 +43,7 @@
 | VII 圖表優先 | 010 三張 PlantUML 與 PNG 已先產生；plan 以其組件、類別、訊息序為藍圖 | ✅ |
 | VIII 繁體中文與資料衛生 | 文件與 UI 使用繁體中文；探針只用合成組名與假憑證，不輸出 token 或答案 | ✅ |
 
-**Gate 結論**：設計本身無憲章違反；parity 同步是流程阻塞項，不影響 Phase 0／1 設計產物，但未完成前不得派提案評審或呈批。
+**Gate 結論**：設計本身無憲章違反；parity 已同步並通過門禁，可派提案評審；凍結契約仍須於提案輪後取得負責人明確批准。
 
 ### Phase 1 後重檢
 
@@ -51,7 +51,7 @@
 - `data-model.md` 不新增實體或持久化，只調整 `MAX_TEAMS` 約束並保留所有生命週期規則。
 - `contracts/api-change.md` 只提案修改既有組數範圍與錯誤邊界；負責人批准前不改凍結件。
 - `quickstart.md` 覆蓋邊界、撤銷、300 台探針、隔離、並發、UI 與全量門禁。
-- parity 姊妹 repo 同步仍為唯一未綠流程項；完成後本節可全數轉為 ✅。
+- parity 姊妹 repo 已同步且門禁為 0 處不一致；Phase 0／1 憲章檢查全數為 ✅。
 
 ## Project Structure
 
