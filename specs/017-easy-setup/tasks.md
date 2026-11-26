@@ -5,7 +5,7 @@
 ## Phase 0: 提案前置
 
 - [x] T000 探針③ PATH 刷新（`probes/results/2026-11-26-easy-setup.txt`）
-- [ ] T001 探針①② 自動開瀏覽器、執行期起停 cloudflared：負責人本機執行 `uv run --project server python -X utf8 probes/easy_setup_probe.py --browser-url http://127.0.0.1:8000/ --cycles 3`，回填結果與 research R1、R3（阻塞定稿）
+- [x] T001 探針①② 自動開瀏覽器、執行期起停 cloudflared：負責人本機執行 `uv run --project server python -X utf8 probes/easy_setup_probe.py --browser-url http://127.0.0.1:8000/ --cycles 3`，回填結果與 research R1、R3（2026-11-26 已回填；探針改固定 204 handler）
 - [x] T002 三張圖 `make diagrams`、`make gate-diagrams` 綠
 - [x] T003 `docs/parity.md` §4 登記、§5 記變更（與 OpenSpec 組同批）
 - [ ] T004 提案輪評審（紅隊＋架構雙通道，與 OpenSpec 組同批）；負責人批准契約

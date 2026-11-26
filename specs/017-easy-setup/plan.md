@@ -20,7 +20,7 @@
 **Language/Version**: Python 3.12、TypeScript（React 19＋antd 5）、PowerShell 5.1
 **Primary Dependencies**: 無新增（`webbrowser` 標準庫；cloudflared 為選用外部執行檔）
 **Testing**: pytest（`.env` 以 tmp_path 注入、假 Tunnel、替身開瀏覽器）、vitest
-**Constraints**: 與 OpenSpec 組同批、程式逐字相同；`contracts/api.md` 改動待負責人批准；探針①②待負責人執行（阻塞定稿）
+**Constraints**: 與 OpenSpec 組同批、程式逐字相同；`contracts/api.md` 改動負責人 2026-11-26 批准；探針①②③皆已執行（`probes/results/2026-11-26-easy-setup.txt`）；探針與測試不得以檔案伺服器接通道
 
 ## Constitution Check
 

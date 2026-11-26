@@ -2,7 +2,7 @@
 
 ## 探針
 
-見 `probes/results/2026-11-26-easy-setup.txt`：③已執行；①②待負責人執行（T001）。
+見 `probes/results/2026-11-26-easy-setup.txt`：①②③皆已執行（①②由負責人主會話執行）。
 
 ## 門禁實錄
 

@@ -1,7 +1,11 @@
-"""easy-setup 探針（准入③）：①uv 子行程內 webbrowser.open 能否開預設瀏覽器 ②執行期起停 cloudflared 多次不殘留。
+"""easy-setup 探針（准入③）。
+
+①uv 子行程內 webbrowser.open 能否開預設瀏覽器 ②執行期起停 cloudflared 多次不殘留。
+通道後端只回固定 204、不讀檔（通道是公開的，不得接檔案伺服器）。
 
 用法（負責人本機執行；會開一個瀏覽器分頁、並連 Cloudflare 建立快速通道約 5 秒／次）：
-  uv run --project server python -X utf8 probes/easy_setup_probe.py --browser-url http://127.0.0.1:8000/ --cycles 3
+  uv run --project server python -X utf8 probes/easy_setup_probe.py \
+    --browser-url http://127.0.0.1:8000/ --cycles 3
 原樣輸出存 probes/results/<日期>-easy-setup.txt（通道網址已遮蔽）。
 """
 import argparse
@@ -15,6 +19,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
 from quiz_server.tunnel import Tunnel, find_cloudflared  # noqa: E402
+
+
+class _EmptyHandler(http.server.BaseHTTPRequestHandler):
+    """通道後端只回固定 204、不讀任何檔案：通道是公開的，不得接檔案伺服器（負責人 2026-11-26 指出舊版洞）。"""
+
+    def do_GET(self) -> None:  # noqa: N802 BaseHTTPRequestHandler 的方法命名
+        self.send_response(204)
+        self.end_headers()
+
+    do_HEAD = do_GET
+
+    def log_message(self, *_: object) -> None:
+        pass
 
 
 def count_cloudflared() -> int:
@@ -38,7 +55,7 @@ def main() -> None:
         print(f"① webbrowser.get().name：{name}")
         print(f"① webbrowser.open 回傳：{webbrowser.open(a.browser_url)}")
     print(f"② find_cloudflared：{find_cloudflared()}")
-    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), http.server.SimpleHTTPRequestHandler)
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _EmptyHandler)
     port = srv.server_address[1]
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     base = count_cloudflared()

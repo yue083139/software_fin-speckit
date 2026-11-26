@@ -11,8 +11,20 @@
 ③ 以 Machine＋User 登錄值刷新 $env:Path 後：True → C:\Program Files (x86)\cloudflared\cloudflared.exe
 ③ PowerShell 5.1.26100.9818
 
-## ①② 自動開瀏覽器、執行期起停 cloudflared（待負責人執行）
-起草會話以 `uv run --project server python -X utf8 probes/easy_setup_probe.py --browser-url http://127.0.0.1:8000/ --cycles 3`
-實跑時被 Claude Code 權限分類器拒絕（會開瀏覽器分頁並連 Cloudflare），故未執行。
-負責人請以上列指令在本機執行，原樣輸出貼回本檔本段；design D2、D3 證偽欄以該輸出為準（提案輪評審前補齊）。
-既有旁證：student-qr 卡 `probes/results/2026-11-26-cloudflared.txt`（單次起停、--tunnel 真棧冒煙）。
+## ①② 自動開瀏覽器、執行期起停 cloudflared（負責人主會話執行，2026-11-26）
+執行環境：PowerShell 以 Machine＋User 登錄值刷新 PATH；cwd 設為空的暫存目錄（舊版探針以 SimpleHTTPRequestHandler 接通道，會把 cwd 公開，見下方「探針修正」）。
+基準 1＝本機正在跑的 Demo 伺服器自己的通道。
+原樣輸出：
+指令：uv run --project server python -X utf8 probes/easy_setup_probe.py --browser-url http://127.0.0.1:8000/ --cycles 3
+① webbrowser.get().name：
+① webbrowser.open 回傳：True
+② find_cloudflared：C:\Program Files (x86)\cloudflared\cloudflared.EXE
+② 起始 cloudflared 行程數（含既有）：1
+② 第 1 次：start 3.9 秒 → 取得 https://<遮蔽>.trycloudflare.com/；執行中 2；stop 後 1（基準 1）
+② 第 2 次：start 3.9 秒 → 取得 https://<遮蔽>.trycloudflare.com/；執行中 2；stop 後 1（基準 1）
+② 第 3 次：start 4.0 秒 → 取得 https://<遮蔽>.trycloudflare.com/；執行中 2；stop 後 1（基準 1）
+② 結束 cloudflared 行程數：1（基準 1）
+
+## 探針修正（2026-11-26，負責人指出）
+舊版以 `http.server.SimpleHTTPRequestHandler` 當通道後端，會把 cwd 目錄經公開通道服務出去（在 repo 根目錄跑等於公開 repo 檔案約 5 秒×3）。
+已改為只回固定 204、不讀檔的 handler（`probes/easy_setup_probe.py` 的 `_EmptyHandler`）；上列輸出是在空暫存目錄執行，未外洩檔案。

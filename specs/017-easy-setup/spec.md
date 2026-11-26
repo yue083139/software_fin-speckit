@@ -2,7 +2,7 @@
 
 **Feature Branch**: `017-easy-setup`
 **Created**: 2026-11-26
-**Status**: Draft（v1.0；提案輪評審前；與 OpenSpec 組 `openspec/changes/easy-setup/` 同批）
+**Status**: Draft（v1.0 定稿送審；負責人 2026-11-26 定案未決四項；與 OpenSpec 組 `openspec/changes/easy-setup/` 同批）
 **Input**: 負責人 2026-11-26：「現在的啟動過程有點複雜，需要 .env，有辦法簡化或是在後台頁面裡面引導式操作嗎」⇒ 裁四項全做（Google 設定精靈、啟動後自動開老師頁、老師頁一鍵開手機連線、啟動腳本自動補裝工具）；補充「希望 make dev 之類的啟動後就能直接進後台做」。
 **需求編號**：R-01、X-04｜**parity**：`docs/parity.md` §4 `easy-setup`｜**檔位**：S（憑證 Google API、`contracts/`、跨元件架構取捨：執行期起停外部子行程與開瀏覽器）
 **圖表**：`diagrams/017-easy-setup-{component,class,sequence}.puml`
