@@ -28,6 +28,7 @@ export interface QuestionOutline {
   labels: string[];
   multiplier?: number; // question-settings：1 或 2
   time_limit?: number; // 秒，時間計分模式使用
+  prompts?: string[]; // question-text：每個子題的題目敘述；伺服器只在學生可看時才帶
 }
 
 export interface TeacherView {

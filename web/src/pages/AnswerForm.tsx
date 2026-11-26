@@ -1,3 +1,4 @@
+import { PromptText } from "./Prompts";
 import { useEffect, useRef, useState } from "react";
 import type { Draft as DraftRow, QuestionOutline } from "../types";
 import { DoubleTag } from "./ImportPanel";
@@ -97,6 +98,7 @@ function QuestionCard({
         <>
           {question.labels.map((label, i) => (
             <label key={i}>
+              <PromptText text={question.prompts?.[i]} />
               {label || "答案"}
               <input
                 aria-label={`第 ${question.number} 題 ${label || "答案"}`}

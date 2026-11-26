@@ -78,6 +78,7 @@ export function StudentPanel({
           scores={view.team_scores ?? {}}
           scoreLabel={view.score_label}
           winnerTag={view.mode?.key === "classic" || !view.mode ? "搶答成功" : "最早答對"}
+          questions={view.questions}
         />
       )}
     </>

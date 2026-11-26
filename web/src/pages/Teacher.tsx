@@ -224,6 +224,7 @@ export function TeacherPanel({
         <h2>作答狀況與結果</h2>
         <Board
           board={view.board}
+          questions={view.questions}
           teams={view.teams}
           scores={view.team_scores}
           scoreLabel={view.score_label}

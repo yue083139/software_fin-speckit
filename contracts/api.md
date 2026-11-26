@@ -66,7 +66,7 @@
  "source": "group.xlsx", "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
 
-`questions[].labels`：每個子題給學生看的標籤，長度＝子題數；單題為 `[""]`。不含作答格座標（guided-notes-import）。`questions[].multiplier`：該題倍率（1 或 2，老師與學生皆有；question-settings）。`questions[].time_limit`：該題時限秒數（mode-timed-scoring）。
+`questions[].labels`：每個子題給學生看的標籤，長度＝子題數；單題為 `[""]`。不含作答格座標（guided-notes-import）。`questions[].multiplier`：該題倍率（1 或 2，老師與學生皆有；question-settings）。`questions[].time_limit`：該題時限秒數（mode-timed-scoring）。`questions[].prompts`：每個子題的題目敘述（取自 Guided Notes 題目欄，無題目欄為 `""`），長度與順序同 `labels`；老師 view 任何階段都有（question-text，負責人 2026-11-26 批准）。
 
 老師與學生 view 皆含 `round`（mode-timed-scoring）：目前回合 `{question, state: "open"|"closed", deadline_epoch_ms}`，沒有則 `null`；`deadline_epoch_ms` 只供倒數顯示，截止以伺服器為準。`mode` 另含 `sequential`（是否逐題開放）。時間計分模式下老師 view 另含 `leaderboard: [{team, rank, score}]`（只計已揭曉題）。
 
@@ -83,7 +83,7 @@
  "questions": [{"number": 1, "labels": ["（1）", "（2）"]}, {"number": 3, "labels": [""]}]}
 ```
 
-所有階段都含 `mode: {key, label, sequential}`、`score_label`、`round` 與 `my_submissions`（只有本組：`[{question, answers}]`，不含順位、序號、他組是否送出）。`judging` 與 `answering` 相同，不含判定結果。另含 `team_play`；組隊時 `preparing` 另含 `invite_code`（本組邀請碼），`answering` 另含 `drafts: [{question, answers}]`（只有本組、最後寫入者為準，送出即清除）；其餘階段兩者皆不帶（team-mode）。時間計分模式在 `ended` 前另含 `revealed: [{question, submitted, correct, score}]`（只有本組、只列已揭曉題）、`my_total`（本組累積）與 `leaderboard: [{team, rank}]`（依已揭曉題累積分數的名次，同分同名次；**不含他組分數**——分數可反推作答秒數）。只有 `ended` 階段另含 `results`：
+`questions[].prompts` 只在搶答開始後才帶：`preparing` 每題都不帶此鍵；`answering`／`judging` 非逐題模式每題都帶、逐題模式只有已開放過的題帶；`ended` 每題都帶（question-text）。所有階段都含 `mode: {key, label, sequential}`、`score_label`、`round` 與 `my_submissions`（只有本組：`[{question, answers}]`，不含順位、序號、他組是否送出）。`judging` 與 `answering` 相同，不含判定結果。另含 `team_play`；組隊時 `preparing` 另含 `invite_code`（本組邀請碼），`answering` 另含 `drafts: [{question, answers}]`（只有本組、最後寫入者為準，送出即清除）；其餘階段兩者皆不帶（team-mode）。時間計分模式在 `ended` 前另含 `revealed: [{question, submitted, correct, score}]`（只有本組、只列已揭曉題）、`my_total`（本組累積）與 `leaderboard: [{team, rank}]`（依已揭曉題累積分數的名次，同分同名次；**不含他組分數**——分數可反推作答秒數）。只有 `ended` 階段另含 `results`：
 
 ```json
 {"results": [{"number": 3, "labels": [""], "winner": {"team": "第2組", "answers": ["位址"]},

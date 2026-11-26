@@ -64,3 +64,14 @@ describe("匯出", () => {
     expect(clicked).toBe(1);
   });
 });
+
+describe("結果表的題目敘述（question-text D5）", () => {
+  it("學生結果與老師作答表依題號顯示敘述", () => {
+    const questions = results.map((q) => ({ number: q.number, labels: q.labels, prompts: q.labels.map(() => `第${q.number}題敘述`) }));
+    const { unmount } = render(<StudentResults team="第1組" results={results} scores={scores} questions={questions} />);
+    expect(screen.getAllByText(/第\d+題敘述/).length).toBeGreaterThan(0);
+    unmount();
+    render(<Board board={results} teams={["第1組", "第2組"]} scores={scores} questions={questions} />);
+    expect(screen.getAllByText(/第\d+題敘述/).length).toBeGreaterThan(0);
+  });
+});

@@ -1,0 +1,45 @@
+@startuml 011-question-text-sequence
+title 011 question-text：時序圖（匯入讀敘述 → 準備階段不送 → 開始後送給學生）（v1.1）
+
+actor "老師" as T
+participant "web（老師）" as WT
+participant "app.py" as App
+participant "guided_notes" as GN
+participant "Activity" as Act
+participant "views" as V
+participant "web（學生）" as WS
+actor "學生" as S
+
+== 匯入 ==
+T -> WT : 上傳 xlsx 或從 Google 試算表匯入
+WT -> App : POST /api/teacher/import（或 import-url）
+App -> GN : parse_grids(grids)
+GN -> GN : _find_header：題號欄・作答欄・參考答案欄・題目欄（可選）
+loop 每個子題
+  GN -> GN : Slot.prompt ← _prompt(該列題目欄)（縱向合併非錨點列 ""）
+end
+GN --> App : ParsedNotes
+App -> Act : load_questions(notes)
+Act -> V : 推播
+V --> WT : teacher_view：questions[].prompts（恆帶）
+V --> WS : student_view：preparing → 每題不帶 prompts
+WS --> S : 只見題號與子題輸入欄
+
+== 開始搶答 ==
+T -> WT : 按「開始搶答」
+WT -> App : POST /api/teacher/start
+App -> Act : start()
+Act -> V : 推播
+alt 非逐題模式（經典、只計對錯）
+  V --> WS : 每題帶 prompts（payload 不含他組答案）
+else 逐題模式（時間計分）
+  T -> App : POST /api/teacher/open-next
+  App -> Act : open_next() → rounds[1]
+  V --> WS : 只有 number in rounds 的題帶 prompts
+end
+WS --> S : 子題輸入欄上方顯示敘述
+
+== 結束 ==
+App -> Act : end()
+V --> WS : ended → 每題帶 prompts；結果表題號旁顯示敘述
+@enduml

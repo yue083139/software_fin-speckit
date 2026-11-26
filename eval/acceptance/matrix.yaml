@@ -18,7 +18,7 @@ rows:
   - id: M-003
     需求: R-02
     聲明: 匯入任一份合規 Guided Notes 後題數與原檔一致，不依賴固定座標（至少三份版面不同的夾具）
-    守門: server/tests/test_guided_notes_parse.py（single、group、variant 三份夾具）；server/tests/test_api_import.py；server/tests/test_google_sheets.py::test_sheets_grid_parses_same_as_xlsx（四份夾具，Google Sheets 格狀資料與 xlsx 解析等價）、test_number_column_uses_effective_value；server/tests/test_api_google.py::test_import_url_reads_copy（guided-notes-sheets-sync：直接讀雲端試算表副本）
+    守門: server/tests/test_guided_notes_parse.py（single、group、variant 三份夾具）；server/tests/test_api_import.py；server/tests/test_google_sheets.py::test_sheets_grid_parses_same_as_xlsx（四份夾具，Google Sheets 格狀資料與 xlsx 解析等價）、test_number_column_uses_effective_value；server/tests/test_api_google.py::test_import_url_reads_copy（guided-notes-sheets-sync：直接讀雲端試算表副本）；server/tests/test_guided_notes_parse.py::test_prompts_*、test_no_question_column_still_imports（question-text：題目欄可選，不改題數）
     狀態: covered
     卡: guided-notes-import
   - id: M-004
@@ -123,3 +123,9 @@ rows:
     守門: server/tests/test_isolation.py::test_google_tokens_never_reach_students_or_logs；server/tests/test_api_google.py::test_forged_state_rejected、test_state_replay_rejected、test_state_expires、test_other_browser_without_cookie_rejected、test_callback_does_not_echo_params、test_logout_revokes_with_token_in_body；ops/tests/test_gates.py::test_secrets_flags_real_shapes（GOCSPX-、ya29.、1// 形狀）
     狀態: covered
     卡: guided-notes-sheets-sync
+  - id: M-021
+    需求: X-04、R-09
+    聲明: 題目敘述只在搶答開始後送給學生（準備階段不送、逐題模式只送已開放過的題、結束後全送），老師任何階段都有；帶敘述的學生 payload 仍不含他組答案
+    守門: server/tests/test_isolation.py::test_prompts_hidden_until_open、test_prompts_payload_still_has_no_other_team_answers、test_prompts_sequential_only_opened、test_prompts_all_after_timed_end、test_invalid_token_has_no_prompts
+    狀態: covered
+    卡: question-text

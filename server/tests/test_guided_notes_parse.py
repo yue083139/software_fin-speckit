@@ -124,3 +124,65 @@ def test_d5_right_cell_with_content_is_not_blank():
                  merges=("B1:C1", "A2:A3"))
     notes = parse_workbook(data)
     assert [s.cell for s in notes.questions[0].slots] == ["B2", "C3"]
+
+
+# question-text D1：題目欄為可選欄，逐子題取所在列的敘述
+
+
+def _prompts(notes):
+    return [[s.prompt for s in q.slots] for q in notes.questions]
+
+
+def test_prompts_single_template(fixture_bytes):
+    notes = parse_workbook(fixture_bytes("single.xlsx"))
+    prompts = _prompts(notes)
+    assert [len(p) for p in prompts] == [1] * 6
+    assert prompts[0][0].startswith("電腦系統中負責執行程式指令")
+    assert all(p[0] for p in prompts)
+
+
+def test_prompts_group_template_per_sub_row(fixture_bytes):
+    notes = parse_workbook(fixture_bytes("group.xlsx"))
+    prompts = _prompts(notes)
+    assert prompts[0][0].startswith("根據文章第一段")
+    assert prompts[0][1].startswith("而他安裝的 Windows")
+    assert prompts[1][0].startswith("為了處理角色移動")
+    assert prompts[1][1].startswith("而他用來實作")
+    assert prompts[2][0].startswith("無論小明寫的高階語言")
+    assert prompts[3][0].startswith("專案最後的連線失敗")
+
+
+def test_prompts_variant_alias(fixture_bytes):
+    notes = parse_workbook(fixture_bytes("variant.xlsx"))
+    prompts = _prompts(notes)
+    assert prompts[0] == ["先進先出的資料結構稱為什麼？"]
+    assert all(all(p) for p in prompts)
+
+
+def test_prompts_reference_template(fixture_bytes):
+    notes = parse_workbook(fixture_bytes("reference.xlsx"))
+    assert _prompts(notes)[1] == ["電腦內部使用哪一種進位系統？", "除了 1 之外，該系統還用哪個數字？"]
+
+
+def test_no_question_column_still_imports():
+    notes = parse_workbook(_book({"A1": "題號", "B1": "作答", "A2": 1, "A3": 2}))
+    assert [q.number for q in notes.questions] == [1, 2]
+    assert _prompts(notes) == [[""], [""]]
+
+
+def test_group_prompt_merged_vertically_only_anchor():
+    notes = parse_workbook(_book(
+        {"A1": "題號", "B1": "題目", "C1": "作答", "A2": 1, "B2": "  共用敘述\n第二行  ", "C2": "（1）",
+         "C3": "（2）", "A4": 2, "B4": 3.0},
+        merges=("A2:A3", "B2:B3")))
+    assert _prompts(notes) == [["共用敘述\n第二行", ""], ["3"]]
+
+
+def test_prompts_do_not_change_writeback(fixture_bytes):
+    from quiz_server.guided_notes import write_answers
+    data = fixture_bytes("group.xlsx")
+    notes = parse_workbook(data)
+    out = openpyxl.load_workbook(io.BytesIO(write_answers(data, notes, {3: ("甲",)})))
+    src = openpyxl.load_workbook(io.BytesIO(data))
+    ws_o, ws_s = out.worksheets[0], src.worksheets[0]
+    assert ws_o["C11"].value == ws_s["C11"].value  # 題目欄不被寫入
