@@ -6,7 +6,7 @@ rows:
   - id: M-001
     需求: R-01
     聲明: 進場時可選擇老師或學生身分，學生須選定組別並以組別憑證辨識
-    守門: server/tests/test_api_skeleton.py；web/src/pages/pages.test.tsx
+    守門: server/tests/test_api_skeleton.py；web/src/pages/pages.test.tsx；server/tests/test_api_host.py::test_teacher_ws_bad_key_accepts_then_closes_4401、web/src/live.test.tsx、web/src/pages/qr.test.tsx（teacher-key-error：金鑰錯誤先交握後 4401、前端 4401 不重連；金鑰清除與錯誤頁見 M-024）
     狀態: covered
     卡: app-skeleton
   - id: M-002

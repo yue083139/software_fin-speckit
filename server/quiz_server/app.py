@@ -428,6 +428,9 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
             await socket.close(code=WS_NOT_LOCAL)
             return
         if role == "teacher" and not is_teacher(key):
+            # 同上：先 accept 再以 4401 關，前端才顯示得出「金鑰錯誤」（teacher-key-error）
+            # 關閉前不送任何 view
+            await socket.accept()
             await socket.close(code=WS_UNAUTHORIZED)
             return
         await socket.accept()

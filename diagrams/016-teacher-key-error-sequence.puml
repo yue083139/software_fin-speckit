@@ -1,0 +1,19 @@
+@startuml 016-teacher-key-error-sequence
+title 016 teacher-key-error：時序圖
+
+actor "老師" as T
+participant "老師頁（Teacher.tsx）" as W
+participant "useLiveView（live.ts）" as L
+participant "app.ws" as A
+
+T -> W : 以錯金鑰開老師頁
+W -> L : useLiveView(role=teacher, key)
+L -> A : WebSocket 連線
+A -> A : is_local 檢查（非本機則 accept 後 close 4403）
+A -> A : is_teacher(key) 為假
+A --> L : accept（完成交握）
+A --> L : close 4401（之前不送任何訊息）
+L -> L : NO_RECONNECT 含 4401，不重連
+L --> W : closedCode = 4401
+W --> T : BadKeyNotice 整頁顯示「老師金鑰錯誤」與重開方式
+@enduml
