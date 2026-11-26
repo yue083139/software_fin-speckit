@@ -7,6 +7,14 @@ export class ApiError extends Error {
   }
 }
 
+// 伺服器老師金鑰錯誤的 401 文案（server/quiz_server/app.py require_teacher）。
+// 只有這個 401 才是金鑰錯；Google 未登入／過期同樣回 401，但不是金鑰問題（teacher-key-hidden 對抗通道藥方）
+export const BAD_TEACHER_KEY_DETAIL = "需要老師金鑰";
+
+export function isBadTeacherKey(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 401 && e.message === BAD_TEACHER_KEY_DETAIL;
+}
+
 async function parse(res: Response): Promise<unknown> {
   const text = await res.text();
   let body: { detail?: unknown };

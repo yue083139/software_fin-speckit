@@ -1,0 +1,35 @@
+@startuml 015-teacher-key-hidden-class
+title 015 teacher-key-hidden：類別圖
+
+class route <<module>> {
+  +TEACHER_KEY_STORE : string = "qz_teacher_key"
+  +parseRoute(hash) : Route
+  +takeTeacherKey() : string
+  +clearTeacherKey() : void
+}
+class App <<component>> {
+  -snap : hash 與 teacherKey
+  -snapshot() 載入與 hashchange 時執行
+}
+class api <<module>> {
+  +BAD_TEACHER_KEY_DETAIL : string = "需要老師金鑰"
+  +isBadTeacherKey(e) : boolean
+}
+class Teacher <<component>> {
+  +teacherKey : string
+  -badKey : boolean
+  -setError(e)
+  -refreshGoogle()
+}
+class BadKeyNotice <<component>>
+class ApiError {
+  +status : number
+  +message : string
+}
+App ..> route : takeTeacherKey
+Teacher ..> route : clearTeacherKey
+Teacher ..> api : isBadTeacherKey 為真才清除
+Teacher ..> BadKeyNotice : 401 金鑰錯或 4401
+api ..> ApiError
+App ..> Teacher : key=teacherKey 重新掛載
+@enduml

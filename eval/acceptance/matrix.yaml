@@ -141,3 +141,9 @@ rows:
     守門: server/tests/test_api_host.py；server/tests/test_tunnel.py
     狀態: covered
     卡: student-qr
+  - id: M-024
+    需求: R-01、P-06
+    聲明: 老師金鑰只經網址首次帶入，載入後自網址移除（不新增瀏覽紀錄），只存本分頁 sessionStorage，不寫 localStorage 或 cookie；金鑰錯誤（401／4401）即清除並提示重新輸入
+    守門: web/src/route.test.ts；web/src/pages/teacherkey.test.tsx
+    狀態: covered
+    卡: teacher-key-hidden
