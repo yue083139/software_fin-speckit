@@ -1,15 +1,17 @@
 @startuml 012-answer-review-class
-title 012 answer-review：類別圖
+title 012 answer-review：類別圖（v1.1）
 
 class Activity {
   phase: Phase
   mode: Mode
   submissions: dict[int, list[Submission]]
   judgments: dict[int, dict[str, bool]]  ' 共用；經典只在 ended 寫入
+  sheet_written: frozenset[int]  ' 上次寫回寫過的題號；重新匯入清空、重置保留
   --
   + review(number, team, correct) : None
   + review_reset(number) : None
   + review_candidate(number) : Ranked | None
+  + mark_sheet_written(sheet_id, numbers) : None
   - _clear_answers()  ' 重新匯入、重置一併清空
   - _bump()
 }
@@ -35,7 +37,7 @@ class Ranked {
 }
 
 class "results" as Results <<module>> {
-  + build(a, teacher) : list[dict]
+  + build(a, teacher) : list[dict]  ' 老師經典：board[].review {candidate, rejected, locked}
   + team_scores(a) : dict[str, int]
   + winning_answers(a) : dict[int, tuple[str, ...]]
 }
@@ -43,11 +45,12 @@ class "results" as Results <<module>> {
 class "google_sheets" as GS <<module>> {
   COPY_SUFFIX = "_作答情況"
   + import_copy(...)
-  + write_answers(session, copy_id, notes, answers)  ' 全部作答格；無得主寫 slot.label
+  + write_answers(session, copy_id, notes, answers, restore)  ' 有得主＋restore 內無得主寫 slot.label
 }
 
 class "app" as App <<module>> {
   + export_filename(source) : str  ' <stem>_作答情況.xlsx
+  export_lock : asyncio.Lock
   POST /api/teacher/review {question, team, correct}
   POST /api/teacher/review-reset {question}
 }

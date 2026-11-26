@@ -1,6 +1,9 @@
-# Research: 012 answer-review（v1.0）
+# Research: 012 answer-review（v1.1，提案輪評審後定稿；負責人 2026-11-26 裁定）
 
 知識時點：2026-11-26。本卡不依賴倉外行為（Google 端只改副本名稱字串與寫入範圍，端點與 `RAW` 寫法沿用 010 已探針的 `values:batchUpdate`），故無新探針；現行行為以原始碼引述為證。本檔 R1–R6 與 OpenSpec 組 `openspec/changes/answer-review/design.md` D1–D6 一一對應、口徑相同。
+
+> **v1.1（提案輪評審，紅隊 0B/2M/3m、架構 0B/1M/3m，皆 0 阻斷）**：重要——`docs/requirements.md` §4 缺負責人對 R-10／R-05 的解讀、`game-modes`「經典搶答行為不變」與 `results-view`「順位 1 為得主」「判定模式才顯示對錯」未改（兩通道同抽）⇒ 需求 §4 加解讀、兩條 MODIFIED 限定為「未檢查時」（本組落在 `spec.md` FR-001、FR-008）、R1 證偽欄明列改寫的兩個舊測試。次要——寫回全部子題會改動從未寫過的無人搶答格（R5 改「有得主＋上次寫過」）；匯出快照在鎖外、兩次寫回可交錯（R5 加伺服器鎖）；R2 推播口徑與「對未檢查題重設」未定；錯誤碼先後 401 應先於 422（R2）。**負責人 2026-11-26 裁**：未決事項照傾向（學生結束後看得到 ✓／✗、匯出後可改判重匯出、未檢查完可匯出且未檢查題寫順位 1、矩陣 M-022）；「全部做完集成到本地再測」。
+> **實作偏離回稿**：①D4 老師 view 增 `board[].review`（整合方要求前端直接讀，不由 `ranking` 推得）；②D5「上次寫過的題號」隨副本走——重新匯入清空、**重置保留**（重置後仍寫同一份副本，清空就還原不了上一場寫過的格）；③D6 `web/src/pages/ImportPanel.tsx` 副本名稱文案移到 `web-workbench` 整合時改（前端正以 antd 重寫）。
 
 ## 背景與對標
 
@@ -24,18 +27,19 @@
 - 無任何判定時輸出與現行逐筆相同（`correct=None`、順位 1 得主）。
 - `team_scores` 不變（`_sum_scores`）；`score_label` 不變（經典且倍率全 1 仍為「得題數」）。
 - `pending_judgments` 語意不變（只在判定模式顯示，前端不在經典模式讀）。
-- 證偽欄｜可證偽：`test_scoring.py` 新增四例——無判定與現行輸出逐欄相同；順位 1 為 `False` ⇒ 順位 2 得主、分數 1×倍率；順位 2 為 `True` 鎖定；全部 `False` ⇒ 無 `is_winner`、分數全 0。屬取捨：另設 `reviews` 結構可讓兩種判定語意分開，但會多一條清空路徑與一個 view 欄位；共用的前提「經典在 `ended` 前無判定」由 R2 階段檢查保證。
+- 證偽欄｜可證偽：`test_scoring.py` 新增三例＋改寫兩例——`test_classic_rejected_falls_back_to_next_rank`、`test_classic_locked_candidate`、`test_classic_all_rejected_has_no_winner`；**改寫** `test_judgments_do_not_change_classic` 為 `test_classic_without_judgments_unchanged`（原斷言「經典規則對任何判定輸出不變」正是本卡要推翻的口徑，改為「無判定時與第一期逐欄相同」）、`test_classic_correct_is_none` 為 `test_classic_correct_reflects_review`（經典 `correct` 改為檢查結果，未檢查仍為 `None`）。屬取捨：另設 `reviews` 結構可讓兩種判定語意分開，但會多一條清空路徑與一個 view 欄位；共用的前提「經典在 `ended` 前無判定」由 R2 階段檢查保證。
 
 ## R2 端點：`POST /api/teacher/review` 與 `POST /api/teacher/review-reset`
 
 - `POST /api/teacher/review` 本體 `{question, team, correct}`：
-  - 錯誤先後：401 老師金鑰 → 409「只有經典搶答可以檢查」（模式非 classic）→ 409「搶答結束後才能檢查」（非 `ended`）→ 404 題號不存在 → 409「本題已鎖定，請先重設本題」（候選判定為 `True`）→ 409「本題沒有可檢查的答案」（無送出或全部已判錯）→ 409「這一組不是目前要檢查的答案，請重新整理」（`team` ≠ 候選）→ 422 本體格式錯誤（FastAPI 驗證，先於上述）。
+  - 錯誤先後：401 老師金鑰（依賴先於本體驗證）→ 422 本體格式錯誤 → 409「只有經典搶答可以檢查」（模式非 classic）→ 409「搶答結束後才能檢查」（非 `ended`）→ 404 題號不存在 → 409「本題已鎖定，請先重設本題」（候選判定為 `True`）→ 409「本題沒有可檢查的答案」（無送出或全部已判錯）→ 409「這一組不是目前要檢查的答案，請重新整理」（`team` ≠ 候選）。
   - 成功：`judgments[question][team] = correct`，`_bump()` 推播；回 `{question, team, correct}`（不含答案）。
   - `team` 由老師端帶入目前畫面上的候選，伺服器在活動鎖內比對：連點兩下「答錯」第二下回 409，不會跳過一組。
-- `POST /api/teacher/review-reset` 本體 `{question}`：401 → 409 模式 → 409 階段 → 404；成功清空該題 `judgments`（回到順位 1 為候選、未檢查），`_bump()`；回 `{question}`。
+- `POST /api/teacher/review-reset` 本體 `{question}`：401 → 422 → 409 模式 → 409 階段 → 404 → 409「本題尚未檢查」（該題沒有任何判定，v1.1）；成功清空該題 `judgments`（回到順位 1 為候選、未檢查），`_bump()`；回 `{question}`。
 - 候選由唯讀方法 `Activity.review_candidate(number)` 取得（經 `rule.rank` 取 `is_winner` 那列，無則 `None`），`review` 在鎖內呼叫它比對；不在端點重算。
 - 兩者都在 `Activity` 內以同一把鎖完成（`server/CLAUDE.md`「活動狀態只在 Activity 內改變」）。日誌只記題號、組別、結果。
-- 證偽欄｜可證偽：`server/tests/test_review.py` 逐條錯誤碼與先後、連點負例、重設後候選回順位 1、每次成功恰推播一次給每條連線。屬取捨：沿用 `/judge` 可少一個端點，但其語意是「任一組、判定中」，改語意須動 `game-mode-framework` 契約；新端點只增不改。
+- 推播口徑（v1.1）：**狀態有改變的成功操作恰推播一次**；任何 409／404／422 不推播（失敗在寫入前拋出，不呼叫 `_bump()`）。
+- 證偽欄｜可證偽：`server/tests/test_review.py` 逐條錯誤碼與先後（`test_error_order_401_then_422`）、連點負例、重設後候選回順位 1、`test_successful_review_pushes_once_and_failures_push_nothing`（成功 seq +1、中間的 409 不跳號）。變異實錄：拿掉候選比對 ⇒ `test_double_click_does_not_skip_a_team` 與推播測試紅（`verification.md`）。屬取捨：沿用 `/judge` 可少一個端點，但其語意是「任一組、判定中」，改語意須動 `game-mode-framework` 契約；新端點只增不改。
 
 ## R3 適用範圍與階段
 
@@ -48,23 +52,25 @@
 
 - 老師 `board`、學生 `results`、`team_scores`、`winning_answers` 全經 `results._ranked` → `a.rule.rank(..., a.judgments.get(number, {}), ...)`（`server/quiz_server/results.py:12`），R1 改規則即三處同步；不在 view、匯出或前端重算（`server/CLAUDE.md`）。
 - 學生 `ended` 的 `results[].ranking[].correct` 會出現 `true`／`false`（現行經典恆 `null`）；`ended` 已全部公開他組答案，判定公開不違反作答隔離。
-- 老師端判斷「鎖定」「全部答錯」由 `board` 推得：候選＝`is_winner` 那列；鎖定＝候選 `correct === true`；全部答錯＝`winner === null` 且 `ranking` 非空且每列 `correct === false`。不另增 view 欄位。
-- 證偽欄｜可證偽：`test_results_view.py` 新增「檢查後老師 `board` 與學生 `results` 得主、分數、`correct` 逐欄相同」；`test_api_skeleton.py` 推播測試涵蓋 review 後學生收到新 view。
+- 老師 view 經典模式 `board[]` 每題另含 `review: {candidate, rejected, locked}`（實作偏離回稿①）：`candidate`＝目前候選組名（全部判錯或無送出為 `null`）、`rejected`＝依順位已判錯的組名、`locked`＝候選已判對。由 `results.build(teacher=True)` 從同一份 `rank` 輸出產生，不另算；其他模式不帶，學生 `results` 永不帶。
+- 證偽欄｜可證偽：`test_results_view.py::test_teacher_and_student_agree[classic]` 改為先判錯順位 1 再比對老師 `board`（去掉 `reference`、`review`、`suggestion`）與學生 `results` 逐欄相同；`test_review.py` 推播測試斷言學生 `results` 不含 `review`。
 
-## R5 匯出：寫選定答案；Google 寫回改寫全部子題
+## R5 匯出：寫選定答案；Google 寫回範圍＝有得主＋上次寫過（v1.1）
 
 - `winning_answers` 不改（已經規則）：鎖定或未檢查的候選答案；全部答錯的題不列入。
 - xlsx 下載每次由 `source_bytes` 重產（`guided_notes.write_answers`），無得主題保持原樣，**不改**。
-- Google 寫回 `google_sheets.write_answers` 改為**每題每個子題都寫**：有得主 ⇒ `fill(slot, answer)`；無得主 ⇒ `slot.label`（佔位符原文、標籤原文，或 R5 右側填空格的 `""`），以 `RAW` 一次 `batchUpdate`。如此重匯出能把「先前有得主、後來全部判錯或重設」的格還原，副本與畫面一致。
-- 副本中原本就不是作答格的儲存格不寫（仍只寫解析出的作答格）。
-- 證偽欄｜可證偽：`test_google_sheets.py` 新增「第一次寫回有得主、全部判錯後第二次寫回該格為原標籤」與「`data` 長度＝全部子題數」；`test_api_export.py` 新增「順位 1 判錯後 xlsx 為順位 2 答案」「全部判錯該格與原檔相同」。屬取捨：多寫無得主格會把老師在匯出後手動填進副本作答格的內容蓋回原標籤；副本是系統產物，手冊提醒老師在副本以外的地方編修。
+- Google 寫回 `google_sheets.write_answers(..., restore)`：寫入範圍＝**目前有得主的題**（`fill(slot, answer)`）＋**上次寫回寫過、這次已無得主的題**（`slot.label` 還原：佔位符原文、標籤原文，或右側填空格的 `""`）；無得主且從未寫過的格**不碰**（維持「無人搶答的題目不變」）。沒有任何格要寫就不發請求。
+- 「上次寫過的題號」存 `Activity.sheet_written`，寫回成功後以 `Activity.mark_sheet_written(sheet_id, 題號集合)` 在活動鎖內更新（副本 id 已換則不記）。隨副本走：重新匯入（新副本）清空；**重置保留**（實作偏離回稿②：重置後仍寫同一份副本）。
+- 匯出（xlsx）與寫回（Google）在 `app.py` 以同一把 `asyncio.Lock` 序列化，階段檢查與快照（`winning_answers`、`sheet_written`）都在鎖內取（v1.1；原 `app.py`「`url = await google_sheets.write_answers(gs, act.source_sheet_id, act.notes,`」快照在鎖外）；前端匯出中停用按鈕（`web-workbench` 整合時做）。
+- 證偽欄｜可證偽：`test_api_google.py::test_reexport_restores_previously_written_cells`（第一次寫第 1 題、判錯後第二次只寫 H5／H6 為 `""`、第三次不再寫）；既有 `test_export_sheet_writes_copy` 第二題無人搶答不出現在寫入範圍。變異實錄：`restore=frozenset()` ⇒ 該測試紅。屬取捨：「寫全部子題」（v1.0）較簡單但會改動從未寫過的格（評審抽中）。
+- 已知限制：`slot.label` 是匯入時讀到的**計算後的值**，作答格原本放公式或數字時會還原成文字（官方範本作答格皆為字串或空白）；匯入後副本被插列時，寫錯格的範圍＝寫過的格。
 
 ## R6 副本與下載檔名：「_作答情況」
 
 - `COPY_SUFFIX = "_作答情況"`：匯入時 `files.copy` 的 `name` 為「<原標題>_作答情況」。既有副本不改名。
 - `export_filename`：`<原檔名去副檔名>_作答情況.xlsx`；`Content-Disposition` 的 ASCII 後備名 `guided-notes-result.xlsx` 不變。
 - 訂正落全：`git grep -n 搶答結果 -- :/` 共 69 處；其中**檔名／副本名**語意的現行引用點逐一改——`server/quiz_server/google_sheets.py`（2）、`server/quiz_server/app.py`（1）、`server/tests/test_google_sheets.py`（1）、`server/tests/test_api_export.py`（1）、`web/src/pages/ImportPanel.tsx`（1）、`contracts/api.md`（2）、`README.md`（1）、`docs/requirements.md` §4（1）、`docs/manual-verification.md`（2）、`openspec/specs/guided-notes-export/spec.md`（1）、`openspec/specs/guided-notes-import/spec.md`（1；兩者由 OpenSpec 組本卡規格增量改；本組對應 `specs/005-guided-notes-export/`、`specs/010-guided-notes-sheets-sync/` 為歷史功能文件，有意不改）、`docs/parity.md`（2，`guided-notes-export`、`guided-notes-sheets-sync` 兩列；`docs/parity.md` 由 `question-text` 分支先登記，合流時同批改）。**有意不改**：一般用語「搶答結果」（`docs/requirements.md` R-04、`openspec/specs/results-view/spec.md`、`server/quiz_server/results.py` 文件字串、`server/CLAUDE.md`／`AGENTS.md`、`web/src/pages/Results.tsx` 標題）；本組歷史功能文件與圖（`specs/005-guided-notes-export/`、`specs/010-guided-notes-sheets-sync/`、`diagrams/005-guided-notes-export-component.puml`、`diagrams/010-guided-notes-sheets-sync-sequence.puml`；新名稱見 `diagrams/012-answer-review-*.puml`）；歷史紀錄（`openspec/changes/archive/`、`docs/ai-logs/`、`probes/results/2026-11-17-sheets-sync-real-stack.txt`、`probes/google_sheets_probe.py` 探針固定名稱）。
-- 證偽欄｜可證偽：驗收 #7 `git grep -n -- '-搶答結果' -- server web/src contracts README.md docs/requirements.md docs/manual-verification.md` 無輸出。
+- 證偽欄｜可證偽：驗收 #7 `git grep -n -- '-搶答結果' -- server contracts README.md docs/requirements.md docs/manual-verification.md` 無輸出；`web/src/pages/ImportPanel.tsx` 一處留到 `web-workbench` 整合（實作偏離回稿③）。
 
 ## 風險
 

@@ -15,7 +15,7 @@ from .guided_notes import ParsedNotes, Question, parse_workbook
 from .judging import suggest
 from .modes import DEFAULT_MODE, MODES, Mode, ModeError
 from .phases import Phase, PhaseError, check_transition
-from .scoring import QuestionAttrs, ScoringRule, Submission
+from .scoring import QuestionAttrs, Ranked, ScoringRule, Submission
 
 MIN_TEAMS, MAX_TEAMS, DEFAULT_TEAMS = 2, 12, 4
 MAX_ANSWER_CHARS = 200
@@ -124,6 +124,9 @@ class Activity:
         self.source_sheet_id: str | None = None
         # Google 來源：{Google 分頁名: xlsx 備援檔分頁名}（xlsx 不允許 / : 等字元，實作輪評審）
         self.source_xlsx_sheets: dict[str, str] | None = None
+        # 上次寫回 Google 副本時寫過答案的題號（answer-review D5 v1.1）：這次沒得主就以原標籤還原。
+        # 隨副本走：重新匯入（新副本）清空；重置保留（同一份副本，上一場寫過的格仍在副本裡）
+        self.sheet_written: frozenset[int] = frozenset()
         self.mode: Mode = MODES[DEFAULT_MODE]
         self.submissions: dict[int, list[Submission]] = {}
         self.judgments: dict[int, dict[str, bool]] = {}  # 題號 → 組別 → 正確否（game-mode-framework D3）
@@ -267,6 +270,7 @@ class Activity:
             self.notes, self.source_bytes, self.source_name = notes, data, name
             self.source_sheet_id = sheet_id
             self.source_xlsx_sheets = xlsx_sheets
+            self.sheet_written = frozenset()
             self.attrs = {q.number: QuestionAttrs() for q in notes.questions}  # 新題目清單：設定歸零
             self._clear_answers()
             await self._bump()
@@ -455,6 +459,51 @@ class Activity:
             if todo:
                 await self._bump()
             return len(todo)
+
+    # ---- 經典搶答結束後依順位檢查（answer-review D1–D3） ----
+    def _require_reviewable(self, number: int) -> None:
+        if self.mode.key != "classic":
+            raise PhaseError("只有經典搶答可以檢查")
+        if self.phase is not Phase.ENDED:
+            raise PhaseError("搶答結束後才能檢查")
+        self.question(number)  # 題號不存在 ⇒ KeyError ⇒ 404
+
+    def review_candidate(self, number: int) -> Ranked | None:
+        """目前候選＝規則產生的得主（依順位第一個未被判錯者）；全部判錯或無送出為 None。"""
+        ranked = self.rule.rank(self.submissions.get(number, []), self.judgments.get(number, {}),
+                                self.attrs_of(number))
+        return next((r for r in ranked if r.is_winner), None)
+
+    async def review(self, number: int, team: str, correct: bool) -> None:
+        async with self._lock:
+            self._require_reviewable(number)
+            cand = self.review_candidate(number)
+            if cand is not None and cand.correct is True:
+                raise PhaseError("本題已鎖定，請先重設本題")
+            if cand is None:
+                raise PhaseError("本題沒有可檢查的答案")
+            # 老師端帶上畫面上的候選；不符（例：連點第二下）即拒，不會跳過一組
+            if cand.team != team:
+                raise PhaseError("這一組不是目前要檢查的答案，請重新整理")
+            await self._checkpoint()
+            self.judgments.setdefault(number, {})[team] = correct
+            await self._bump()
+
+    async def review_reset(self, number: int) -> None:
+        async with self._lock:
+            self._require_reviewable(number)
+            if not self.judgments.get(number):
+                raise PhaseError("本題尚未檢查")
+            await self._checkpoint()
+            self.judgments[number] = {}
+            await self._bump()
+
+    # ---- Google 副本寫回紀錄（answer-review D5 v1.1） ----
+    async def mark_sheet_written(self, sheet_id: str, numbers: frozenset[int]) -> None:
+        """寫回成功後記下這次寫過答案的題號；寫回期間若已換了副本（重新匯入）就不記。"""
+        async with self._lock:
+            if self.source_sheet_id == sheet_id:
+                self.sheet_written = numbers
 
     async def reveal(self) -> None:
         async with self._lock:

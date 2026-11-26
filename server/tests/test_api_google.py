@@ -193,6 +193,24 @@ def test_export_sheet_writes_copy(gclient, fake):
     assert gclient.get("/api/teacher/export", headers=H).status_code == 200
 
 
+def test_reexport_restores_previously_written_cells(gclient, fake):
+    """answer-review D5（v1.1）：寫回範圍＝目前有得主的格＋上次寫過、這次沒得主的格（以原標籤還原）；
+    從未寫過且無得主的格不碰（「無人搶答的題目不變」）。"""
+    sign_in(gclient, H)
+    gclient.post("/api/teacher/import-url", json={"url": URL}, headers=H)
+    _play_and_end(gclient)
+    gclient.post("/api/teacher/export-sheet", headers=H)
+    body = {"question": 1, "team": "第1組", "correct": False}
+    r = gclient.post("/api/teacher/review", json=body, headers=H)
+    assert r.status_code == 200
+    assert gclient.post("/api/teacher/export-sheet", headers=H).status_code == 200
+    assert fake.writes[1]["data"] == [{"range": "'學習單'!H5", "values": [[""]]},
+                                      {"range": "'學習單'!H6", "values": [[""]]}]
+    # 第三次：上次已還原、這次仍無得主 ⇒ 不再寫入任何格
+    gclient.post("/api/teacher/export-sheet", headers=H)
+    assert len(fake.writes) == 2
+
+
 def test_export_sheet_error_order(gclient, fake, fixture_bytes):
     # 未匯入、非 ended ⇒ 409 階段先於來源與登入
     r = gclient.post("/api/teacher/export-sheet", headers=H)

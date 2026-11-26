@@ -33,6 +33,13 @@ def build(a: Activity, teacher: bool = False) -> list[dict[str, Any]]:
         }
         if teacher:
             entry["reference"] = [s.reference for s in q.slots]
+            if a.mode.key == "classic":
+                # 經典搶答的檢查狀態只給老師（answer-review v1.1）：候選、依順位已判錯的組、是否鎖定
+                entry["review"] = {
+                    "candidate": None if winner is None else winner.team,
+                    "rejected": [r.team for r in ranked if r.correct is False],
+                    "locked": winner is not None and winner.correct is True,
+                }
         out.append(entry)
     return out
 

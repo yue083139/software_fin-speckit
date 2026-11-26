@@ -26,13 +26,34 @@ def test_no_submissions_no_winner():
     assert ClassicBuzzRule().rank([]) == []
 
 
-def test_judgments_do_not_change_classic():
-    """經典規則不判對錯；倍率則乘進得主分數（question-settings 改寫第一期的預留輸入測試）。"""
+def test_classic_without_judgments_unchanged():
+    """answer-review D1 改寫原 test_judgments_do_not_change_classic：經典規則改讀檢查結果，
+    但沒有任何檢查時與第一期逐欄相同（順位 1 得主、correct 為 None）；倍率乘進得主分數。"""
     rule = ClassicBuzzRule()
     subs = [sub("第2組", 1), sub("第1組", 2)]
-    assert rule.rank(subs) == rule.rank(subs, judgments={"第2組": False})
-    doubled = rule.rank(subs, judgments={"第2組": False}, attrs=QuestionAttrs(2))
-    assert [(r.team, r.is_winner, r.score) for r in doubled] == [("第2組", True, 2), ("第1組", False, 0)]
+    assert rule.rank(subs) == rule.rank(subs, judgments={})
+    doubled = rule.rank(subs, attrs=QuestionAttrs(2))
+    assert [(r.team, r.is_winner, r.score, r.correct) for r in doubled] == [
+        ("第2組", True, 2, None), ("第1組", False, 0, None)]
+
+
+def test_classic_rejected_falls_back_to_next_rank():
+    """answer-review D1：順位 1 判錯 ⇒ 順位 2 遞補為得主，判錯者 0 分。"""
+    ranked = ClassicBuzzRule().rank([sub("第2組", 1), sub("第1組", 2), sub("第3組", 3)],
+                                    {"第2組": False}, QuestionAttrs(2))
+    assert [(r.team, r.is_winner, r.score, r.correct) for r in ranked] == [
+        ("第2組", False, 0, False), ("第1組", True, 2, None), ("第3組", False, 0, None)]
+
+
+def test_classic_locked_candidate():
+    ranked = ClassicBuzzRule().rank([sub("第2組", 1), sub("第1組", 2)], {"第2組": False, "第1組": True})
+    assert [(r.team, r.is_winner, r.score, r.correct) for r in ranked] == [
+        ("第2組", False, 0, False), ("第1組", True, 1, True)]
+
+
+def test_classic_all_rejected_has_no_winner():
+    ranked = ClassicBuzzRule().rank([sub("第2組", 1), sub("第1組", 2)], {"第2組": False, "第1組": False})
+    assert not any(r.is_winner for r in ranked) and all(r.score == 0 for r in ranked)
 
 
 @pytest.mark.parametrize("rule", [ClassicBuzzRule(), AccuracyRule()], ids=["classic", "accuracy"])
@@ -74,8 +95,10 @@ def test_accuracy_no_submissions():
     assert AccuracyRule().rank([], {}) == []
 
 
-def test_classic_correct_is_none():
-    assert all(r.correct is None for r in ClassicBuzzRule().rank([sub("第1組", 1)], {"第1組": False}))
+def test_classic_correct_reflects_review():
+    """answer-review D1 改寫原 test_classic_correct_is_none：經典的 correct 為檢查結果，未檢查為 None。"""
+    assert [r.correct for r in ClassicBuzzRule().rank([sub("第1組", 1)])] == [None]
+    assert [r.correct for r in ClassicBuzzRule().rank([sub("第1組", 1)], {"第1組": False})] == [False]
 
 
 @pytest.mark.parametrize(("elapsed_ms", "limit", "multiplier", "expected"), [
