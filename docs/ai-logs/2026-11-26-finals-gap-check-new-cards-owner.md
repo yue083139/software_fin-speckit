@@ -1283,7 +1283,7 @@ Waiting on web-workbench (SpecKit sync + test-flake fixes) and answer-review fol
 ● 【2026-11-26 13:51 AI】
 分身在背景做隱藏金鑰的卡。我先快速確認本地棧正常：
   ⎿ 工具 Bash：Smoke test local and public endpoints
-    K=<已遮蔽>; curl -s -H "X-Teacher-Key: <已遮蔽> http://127.0.0.1:8000/api/teacher/state | python -c "import sys,json;v=json.load(sys.stdin);print(v['phase'],v.get('student_url'))"; U=https://beads-air-predictions-greatly.trycloudflare.com; curl -s -o /dev/null -w 'public student page %{http…（以下略，共 418 字）
+    K=<已遮蔽>; curl -s -H "X-Teacher-Key: <已遮蔽>" http://127.0.0.1:8000/api/teacher/state | python -c "import sys,json;v=json.load(sys.stdin);print(v['phase'],v.get('student_url'))"; U=https://beads-air-predictions-greatly.trycloudflare.com; curl -s -o /dev/null -w 'public student page %{http…（以下略，共 418 字）
 
 ● 【2026-11-26 13:51 AI】
 四張卡（`question-text`、`answer-review`、`web-workbench`、`student-qr`）都做完了。兩組各自經過雙通道評審、合入 `dev`、OpenSpec 也已歸檔。本地棧已用最新 `dev` 加通道模式重啟，可以開始測了。

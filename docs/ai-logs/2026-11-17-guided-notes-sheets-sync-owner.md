@@ -1539,7 +1539,7 @@ Diagrams render cleanly. Fixing the stale `load_notes` mention in plan.md and wr
 1 登入：已開啟瀏覽器，請以測試使用者帳號同意
   回呼 state 相符：True
   換權杖 HTTP 200；有 refresh_token：True；scope：https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email openid；expires_in：3599
-  id_token 有 email：True（hank…）
+  id_token 有 email：True（<已遮蔽>）
 1 登入 OK
 2 讀取：HTTP 200
   標題長度 16；分頁 學習單；合併數 13
