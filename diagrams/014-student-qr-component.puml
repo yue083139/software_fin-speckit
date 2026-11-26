@@ -1,0 +1,38 @@
+@startuml 014-student-qr-component
+title 014 student-qr：組件圖
+
+actor "學生手機（4G）" as Phone
+actor "老師（本機瀏覽器）" as Teacher
+
+cloud "Cloudflare 邊緣" {
+  [trycloudflare.com 快速通道\n轉送時加 cf-connecting-ip、cf-ray\n偽造 Host 回 403] as Edge
+}
+
+node "老師電腦" {
+  [cloudflared 子行程\ntunnel --url http://127.0.0.1:埠] as CF
+  package "server/quiz_server" {
+    [__main__\n--tunnel 或 QUIZ_TUNNEL=1\n印學生公開網址] as Main
+    [tunnel.Tunnel\nfind_cloudflared・parse_url・wait_for_url\nstart・stop] as Tun
+    [app.is_local\nHost 主機名在 LOCAL_HOSTNAMES\n且無 TUNNEL_HEADERS] as Guard
+    [app 老師端點・老師 WebSocket・Google 回呼\n不符：403 或 4403] as TeacherApi
+    [app 學生與公開端點\n不受限] as StudentApi
+    [views.teacher_view\nstudent_url（學生 view 不帶）] as Views
+    [activity.Activity\npublic_url] as Act
+  }
+}
+
+Main --> Tun : start()，取公開網址
+Tun --> CF : 子行程
+Main --> Act : create_app(student_url=)
+Views --> Act
+Phone --> Edge : https 公開網址
+Edge --> CF
+CF --> StudentApi : Host＝公開網域
+CF --> Guard : 公開網域打老師端點
+Guard --> TeacherApi : 只有本機放行
+Teacher --> TeacherApi : http://127.0.0.1:8000
+note bottom of Guard
+  不用 client.host：uvicorn 會依
+  X-Forwarded-For 改寫它（探針 ② 對照）
+end note
+@enduml

@@ -113,6 +113,16 @@
 7. 老師在組別區按第1組「釋放」⇒ A、B 都顯示「尚未加入組別或組別已被老師釋放」；老師頁第1組出現新的邀請碼。A 到首頁用**舊**碼加入 ⇒「邀請碼不正確」；用老師頁的新碼 ⇒ 加入成功。
 8. 老師按「結束搶答」⇒ 結果與經典搶答相同（第 3 題得主第1組，答案「甲」）。
 
+### 場次 F：手機掃碼（student-qr，約 5 分鐘）
+
+前置：已安裝 cloudflared（`winget install --id Cloudflare.cloudflared -e`）；手機關掉 Wi-Fi 改用 4G。
+
+1. 雙擊 `start-tunnel.cmd` ⇒ 視窗印出「學生頁（手機掃老師頁的 QR code，或直接開）：https://….trycloudflare.com/」。
+2. 等約 1 分鐘，以本機開老師頁 ⇒ 老師頁顯示學生網址的 QR code，網址與視窗印的相同。
+3. 手機掃 QR code ⇒ 開啟學生頁，可選第1組加入；電腦另開一個學生分頁選第2組。匯入題目、開始搶答，手機送出第 3 題 ⇒ 老師表即時出現，電腦第2組看不到。
+4. 電腦瀏覽器改用公開網址開老師頁（`https://….trycloudflare.com/#/teacher?key=<金鑰>`）⇒ 顯示「老師頁只能在本機開啟」，看不到任何活動資料。
+5. 關閉視窗 ⇒ 手機學生頁斷線；工作管理員裡沒有殘留的 `cloudflared.exe`。
+
 ## 4. Demo 影片可順便錄
 
 需求 §6：影片 5 分鐘內，須完整展示老師端與**至少 2 組**學生端。場次 A 的 A3–A5 就是完整流程，可邊驗證邊錄（錄影前先關掉含老師金鑰的終端機畫面）。
@@ -134,5 +144,6 @@
 | C | `question-settings` | ✅ | |
 | D | `mode-timed-scoring` | ✅ | |
 | E | `team-mode` | ✅ | |
+| F | `student-qr` | 待執行 | |
 
 各卡原始步驟：OpenSpec 組 `openspec/changes/archive/<日期>-<卡名>/verification.md`；SpecKit 組 `specs/<NNN>-<卡名>/verification.md`。

@@ -33,6 +33,8 @@ winget install --id OpenJS.NodeJS.LTS -e
 
 老師頁網址含老師金鑰，不要給學生。關閉視窗（或按 Ctrl+C）就停止伺服器，活動隨之清空。
 
+**讓手機掃 QR code 進學生頁**（選用）：先安裝 cloudflared（PowerShell 執行 `winget install --id Cloudflare.cloudflared -e`），改雙擊 **`start-tunnel.cmd`**（終端機：`make dev-tunnel`）。視窗多印一行 `https://….trycloudflare.com/` 的學生網址，老師頁會顯示它的 QR code；手機用 4G 也能連，不必與電腦同一個 Wi-Fi。新網址約 1 分鐘後才連得上，每次啟動都不同。老師頁**只能在本機**（`127.0.0.1`）開啟，用公開網址開會顯示「老師頁只能在本機開啟」。找不到 cloudflared 時照常以本機模式啟動。
+
 ### 一場活動
 
 1. 老師開老師頁網址。學生頁在**同一台電腦**開，**每組一個分頁**：組別憑證存在分頁裡，關閉分頁即失效。系統只在本機執行，別台電腦連不到。

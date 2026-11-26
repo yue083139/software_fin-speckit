@@ -120,6 +120,7 @@ class Activity:
         self.notes: ParsedNotes | None = None
         self.source_bytes: bytes | None = None  # 匯入當下的原檔，供匯出寫回（guided-notes-import D6）
         self.source_name: str | None = None
+        self.public_url: str | None = None  # 通道公開網址（student-qr）；伺服器設定，重置與重新匯入都保留
         # Google 來源時為匯入時建立的副本 id（guided-notes-sheets-sync D3）；上傳 xlsx 為 None
         self.source_sheet_id: str | None = None
         # Google 來源：{Google 分頁名: xlsx 備援檔分頁名}（xlsx 不允許 / : 等字元，實作輪評審）

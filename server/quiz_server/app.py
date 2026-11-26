@@ -44,6 +44,13 @@ from .views import view_for
 log = logging.getLogger("quiz_server")
 DEFAULT_STATIC = Path(__file__).resolve().parents[2] / "web" / "dist"
 WS_UNAUTHORIZED = 4401
+WS_NOT_LOCAL = 4403
+# student-qr D2：老師身分只在本機。以 Host 主機名判斷，且不得帶 Cloudflare 邊緣加上的轉送標頭——
+# 經通道的 Host 是公開網域、偽造 Host 會被邊緣 403；client.host 會被 uvicorn 依 X-Forwarded-For 改寫，不採用
+#（探針 probes/results/2026-11-26-cloudflared.txt ②③④）
+LOCAL_HOSTNAMES = frozenset({"127.0.0.1", "localhost", "[::1]"})
+TUNNEL_HEADERS = ("cf-connecting-ip", "cf-ray")
+NOT_LOCAL = "老師頁只能在本機開啟"
 
 
 class TeamsBody(BaseModel):
@@ -108,6 +115,8 @@ COOKIE_PATH = "/api/google"
 # 回呼頁只用固定文案，不回顯任何查詢參數（guided-notes-sheets-sync D1：避免反射型 XSS 偷老師金鑰）
 CALLBACK_OK = ("<!doctype html><meta charset=utf-8><title>登入完成</title>"
                "<p>登入完成，可關閉此分頁，回到老師頁。</p>")
+CALLBACK_NOT_LOCAL = ("<!doctype html><meta charset=utf-8><title>登入失敗</title>"
+                      "<p>請在本機（127.0.0.1）開啟老師頁後重新登入。</p>")
 CALLBACK_FAIL = ("<!doctype html><meta charset=utf-8><title>登入失敗</title>"
                  "<p>登入失敗，請回老師頁重新登入。</p>")
 
@@ -124,7 +133,7 @@ def resolve_teacher_key(explicit: str | None = None) -> str:
 def create_app(activity: Activity | None = None, teacher_key: str | None = None,
                static_dir: Path | None = DEFAULT_STATIC,
                http_transport: httpx.AsyncBaseTransport | None = None,
-               google: GoogleSession | None = None) -> FastAPI:
+               google: GoogleSession | None = None, student_url: str | None = None) -> FastAPI:
     app = FastAPI(title="課堂搶答系統")
     act = activity or Activity()
     gs = google or GoogleSession(os.environ.get("GOOGLE_CLIENT_ID"), os.environ.get("GOOGLE_CLIENT_SECRET"),
@@ -132,11 +141,19 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
     app.state.google = gs
     secret = resolve_teacher_key(teacher_key)
     app.state.activity = act
+    act.public_url = student_url
+
+    def is_local(headers: Any) -> bool:
+        host = headers.get("host", "").strip().lower()
+        hostname = host.split("]")[0] + "]" if host.startswith("[") else host.rsplit(":", 1)[0]
+        return hostname in LOCAL_HOSTNAMES and not any(h in headers for h in TUNNEL_HEADERS)
 
     def is_teacher(given: str | None) -> bool:
         return given is not None and secrets.compare_digest(given.encode(), secret.encode())
 
-    def require_teacher(x_teacher_key: Annotated[str | None, Header()] = None) -> None:
+    def require_teacher(request: Request, x_teacher_key: Annotated[str | None, Header()] = None) -> None:
+        if not is_local(request.headers):  # 先擋 Host，不讓公開網域探測金鑰對錯
+            raise HTTPException(403, NOT_LOCAL)
         if not is_teacher(x_teacher_key):
             raise HTTPException(401, "需要老師金鑰")
 
@@ -296,6 +313,8 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
 
     @app.get("/api/google/callback")
     async def google_callback(request: Request) -> HTMLResponse:
+        if not is_local(request.headers):
+            return HTMLResponse(CALLBACK_NOT_LOCAL, status_code=403)
         q = request.query_params
         try:
             await gs.complete(q.get("state"), q.get("code"), request.cookies.get(COOKIE_NAME), q.get("error"))
@@ -401,6 +420,9 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
                  token: str | None = None) -> None:
         if role not in ("teacher", "student"):
             await socket.close(code=1008)
+            return
+        if role == "teacher" and not is_local(socket.headers):
+            await socket.close(code=WS_NOT_LOCAL)
             return
         if role == "teacher" and not is_teacher(key):
             await socket.close(code=WS_UNAUTHORIZED)

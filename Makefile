@@ -8,7 +8,7 @@ SRV := uv run --project server
 WEB := npm --prefix web
 SIBLING ?= ../software_fin-openspec
 
-.PHONY: help hooks dev web-install test lint gate-zh-hant gate-secrets gate-speckit gate-diagrams gate-diagrams-syntax gate-agents gate-parity gate-docs gate-pr gate probe-guided-notes sync-agents review-codex codex-venv diagrams
+.PHONY: help hooks dev dev-tunnel web-install test lint gate-zh-hant gate-secrets gate-speckit gate-diagrams gate-diagrams-syntax gate-agents gate-parity gate-docs gate-pr gate probe-guided-notes sync-agents review-codex codex-venv diagrams
 
 help: ## 列出所有目標
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-22s %s\n",$$1,$$2}'
@@ -20,6 +20,10 @@ hooks: ## 安裝本機 git 鉤子（pre-push 拒推 main／dev）；clone 後執
 dev: web/node_modules/.package-lock.json ## 一行啟動：缺前端依賴先自動安裝（伺服器依賴由 uv run 自動同步），再建置前端並啟動 http://127.0.0.1:8000
 	$(WEB) run build
 	$(SRV) python -m quiz_server
+
+dev-tunnel: web/node_modules/.package-lock.json ## 同 make dev，另以 Cloudflare 快速通道取得公開網址給手機掃 QR code（需已安裝 cloudflared）
+	$(WEB) run build
+	$(SRV) python -m quiz_server --tunnel
 
 web-install: ## 依 package-lock.json 重新安裝前端依賴（CI 用；make dev 缺依賴時會自動安裝）
 	$(WEB) ci --no-fund --no-audit

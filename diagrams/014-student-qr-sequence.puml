@@ -1,0 +1,41 @@
+@startuml 014-student-qr-sequence
+title 014 student-qr：時序圖
+
+actor "老師" as T
+actor "學生手機" as P
+participant "__main__" as M
+participant "Tunnel" as Tun
+participant "cloudflared" as CF
+participant "Cloudflare 邊緣" as E
+participant "app（is_local）" as A
+participant "views" as V
+
+== 啟動取網址 ==
+T -> M : start-tunnel.cmd 或 make dev-tunnel
+M -> Tun : start(timeout=30)
+Tun -> CF : tunnel --no-autoupdate --url http://127.0.0.1:8000
+CF --> Tun : 輸出表框列 https://隨機.trycloudflare.com
+Tun --> M : 公開網址（失敗則 None，改本機模式）
+M -> A : create_app(student_url=公開網址)
+M --> T : 終端機印學生公開網址
+
+== 老師在本機看 QR code ==
+T -> A : GET /api/teacher/state（Host 127.0.0.1:8000）
+A -> A : is_local 為真，再驗金鑰
+A -> V : teacher_view
+V --> T : student_url＝公開網址
+
+== 手機經通道作答 ==
+P -> E : https 公開網址 /api/student/join
+E -> CF : 加 cf-connecting-ip、cf-ray
+CF -> A : Host＝公開網域
+A --> P : 200 組別憑證（學生端點不受限）
+
+== 公開網址開老師頁被拒 ==
+P -> E : /api/teacher/state 帶老師金鑰
+E -> CF
+CF -> A : Host＝公開網域且帶 cf-connecting-ip
+A --> P : 403 老師頁只能在本機開啟（先於金鑰檢查）
+P -> E : 偽造 Host 127.0.0.1
+E --> P : 邊緣直接 403，到不了本機
+@enduml

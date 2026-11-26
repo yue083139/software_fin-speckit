@@ -38,6 +38,7 @@ export interface TeacherView {
   teams: string[];
   joined: string[];
   source: string | null;
+  student_url?: string | null; // student-qr：通道公開網址，給 QR code；null＝改用自身網址
   questions: QuestionOutline[];
   board: QuestionResult[];
   team_scores: Record<string, number>;
