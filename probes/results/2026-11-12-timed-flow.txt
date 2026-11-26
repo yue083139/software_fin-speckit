@@ -1,0 +1,20 @@
+# 2026-11-12 probes/timed_flow_probe.py（真 uvicorn、真 WebSocket；伺服器另開終端機以 QUIZ_TEACHER_KEY 啟動於 127.0.0.1:8766）
+$ uv run --project server python probes/timed_flow_probe.py http://127.0.0.1:8766 <金鑰> tests/fixtures/guided-notes/group.xlsx
+匯入 200
+模式 {'mode': 'timed'}
+第3題時限 {'question': 3, 'multiplier': 1, 'time_limit': 5}
+開始 {'phase': 'answering'}
+開放 {'question': 3}
+第2組收到回合 3 open
+第1組送出 200
+第2組在他組送出後 0.5 秒內收到 0 則訊息
+第2組送出 200
+伺服器自動關閉並推播：開題後 5.02 秒（時限 5 秒）
+關閉後送出 409 這一題目前沒有開放作答
+揭曉 {'question': 3}
+第2組本組結果 {'question': 3, 'submitted': True, 'correct': False, 'score': 0} 累積 0
+第2組看到名次 [{'team': '第1組', 'rank': 1}, {'team': '第2組', 'rank': 2}]
+第2組 payload 含第1組答案 False ；名次含分數 False
+老師看到第3題 [('第1組', True, 898), ('第2組', False, 0)]
+老師名次 [{'team': '第1組', 'rank': 1, 'score': 898}, {'team': '第2組', 'rank': 2, 'score': 0}]
+（退出碼 0）

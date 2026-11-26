@@ -1,0 +1,50 @@
+@startuml system-component
+title 課堂搶答系統：全系統組件圖（001 起建，各功能增改）
+
+actor "老師" as Teacher
+actor "學生（每組一台裝置）" as Student
+file "Guided Notes\n(xlsx / Google 試算表)" as GN
+cloud "Google 試算表\n匯出端點" as GS
+
+package "web（React + Vite + TypeScript）" {
+  [首頁 Home] as Home
+  [老師頁 Teacher\n模式・判定・題目設定・逐題控制] as TPage
+  [學生頁 Student] as SPage
+  [useLiveView\n(WebSocket hook)] as Live
+  [api.ts\n(REST 呼叫)] as Api
+}
+
+package "server（Python / FastAPI）" {
+  [app.py\nREST + WebSocket 端點] as App
+  [Activity\n唯一狀態來源（鎖）\n判定・題目屬性・回合] as Act
+  [modes\n模式登記表（006、008）] as Modes
+  [views\n依身分裁切畫面狀態] as Views
+  [scoring\nScoringRule 判定規則\n經典・只計對錯・時間計分] as Scoring
+  [judging\n參考答案建議（006）] as Judging
+  [results\n結果（經規則）] as Results
+  [guided_notes\n解析與寫回] as Notes
+  [sources\n上傳驗證／連結下載] as Sources
+}
+
+Teacher --> TPage
+Student --> Home
+Student --> SPage
+TPage --> Api
+SPage --> Api
+Home --> Api
+TPage --> Live
+SPage --> Live
+Api --> App : HTTP（X-Teacher-Key / X-Team-Token）
+Live --> App : WebSocket /ws（每連線各自的 view）
+App --> Act : 所有狀態變更
+Act --> Modes : rule = mode.rule
+Act --> Judging
+App --> Views : 產生送出的 view
+Views --> Results
+Results --> Scoring
+Act --> Notes : 匯入解析
+App --> Sources
+Sources ..> GS : 只限 Google 網域、逐跳檢查
+App --> Notes : 匯出寫回
+GN ..> TPage : 老師上傳
+@enduml

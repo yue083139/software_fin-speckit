@@ -1,0 +1,39 @@
+@startuml 005-guided-notes-export-class
+title 005 guided-notes-export：類別圖
+
+class guided_notes <<module>> {
+  + fill(slot : Slot, answer : str) : str
+  + write_answers(original : bytes, notes : ParsedNotes,\n  answers : dict[int, tuple[str, ...]]) : bytes
+}
+
+class results <<module>> {
+  + winning_answers(a : Activity) : dict[int, tuple[str, ...]]
+}
+
+class app <<module>> {
+  + XLSX_MEDIA
+  + export_filename(source) : str
+  GET /api/teacher/export
+}
+
+class Slot <<frozen dataclass>> {
+  sheet
+  cell
+  label
+  placeholder
+}
+
+class ParsedNotes <<frozen dataclass>>
+class Activity {
+  source_bytes : bytes
+  notes : ParsedNotes
+  phase : Phase
+}
+
+guided_notes ..> Slot : 依座標寫入、data_type = "s"
+guided_notes ..> ParsedNotes
+results ..> Activity
+app ..> results
+app ..> guided_notes
+app ..> Activity
+@enduml

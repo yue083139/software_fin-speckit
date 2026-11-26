@@ -1,0 +1,28 @@
+@startuml 003-buzz-answering-component
+title 003 buzz-answering：組件圖
+
+package "web" {
+  [StudentPanel\n＋ AnswerForm（題組一次送出、送出後鎖定）] as Student
+  [api.ts\nstudentSubmit(X-Team-Token)] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\nPOST /api/student/submit\nRequestValidationError 不回顯本體] as App
+  [activity.Activity\nsubmit・clean_answers] as Act
+  [scoring\nScoringRule・ClassicBuzzRule] as Scoring
+  [results\nbuild（只在 ended 給學生）] as Results
+  [views.student_view\n非 ended 只含本組] as Views
+}
+
+Student --> Api
+Api --> App : 送出（只帶憑證、題號、答案）
+App --> Act : team_of(token) 後 submit
+Act --> Scoring : 排名一律經規則
+App --> Views : 每連線 view
+Views --> Results : 只有 phase == ended
+
+note right of Views
+  他組送出不改變本組 view，
+  依 001 的送出迴圈不推送任何訊息
+end note
+@enduml

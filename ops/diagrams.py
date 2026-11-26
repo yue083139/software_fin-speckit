@@ -5,6 +5,7 @@
 
 用法：python ops/diagrams.py render|check [根目錄]
 """
+import platform
 import shutil
 import subprocess
 import sys
@@ -24,13 +25,26 @@ def _jar(root: Path) -> Path:
     return jar
 
 
+# 圖內文字為繁體中文：指定各平台內建的中文字型；Docker 映像本身沒有中文字型，
+# 掛載主機字型目錄（唯讀）才不會變成方框（2026-11-11 實測）
+FONTS = {
+    "Windows": ("Microsoft JhengHei", Path("C:/Windows/Fonts")),
+    "Darwin": ("PingFang TC", Path("/System/Library/Fonts")),
+}
+DEFAULT_FONT = ("Noto Sans CJK TC", Path("/usr/share/fonts"))
+
+
 def command(root: Path, mode_flag: str, files: list[Path]) -> list[str] | None:
+    font, font_dir = FONTS.get(platform.system(), DEFAULT_FONT)
+    common = ["-charset", "UTF-8", f"-SdefaultFontName={font}", mode_flag]
     if shutil.which("java"):
-        return ["java", "-jar", str(_jar(root)), "-charset", "UTF-8", mode_flag, *map(str, files)]
+        return ["java", "-jar", str(_jar(root)), *common, *map(str, files)]
     if shutil.which("docker"):
         rels = [f"/data/{f.relative_to(root / 'diagrams').as_posix()}" for f in files]
-        return ["docker", "run", "--rm", "-v", f"{(root / 'diagrams').resolve()}:/data",
-                f"plantuml/plantuml:{VERSION}", "-charset", "UTF-8", mode_flag, *rels]
+        mounts = ["-v", f"{(root / 'diagrams').resolve()}:/data"]
+        if font_dir.is_dir():
+            mounts += ["-v", f"{font_dir}:/usr/share/fonts/host:ro"]
+        return ["docker", "run", "--rm", *mounts, f"plantuml/plantuml:{VERSION}", *common, *rels]
     return None
 
 

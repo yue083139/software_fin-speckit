@@ -13,12 +13,18 @@ SHARED = [
     "docs/requirements.md",
     "docs/parity.md",
     "docs/discipline-precedents.md",
+    "docs/trd-game-modes.md",
+    "docs/research/competitors.md",
     ".claude/agents/finder-tail-red.md",
     ".claude/agents/finder-tail-arch.md",
     ".claude/skills/review-dispatch/SKILL.md",
     "ops/gate_parity.py",
     "tests/fixtures/guided-notes/single.xlsx",
     "tests/fixtures/guided-notes/group.xlsx",
+    "tests/fixtures/guided-notes/variant.xlsx",
+    "tests/fixtures/guided-notes/reference.xlsx",
+    "tests/fixtures/guided-notes/build_reference.py",
+    "contracts/api.md",
 ]
 SKIPPED = "gate-parity: 未跑（未提供另一 repo 路徑或路徑不存在）"
 

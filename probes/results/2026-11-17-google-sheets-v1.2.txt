@@ -1,0 +1,28 @@
+# 2026-11-17 Google OAuth／Sheets／Drive 探針 v1.2（guided-notes-sheets-sync D1–D3＝R1–R3；負責人帳號執行；試算表 id 與 email 遮蔽）
+# v1.2 新增：openid email、refresh 換新、撤銷（權杖放表單本體）；步驟 2 已含 D5（題組子題 H 欄）
+$ uv run --project server python probes/google_sheets_probe.py https://docs.google.com/spreadsheets/d/1dk8…/edit
+試算表 id：1dk8…
+1 登入：已開啟瀏覽器，請以測試使用者帳號同意
+  回呼 state 相符：True
+  換權杖 HTTP 200；有 refresh_token：True；scope：https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email openid；expires_in：3599
+  id_token 有 email：True（（已遮蔽））
+1 登入 OK
+2 讀取：HTTP 200
+  標題長度 16；分頁 學習單；合併數 13
+  API 解析：[(1, ['H5', 'H6']), (2, ['H8', 'H9']), (3, ['G11']), (4, ['G13'])]
+  夾具解析：[(1, ['H5', 'H6']), (2, ['H8', 'H9']), (3, ['G11']), (4, ['G13'])]
+2 讀取 OK
+3A Drive files.copy：HTTP 200
+  副本 1urR… 合併與原檔相同：True
+3B Sheets create：HTTP 200
+  sheets.copyTo：HTTP 200；新分頁名：「學習單」的副本
+  副本 B 該分頁合併與原檔相同：True
+4 寫入 G11：HTTP 200
+  副本讀回：'=1+1'；原檔同格（HTTP 200）：None（原檔應未被寫入）
+4 寫入 OK
+5 換新：HTTP 200；有 access_token：True；新 token 與舊不同：True
+5 換新 OK
+6 撤銷：HTTP 200
+  撤銷後再換新：HTTP 400；error：invalid_grant
+6 撤銷 OK
+完成（副本留在雲端硬碟，名稱含「探針」）

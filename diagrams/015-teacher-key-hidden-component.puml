@@ -1,0 +1,24 @@
+@startuml 015-teacher-key-hidden-component
+title 015 teacher-key-hidden：組件圖
+
+package "瀏覽器（老師分頁）" {
+  component "App" as App
+  component "route（takeTeacherKey／clearTeacherKey）" as Route
+  component "Teacher 頁" as Teacher
+  component "api（teacherPost 等）" as Api
+  component "live（WebSocket）" as Live
+  database "sessionStorage：qz_teacher_key" as SS
+  component "history（網址列）" as Hist
+}
+node "伺服器（不變）" as Srv
+
+App --> Route : 老師頁取金鑰
+Route --> Hist : replaceState 移除 key
+Route --> SS : 寫入／讀取／清除
+App --> Teacher : teacherKey
+Teacher --> Api : X-Teacher-Key
+Teacher --> Live : role=teacher 與 key
+Api --> Srv
+Live --> Srv
+Teacher --> Route : 401 或 4401 時清除
+@enduml

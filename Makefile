@@ -4,9 +4,11 @@ SHELL := bash
 .SHELLFLAGS := -eu -o pipefail -c
 export PYTHONUTF8 := 1
 OPS := uv run --group dev
+SRV := uv run --project server
+WEB := npm --prefix web
 SIBLING ?= ../software_fin-openspec
 
-.PHONY: help hooks test lint gate-zh-hant gate-secrets gate-speckit gate-diagrams gate-diagrams-syntax gate-agents gate-parity gate-docs gate-pr gate probe-guided-notes sync-agents review-codex codex-venv diagrams
+.PHONY: help hooks dev dev-tunnel web-install test lint gate-zh-hant gate-secrets gate-speckit gate-diagrams gate-diagrams-syntax gate-agents gate-parity gate-docs gate-pr gate probe-guided-notes sync-agents review-codex codex-venv diagrams
 
 help: ## 列出所有目標
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-22s %s\n",$$1,$$2}'
@@ -15,11 +17,31 @@ hooks: ## 安裝本機 git 鉤子（pre-push 拒推 main／dev）；clone 後執
 	git config core.hooksPath .githooks
 	@echo "core.hooksPath=$$(git config core.hooksPath)"
 
-test: ## 全部單元測試（目前為門禁腳本負例），認末行「N passed」
-	$(OPS) pytest -q ops/tests
+dev: web/node_modules/.package-lock.json ## 一行啟動：缺前端依賴先自動安裝（伺服器依賴由 uv run 自動同步），再建置前端並啟動 http://127.0.0.1:8000
+	$(WEB) run build
+	$(SRV) python -m quiz_server
 
-lint: ## ruff（門禁腳本與探針）
+dev-tunnel: web/node_modules/.package-lock.json ## 同 make dev，另以 Cloudflare 快速通道取得公開網址給手機掃 QR code（需已安裝 cloudflared）
+	$(WEB) run build
+	$(SRV) python -m quiz_server --tunnel
+
+web-install: ## 依 package-lock.json 重新安裝前端依賴（CI 用；make dev 缺依賴時會自動安裝）
+	$(WEB) ci --no-fund --no-audit
+
+# npm 每次安裝都會改寫 node_modules/.package-lock.json；它不存在或比鎖檔舊（例如拉到新的鎖檔）才重裝
+web/node_modules/.package-lock.json: web/package-lock.json
+	$(WEB) ci --no-fund --no-audit
+
+test: ## 全部單元測試：server、門禁腳本、前端；認 pytest 末行「N passed」與 vitest「Tests … passed」
+	$(SRV) pytest -q server/tests
+	$(OPS) pytest -q ops/tests
+	$(WEB) test
+
+lint: ## ruff（server、門禁腳本、探針）＋前端 ESLint 與型別檢查
+	$(SRV) ruff check server
 	$(OPS) ruff check ops probes
+	$(WEB) run lint
+	$(WEB) run typecheck
 
 gate-zh-hant: ## 倉內不得含簡體專用字
 	$(OPS) python ops/gate_zh_hant.py .

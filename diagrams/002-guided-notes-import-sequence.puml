@@ -1,0 +1,31 @@
+@startuml 002-guided-notes-import-sequence
+title 002 guided-notes-import：時序圖（連結匯入）
+
+actor "老師" as T
+participant "app.py" as App
+participant "Activity" as Act
+participant "sources" as Src
+participant "Google\n匯出端點" as G
+participant "guided_notes" as GN
+actor "學生" as S
+
+T -> App : POST /api/teacher/import-url {url}（X-Teacher-Key）
+App -> Act : require_preparing()
+alt 非準備階段
+  App --> T : 409（不發出任何對外請求）
+end
+App -> Src : download_sheet(url)
+Src -> Src : export_url：https、docs.google.com、id 字元集
+loop 最多 5 跳
+  Src -> G : GET（目前這一跳）
+  G --> Src : 307 location 或 200 xlsx
+  Src -> Src : _allowed_hop：限 https 與 Google 網域
+end
+Src --> App : xlsx 位元組（串流，≤ 5 MB）
+App -> Act : load_questions(bytes, "Google 試算表.xlsx")
+Act -> GN : parse_workbook
+GN --> Act : ParsedNotes（題號、作答格座標、標籤）
+Act -> Act : 保存原檔、清空作答、version+1
+App --> T : {source, count}
+App --> S : 推播：questions（只有題號與子題標籤）
+@enduml

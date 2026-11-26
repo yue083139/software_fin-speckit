@@ -13,11 +13,18 @@ jobs:
           # gate-diagrams 比對 .puml 與 .png 的最後提交時間，需要完整歷史
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
       - run: uv sync --group dev
+      - run: uv sync --project server --group dev
+      - run: make web-install
       - run: make gate-pr
       - run: make gate-diagrams-syntax
       # 另一組 repo 不在 CI 上：此步固定印「未跑」，合併前由負責人在本機補跑

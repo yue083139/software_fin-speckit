@@ -1,0 +1,83 @@
+@startuml 010-guided-notes-sheets-sync-class
+title 010 guided-notes-sheets-sync：類別圖
+
+class GoogleSession {
+  - _client_id : str
+  - _client_secret : str
+  - _pending : dict[state, (code_verifier, 到期時刻)]
+  - _access_token : str
+  - _refresh_token : str
+  - _expires_at : float
+  + email : str | None
+  + configured : bool
+  + signed_in : bool
+  + status() : dict  // configured・signed_in・email（無權杖）
+  + begin() : (授權網址, state)  // 呼叫端設 cookie＝sha256(state)
+  + complete(state, code, cookie, error) : None
+  + token() : str  // 過期前 60 秒自動換新
+  + logout() : None
+}
+
+class GoogleConfigError <<ValueError>>
+class GoogleAuthError <<Exception>>
+class GoogleCallbackError <<Exception>>
+class GoogleApiError <<Exception>>
+class SheetNotFoundError <<ValueError>>
+
+class google_sheets <<module>> {
+  + import_copy(session, sheet_id, gid, parse) : (title, copy_id, list[SheetsGrid], ParsedNotes)
+  + delete_copy(session, copy_id) : None  // 盡力刪除，吞掉錯誤
+  + write_answers(session, copy_id, notes, answers) : str  // 副本網址
+}
+
+interface Grid {
+  + title : str
+  + max_row : int
+  + max_column : int
+  + cell(row, col) : object
+  + merges : list[(min_row, min_col, max_row, max_col)]
+}
+
+class OpenpyxlGrid
+class SheetsGrid
+
+class guided_notes <<module>> {
+  + parse_grids(grids : list[Grid]) : ParsedNotes
+  + parse_workbook(data : bytes) : ParsedNotes
+  + grids_to_xlsx(grids) : (bytes, {Google 分頁名: xlsx 分頁名})  // 下載備援，分頁名淨化
+  + rename_sheets(notes, names) : ParsedNotes
+  + fill(slot, answer) : str
+  + write_answers(original, notes, answers) : bytes
+}
+
+class Slot <<frozen dataclass>> {
+  sheet
+  cell  // D5：子題可能是標籤右側格
+  label
+  placeholder
+  display
+  reference
+}
+
+class Activity {
+  notes : ParsedNotes
+  source_name : str
+  source_bytes : bytes | None
+  source_sheet_id : str | None
+  source_xlsx_sheets : dict | None
+}
+
+Grid <|.. OpenpyxlGrid
+Grid <|.. SheetsGrid
+google_sheets ..> GoogleSession : token()
+google_sheets ..> SheetsGrid
+google_sheets ..> Slot : 依 sheet＋cell 寫副本
+guided_notes ..> Grid
+guided_notes ..> Slot
+GoogleSession ..> GoogleAuthError
+GoogleSession ..> GoogleConfigError
+GoogleSession ..> GoogleCallbackError
+google_sheets ..> SheetNotFoundError
+google_sheets ..> GoogleApiError
+Activity ..> Slot
+@enduml

@@ -1,0 +1,20 @@
+@startuml 016-teacher-key-error-component
+title 016 teacher-key-error：組件圖
+
+package "web" {
+  component "Teacher.tsx" as Teacher
+  component "BadKeyNotice" as Notice
+  component "live.ts（useLiveView）" as Live
+}
+package "server" {
+  component "app.ws" as WS
+  component "is_local" as Local
+  component "is_teacher" as Key
+}
+
+Teacher --> Live : 關閉碼
+Teacher --> Notice : closedCode 為 4401
+Live --> WS : WebSocket
+WS --> Local : 先檢查（4403）
+WS --> Key : 再檢查（4401，交握後關閉）
+@enduml

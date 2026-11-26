@@ -1,0 +1,80 @@
+@startuml 017-easy-setup-sequence
+title 017 easy-setup：時序圖（v1.1：啟動、Google 精靈、手機連線）
+
+actor 老師 as T
+participant "start.ps1" as PS
+participant "~__main__" as M
+participant "瀏覽器（老師頁）" as B
+participant "app" as A
+participant "envfile" as E
+participant "GoogleSession" as G
+participant "Tunnel" as TN
+participant "Activity" as ACT
+
+== 啟動 ==
+T -> PS : 雙擊 start.cmd
+alt 缺 uv 或 Node.js
+  PS -> T : 要幫你用 winget 安裝嗎？(Y/N)
+  alt 輸入 Y 或 y
+    PS -> PS : winget install，刷新 PATH
+  else 空值或其他
+    PS -> T : 印手動安裝指令後結束
+  end
+end
+PS -> M : uv run python -m quiz_server
+M -> TN : Tunnel(伺服器埠)
+M -> A : create_app(tunnel=同一實例)
+M -> M : uvicorn.Server 啟動
+M -> B : started 後 webbrowser.open（一次）
+B -> A : GET /api/teacher/state、/api/teacher/google
+A --> B : 老師 view（tunnel off）、configured false
+B -> B : 開始前的設定清單，Google 分區展開精靈
+
+== Google 設定精靈 ==
+T -> B : 依六步在 Cloud Console 建用戶端，貼上 ID 與密鑰
+B -> A : POST /api/teacher/google/config
+A -> A : is_local，驗金鑰，validate_client（fullmatch）
+alt 格式不符
+  A --> B : 422（不回顯輸入）
+else 通過
+  A -> A : config_lock
+  alt 已登入
+    A --> B : 409 請先登出 Google 再變更設定
+  else 未登入
+    A -> E : write_keys（同鍵只留一行，原子寫入）
+    A -> G : reconfigure（世代號加一）
+    A --> B : configured true、client_id_hint
+  end
+end
+
+== 手機連線 ==
+T -> B : 按「開啟手機連線」
+B -> A : POST /api/teacher/tunnel
+A -> A : tunnel_lock
+alt 建立中
+  A --> B : 409 手機連線建立中
+else 找不到 cloudflared
+  A --> B : 503 含安裝指令
+else 可開啟
+  A -> ACT : set_tunnel(starting)，推播
+  A -> TN : start（鎖外 to_thread）
+  opt 建立中老師按關閉
+    B -> A : DELETE /api/teacher/tunnel
+    A -> A : 設取消旗標，等建立完成
+  end
+  alt 已取消
+    A -> TN : stop
+    A -> ACT : set_tunnel(off)
+    A --> B : tunnel off
+  else 逾時
+    A -> ACT : set_tunnel(off)
+    A --> B : 504 建立手機連線逾時
+  else 取得網址
+    A -> ACT : set_tunnel(on, 公開網址)，推播
+    A --> B : tunnel on、student_url
+  end
+end
+T -> B : 搶答開始後按「關閉手機連線」
+B -> A : DELETE /api/teacher/tunnel
+A --> B : 409 搶答進行中不能關閉手機連線
+@enduml

@@ -1,0 +1,49 @@
+@startuml 004-results-view-class
+title 004 results-view：類別圖
+
+class results <<module>> {
+  + build(a : Activity) : list[QuestionResult]
+  + team_scores(a : Activity) : dict[str, int]
+}
+
+class QuestionResult <<dict>> {
+  number : int
+  labels : list[str]
+  ranking : list[RankedAnswer]
+  winner : {team, answers} | null
+}
+
+class RankedAnswer <<dict>> {
+  team : str
+  answers : list[str]
+  rank : int
+  is_winner : bool
+  score : int
+}
+
+class views <<module>> {
+  + teacher_view(a)  ' 加 board、team_scores
+  + student_view(a, team)  ' ended 才加 results、team_scores
+}
+
+class "Board（web）" as Board {
+  board : QuestionResult[]
+  teams : string[]
+  scores : Record<string, number>
+}
+
+class "StudentResults（web）" as SR {
+  team : string
+  results : QuestionResult[]
+  scores : Record<string, number>
+}
+
+interface ScoringRule
+
+results ..> ScoringRule : rank、team_scores
+results ..> QuestionResult : 產生
+QuestionResult *-- RankedAnswer
+views ..> results
+Board ..> QuestionResult : 只顯示
+SR ..> QuestionResult : 只顯示
+@enduml

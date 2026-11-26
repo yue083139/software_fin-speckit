@@ -1,0 +1,71 @@
+@startuml 013-web-workbench-class
+title 013 web-workbench：類別圖（前端型別與元件）
+
+class palette <<const>> {
+  + accent : "#0f7c83"
+  + text・text2・text3
+  + hairline・border・pageBg
+  + glow : 四色
+}
+
+class quizTheme <<ThemeConfig>> {
+  + token
+  + components : Layout・Card・Menu・Table・Button・Input・Tag・Alert
+}
+
+class theme <<module>> {
+  + cssVars() : Record
+}
+
+class Btn <<component>> {
+  + ButtonProps
+  -- 預設 autoInsertSpace=false --
+}
+
+class PhaseTag <<component>> {
+  + phase : Phase
+}
+
+class Section <<component>> {
+  + id? : string
+  + title? : ReactNode
+  + extra? : ReactNode
+}
+
+class GlassHeader <<component>> {
+  + title : ReactNode
+  + children? : ReactNode
+}
+
+class Shell <<component>>
+class Backdrop <<component>>
+
+class TeacherView <<interface>> {
+  + phase : Phase
+  + student_url? : string  // 新增：student-qr 預留
+}
+
+class StudentLink <<component>> {
+  + url : string
+}
+
+class TeacherPanel <<component>> {
+  + view : TeacherView
+  -- 全部內容卡同時渲染 --
+}
+
+class TestUtils <<module>> {
+  + btn(text) : HTMLButtonElement
+  + allBtn(text) : HTMLButtonElement 陣列
+}
+
+quizTheme --> palette
+theme --> palette
+Shell --> Backdrop
+TeacherPanel --> Section
+TeacherPanel --> StudentLink
+TeacherPanel --> Btn
+StudentLink ..> TeacherView : student_url 或本頁網址
+PhaseTag ..> TeacherView : phase
+GlassHeader --> PhaseTag
+@enduml

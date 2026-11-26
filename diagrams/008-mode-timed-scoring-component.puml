@@ -1,0 +1,37 @@
+@startuml 008-mode-timed-scoring-component
+title 008 mode-timed-scoring：組件圖
+
+package "web" {
+  [Teacher RoundControls\n開放下一題・提早結束・揭曉本題・倒數] as TRound
+  [Teacher QuestionList\n每題時限（preparing、時間計分）] as TList
+  [StudentPanel\n只顯示進行中題目・倒數\n揭曉結果・排行榜] as SPage
+  [api.ts] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\nPOST open-next・close-question\nreveal-question・question-settings(time_limit)] as App
+  [modes\nMode.sequential・timed] as Modes
+  [activity.Activity\nrounds・open_next・close_due\nreveal_question・可注入 clock] as Act
+  [計時器任務\n迴圈：sleep 剩餘時間 -> close_due()\n直到該回合關閉] as Timer
+  [scoring\nTimedRule・timed_points] as Scoring
+  [views\nround・revealed（本組）・leaderboard（學生只有名次）] as Views
+  [results\nrevealed_scores・leaderboard・own_revealed] as Results
+}
+
+TRound --> Api
+TList --> Api
+SPage --> Api
+Api --> App
+App --> Act
+Act --> Modes
+Act --> Timer : open_next 時排程
+Timer --> Act : close_due()
+Views --> Results
+Results --> Scoring : 只計已揭曉題
+App --> Views
+
+note right of Act
+  截止判斷在 submit 內以 clock 比對；
+  計時器只決定何時推送「已關閉」
+end note
+@enduml

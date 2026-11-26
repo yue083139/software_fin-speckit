@@ -1,0 +1,26 @@
+@startuml 009-team-mode-component
+title 009 team-mode：組件圖
+
+package "web" {
+  [TeamSettings\n組隊勾選（preparing）・台數・邀請碼] as TSet
+  [Home\n邀請碼輸入欄] as Home
+  [StudentPanel\n本組邀請碼] as SPanel
+  [AnswerForm\n草稿 400 ms 送出・組內草稿「套用」] as Form
+  [api.ts\nteacherPost(team-play)・joinTeam(team, code)・studentDraft] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\nPOST /api/teacher/team-play\nPOST /api/student/join {team, code?}\nPOST /api/student/draft] as App
+  [activity.Activity\nteam_play・_codes・_tokens 多對一・drafts] as Act
+  [views\n老師 devices・invite_codes\n學生 invite_code（只在 preparing）・drafts（只在 answering、本組）] as Views
+}
+
+TSet --> Api
+Home --> Api
+Form --> Api
+Api --> App : X-Teacher-Key／X-Team-Token
+App --> Act : set_team_play・join・set_draft・submit
+Views --> Act
+SPanel ..> Views : 只含本組
+Form ..> Views : drafts 只含本組
+@enduml

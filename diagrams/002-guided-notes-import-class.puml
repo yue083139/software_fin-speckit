@@ -1,0 +1,59 @@
+@startuml 002-guided-notes-import-class
+title 002 guided-notes-import：類別圖
+
+class GuidedNotesError <<ValueError>>
+class SourceError <<ValueError>>
+
+class Slot <<frozen dataclass>> {
+  + sheet : str
+  + cell : str  ' 解析得到的座標
+  + label : str
+  + placeholder : bool
+  + display : str
+}
+
+class Question <<frozen dataclass>> {
+  + number : int
+  + slots : tuple[Slot, ...]
+  + is_group : bool
+}
+
+class ParsedNotes <<frozen dataclass>> {
+  + sheet : str
+  + questions : tuple[Question, ...]
+}
+
+class guided_notes <<module>> {
+  + NUMBER_ALIASES
+  + ANSWER_ALIASES
+  + parse_workbook(data) : ParsedNotes
+  - _find_header(ws, merged)
+  - _parse_sheet(ws, merged, header)
+  - _as_number(value)
+}
+
+class sources <<module>> {
+  + MAX_BYTES = 5 MB
+  + check_upload(filename, data)
+  + export_url(url) : str
+  + download_sheet(url, transport) : bytes
+  - _allowed_hop(url) : bool
+}
+
+class Activity {
+  + notes : ParsedNotes | None
+  + source_bytes : bytes | None
+  + source_name : str | None
+  + questions : tuple[Question, ...]
+  + require_preparing()
+  + load_questions(data, name)
+}
+
+ParsedNotes "1" *-- "many" Question
+Question "1" *-- "1..*" Slot
+guided_notes ..> ParsedNotes : 產生
+guided_notes ..> GuidedNotesError
+sources ..> SourceError
+Activity --> ParsedNotes
+Activity ..> guided_notes : load_questions 內呼叫
+@enduml

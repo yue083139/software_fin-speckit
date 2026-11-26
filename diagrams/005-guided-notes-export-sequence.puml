@@ -1,0 +1,27 @@
+@startuml 005-guided-notes-export-sequence
+title 005 guided-notes-export：時序圖
+
+actor "老師" as T
+participant "web\nteacherDownload" as W
+participant "app.py" as App
+participant "Activity" as Act
+participant "results" as R
+participant "guided_notes" as GN
+
+T -> W : 按「匯出 Guided Notes」
+W -> App : GET /api/teacher/export（X-Teacher-Key）
+App -> Act : phase == ended？已匯入？
+alt 非 ended 或未匯入
+  App --> W : 409
+end
+App -> R : winning_answers(activity)
+R --> App : {題號: 得主各子題答案}（經 ScoringRule）
+App -> GN : write_answers(source_bytes, notes, answers)
+loop 每題有得主者、每個子題
+  GN -> GN : fill(slot, answer)：佔位符取代或「標籤＋答案」
+  GN -> GN : 寫入 (sheet, cell)、data_type = "s"
+end
+GN --> App : 新 xlsx 位元組（原檔不變）
+App --> W : 200 xlsx、Content-Disposition filename*=UTF-8''…
+W --> T : 瀏覽器儲存檔案
+@enduml

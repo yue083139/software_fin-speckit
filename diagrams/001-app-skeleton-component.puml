@@ -1,0 +1,35 @@
+@startuml 001-app-skeleton-component
+title 001 app-skeleton：組件圖
+
+package "web" {
+  [Home\n選組加入／輸入老師金鑰] as Home
+  [Teacher\nPhaseControls・TeamSettings] as Teacher
+  [Student\nStudentPanel] as Student
+  [useLiveView] as Live
+  [api.ts\njoinTeam・teacherPost\nsaveToken(sessionStorage)] as Api
+}
+
+package "server/quiz_server" {
+  [app.py] as App
+  [activity.Activity] as Act
+  [phases\nPhase・TRANSITIONS] as Phases
+  [views\nteacher_view・student_view] as Views
+  [__main__\n印老師頁網址・log_level=warning] as Main
+}
+
+Home --> Api
+Teacher --> Api
+Teacher --> Live
+Student --> Live
+Api --> App : POST /api/student/join\nPOST /api/teacher/{teams,release,start,end,reset}
+Live --> App : WS /ws?role=teacher&key=…\nWS /ws?role=student&token=…
+App --> Act : join・release・configure_teams\nstart・end・reset
+Act --> Phases : check_transition
+App --> Views : view_for(role, team_of(token))
+Main --> App : create_app(teacher_key)
+
+note right of Views
+  學生 view 只由 student_view 產生；
+  憑證無效 則 最少資訊（team_valid=false）
+end note
+@enduml
