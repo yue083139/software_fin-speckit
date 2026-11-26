@@ -1,0 +1,18 @@
+# easy-setup 探針結果（2026-11-26）
+
+## ③ winget 安裝後同一 PowerShell 行程刷新 PATH（已執行）
+指令（PowerShell 5.1）：
+  $env:Path = ($env:Path -split ';' | Where-Object { $_ -notmatch 'cloudflared' }) -join ';'
+  $before = [bool](Get-Command cloudflared -ErrorAction SilentlyContinue)
+  $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+  $after = Get-Command cloudflared -ErrorAction SilentlyContinue
+原樣輸出：
+③ 移除 cloudflared 目錄後 Get-Command 找得到：False
+③ 以 Machine＋User 登錄值刷新 $env:Path 後：True → C:\Program Files (x86)\cloudflared\cloudflared.exe
+③ PowerShell 5.1.26100.9818
+
+## ①② 自動開瀏覽器、執行期起停 cloudflared（待負責人執行）
+起草會話以 `uv run --project server python -X utf8 probes/easy_setup_probe.py --browser-url http://127.0.0.1:8000/ --cycles 3`
+實跑時被 Claude Code 權限分類器拒絕（會開瀏覽器分頁並連 Cloudflare），故未執行。
+負責人請以上列指令在本機執行，原樣輸出貼回本檔本段；design D2、D3 證偽欄以該輸出為準（提案輪評審前補齊）。
+既有旁證：student-qr 卡 `probes/results/2026-11-26-cloudflared.txt`（單次起停、--tunnel 真棧冒煙）。

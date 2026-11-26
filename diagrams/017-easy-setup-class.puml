@@ -1,0 +1,66 @@
+@startuml 017-easy-setup-class
+title 017 easy-setup：類別圖
+
+class envfile <<module>> {
+  ENV_FILE : Path
+  write_keys(values : dict, path) : None
+  remove_keys(keys : list, path) : None
+}
+
+class GoogleSession {
+  - _client_id : str
+  - _client_secret : str
+  + configured : bool
+  + signed_in : bool
+  + client_id_hint : str
+  + status() : dict
+  + reconfigure(client_id : str, client_secret : str) : None
+}
+
+class google_auth <<module>> {
+  CLIENT_ID_PATTERN : Pattern
+  CLIENT_SECRET_PATTERN : Pattern
+  MAX_LEN : int = 128
+  REDIRECT_URI : str
+}
+
+class Tunnel {
+  + port : int
+  + proc : Popen
+  + start(timeout : float) : str
+  + stop() : None
+}
+
+class Activity {
+  + public_url : str
+  + tunnel : str
+}
+
+class App <<create_app>> {
+  + tunnel_lock : Lock
+  + tunnel_factory : type
+  + google_config_set(body) : dict
+  + google_config_clear() : dict
+  + tunnel_open() : dict
+  + tunnel_close() : dict
+}
+
+class Main <<main 模組>> {
+  + open_teacher_page(url : str, opener) : bool
+  + should_open(args, env) : bool
+}
+
+class SetupChecklist <<web>> {
+  google : 未設定 或 未登入 或 已登入
+  tunnel : off 或 starting 或 on
+  questions : 題數
+}
+
+App --> GoogleSession : reconfigure
+App --> envfile : write_keys 與 remove_keys
+App --> Tunnel : start 與 stop（to_thread）
+App --> Activity : tunnel 與 public_url
+GoogleSession ..> google_auth : 白名單與常數
+Main --> App : uvicorn.Server
+SetupChecklist ..> App : 讀老師 view 與 Google 狀態
+@enduml

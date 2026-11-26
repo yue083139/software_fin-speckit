@@ -55,6 +55,7 @@
 | `student-qr` | R-01、X-04 | 學生連結可用手機掃 QR code：以 `--tunnel`（`make dev-tunnel`、`start-tunnel.cmd`）啟動時伺服器以子行程起 Cloudflare 快速通道（cloudflared），取得 `https://<隨機>.trycloudflare.com/` 公開網址放進老師 view `student_url`（學生 view 不帶），失敗照常只開本機；老師 REST、老師 WebSocket（4403）、Google 回呼只接受本機 Host（127.0.0.1／localhost／[::1]）且不帶 Cloudflare 轉送標頭，先於金鑰檢查回 403「老師頁只能在本機開啟」；OAuth 維持 127.0.0.1；前端 QR（antd `QRCode`，`student_url ?? origin`）與 4403 提示併入 `web-workbench` 之後接上 | 已合入 | 已合入 |
 | `teacher-key-hidden` | R-01、X-04 | 老師金鑰只經網址首次帶入，老師頁載入後以 `history.replaceState` 自網址移除（網址列只剩 `#/teacher`），存本分頁 sessionStorage，重新整理仍可用、關分頁即失效；網址帶新金鑰以網址為準；401／4401 清除並提示回首頁重新輸入；伺服器與終端機輸出不變 | 已合入 | 已合入 |
 | `teacher-key-error` | R-01 | 老師 WebSocket 金鑰錯誤時先完成交握、不送任何訊息再以 4401 關閉，老師頁顯示「老師金鑰錯誤」與重開方式（整頁提示、不重連）；公開 Host 仍先以 4403 關閉 | 已合入 | 已合入 |
+| `easy-setup` | R-01、X-04 | 任一方式啟動就緒後自動以預設瀏覽器開老師頁一次（`--no-browser`／`QUIZ_NO_BROWSER=1`／`CI` 可關）；老師頁 Google 設定精靈（Cloud Console 直達連結、複製重新導向 URI、貼上用戶端 ID／密鑰後伺服器以白名單驗證寫入 repo 根目錄 `.env` 並立即生效，密鑰不回傳不入日誌，限本機＋金鑰，已登入時不可變更）；老師頁一鍵開關手機連線（執行期起停 cloudflared，老師 view 加 `tunnel` 狀態，找不到回 503 顯示安裝指令；移除 `start-tunnel.cmd`）；準備階段頂部「開始前的設定」清單；`start.ps1` 缺 uv／Node.js 時詢問以 winget 代裝 | 起稿中 | 起稿中 |
 
 狀態值：未開／提案中／實作中／已實作（待合入）／已合入。
 
@@ -87,3 +88,4 @@
 | 2026-11-26 | `teacher-key-hidden` | 負責人整合驗證時要求「金鑰不要顯示在網址列」；開卡 B 檔，兩組同批實作（web 逐字相同） | 兩組（負責人指示） | 同一會話兩組同批 |
 | 2026-11-26 | `teacher-key-error` | 負責人指示開小卡處理 student-qr followup：金鑰錯誤時瀏覽器拿不到 4401、提示顯示不出來；改為先 accept 再以 4401 關閉 | 兩組（負責人指示） | 同一會話兩組同批 |
 | 2026-11-26 | `teacher-key-hidden`、`teacher-key-error` | 兩卡皆合入 `dev`（OpenSpec #29、#28；SpecKit #28、#27），兩組 server、web、contracts 逐字相同；OpenSpec 組歸檔兩卡；人工驗證待負責人整合後執行 | 兩組（負責人指示合入） | 已確認 |
+| 2026-11-26 | `easy-setup` | 負責人指示簡化啟動（要手動編 .env、從終端機複製網址、啟動前選腳本、缺工具只報錯），四項全做並補充「make dev 之類啟動後就能直接進後台做」；S 檔壓縮版；合入順序在 `teacher-key-hidden`、`teacher-key-error` 之後 | 兩組（負責人裁定） | 同一會話兩組同批起稿 |

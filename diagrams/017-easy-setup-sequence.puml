@@ -1,0 +1,56 @@
+@startuml 017-easy-setup-sequence
+title 017 easy-setup：時序圖（啟動、Google 精靈、手機連線）
+
+actor 老師 as T
+participant "start.ps1" as PS
+participant "~__main__" as M
+participant "瀏覽器（老師頁）" as B
+participant "app" as A
+participant "envfile" as E
+participant "GoogleSession" as G
+participant "Tunnel" as TN
+participant "Activity" as ACT
+
+== 啟動 ==
+T -> PS : 雙擊 start.cmd
+alt 缺 uv 或 Node.js
+  PS -> T : 要幫你用 winget 安裝嗎？(Y/N)
+  T -> PS : Y
+  PS -> PS : winget install，刷新 PATH
+end
+PS -> M : uv run python -m quiz_server
+M -> M : uvicorn.Server 啟動
+M -> B : started 後 webbrowser.open（一次）
+B -> A : GET /api/teacher/state、/api/teacher/google
+A --> B : 老師 view、configured false
+B -> B : 開始前的設定清單，Google 分區展開精靈
+
+== Google 設定精靈 ==
+T -> B : 依六步在 Cloud Console 建用戶端，貼上 ID 與密鑰
+B -> A : POST /api/teacher/google/config
+A -> A : is_local，驗金鑰，白名單
+alt 格式不符
+  A --> B : 422（不回顯輸入）
+else 已登入
+  A --> B : 409 請先登出 Google 再變更設定
+else 通過
+  A -> E : write_keys（只改兩鍵，原子寫入）
+  A -> G : reconfigure
+  A --> B : configured true、client_id_hint
+end
+
+== 手機連線 ==
+T -> B : 按「開啟手機連線」
+B -> A : POST /api/teacher/tunnel
+A -> A : tunnel_lock
+A -> ACT : tunnel starting，推播
+A -> TN : start（to_thread）
+alt 找不到 cloudflared
+  A -> ACT : tunnel off
+  A --> B : 503 含安裝指令
+else 取得網址
+  A -> ACT : public_url、tunnel on，推播
+  A --> B : tunnel on、student_url
+  B -> B : QRCode 更新
+end
+@enduml
