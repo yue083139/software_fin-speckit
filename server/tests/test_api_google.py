@@ -211,6 +211,66 @@ def test_reexport_restores_previously_written_cells(gclient, fake):
     assert len(fake.writes) == 2
 
 
+def _round(c, submissions):
+    """新的一場：加入、開始、依序送出 (組別, 題號, 答案)、結束。"""
+    tokens = {}
+    for team, _, _ in submissions:
+        if team not in tokens:
+            tokens[team] = c.post("/api/student/join", json={"team": team}).json()["token"]
+    c.post("/api/teacher/start", headers=H)
+    for team, q, answers in submissions:
+        c.post("/api/student/submit", json={"question": q, "answers": answers},
+               headers={"X-Team-Token": tokens[team]})
+    c.post("/api/teacher/end", headers=H)
+
+
+def test_reset_keeps_written_and_restores_in_next_round(gclient, fake):
+    """answer-review D5 v1.1：重置保留上次寫過的題號（同一份副本）；新一場第 1 題無人搶 ⇒ H5／H6 還原，
+    第 4 題新得主寫 G13。"""
+    sign_in(gclient, H)
+    gclient.post("/api/teacher/import-url", json={"url": URL}, headers=H)
+    _play_and_end(gclient)
+    gclient.post("/api/teacher/export-sheet", headers=H)
+    gclient.post("/api/teacher/reset", headers=H)
+    _round(gclient, [("第2組", 4, ["作業系統"])])
+    assert gclient.post("/api/teacher/export-sheet", headers=H).status_code == 200
+    assert fake.writes[1]["data"] == [{"range": "'學習單'!H5", "values": [[""]]},
+                                      {"range": "'學習單'!H6", "values": [[""]]},
+                                      {"range": "'學習單'!G13", "values": [["作業系統"]]}]
+
+
+def test_reimport_clears_written(gclient, fake):
+    """紅隊實作輪 m-1：重新匯入（新副本）清空上次寫過的題號，新副本的寫回不含舊副本的還原格。"""
+    sign_in(gclient, H)
+    gclient.post("/api/teacher/import-url", json={"url": URL}, headers=H)
+    _play_and_end(gclient)
+    gclient.post("/api/teacher/export-sheet", headers=H)
+    gclient.post("/api/teacher/reset", headers=H)
+    assert gclient.post("/api/teacher/import-url", json={"url": URL}, headers=H).status_code == 200
+    _round(gclient, [("第2組", 4, ["作業系統"])])
+    gclient.post("/api/teacher/export-sheet", headers=H)
+    assert fake.writes[1]["data"] == [{"range": "'學習單'!G13", "values": [["作業系統"]]}]
+
+
+def test_written_not_recorded_when_copy_changed_during_write(gclient, fake, activity, monkeypatch):
+    """紅隊實作輪 m-2：寫回等 Google 回應期間另一次匯入換了副本 ⇒ 不記錄寫過的題號
+    （記到新副本會還原錯格）。"""
+    from quiz_server import google_sheets
+    sign_in(gclient, H)
+    gclient.post("/api/teacher/import-url", json={"url": URL}, headers=H)
+    _play_and_end(gclient)
+    original = google_sheets.write_answers
+
+    async def write_then_copy_swapped(*args, **kwargs):
+        url = await original(*args, **kwargs)
+        activity.source_sheet_id = "1" + "D" * 43  # 模擬寫回途中另一次匯入已換成新副本
+        return url
+
+    monkeypatch.setattr(google_sheets, "write_answers", write_then_copy_swapped)
+    assert gclient.post("/api/teacher/export-sheet", headers=H).status_code == 200
+    assert activity.sheet_written == frozenset()
+
+
 def test_export_sheet_error_order(gclient, fake, fixture_bytes):
     # 未匯入、非 ended ⇒ 409 階段先於來源與登入
     r = gclient.post("/api/teacher/export-sheet", headers=H)

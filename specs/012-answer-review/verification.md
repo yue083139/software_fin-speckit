@@ -50,12 +50,17 @@ gate-parity: 0 處不一致
 
 ## 變異實錄
 
-與 OpenSpec 組同一份程式碼，變異實錄見 `software_fin-openspec` `openspec/changes/answer-review/verification.md`：拿掉候選比對 ⇒ `test_double_click_does_not_skip_a_team` 等 2 例紅；`restore=frozenset()` ⇒ `test_reexport_restores_previously_written_cells` 紅。
+與 OpenSpec 組同一份程式碼，變異實錄見 `software_fin-openspec` `openspec/changes/answer-review/verification.md`：拿掉候選比對 ⇒ `test_double_click_does_not_skip_a_team` 等 2 例紅；`restore=frozenset()` ⇒ `test_reexport_restores_previously_written_cells` 紅；刪 `load_questions` 內清空 ⇒ `test_reimport_clears_written` 紅；拿掉 `mark_sheet_written` 副本 id 條件 ⇒ `test_written_not_recorded_when_copy_changed_during_write` 紅；重置加清空 ⇒ `test_reset_keeps_written_and_restores_in_next_round` 紅。
 
 ## 評審紀錄
 
-- 提案輪（v1.0 → v1.1）：紅隊 0B/2M/3m、架構 0B/1M/3m，皆 0 阻斷；藥方與實作偏離回稿見 research 抬頭。
-- 實作輪：待派。
+- 提案輪（v1.0 → v1.1）：紅隊 0B/2M/3m、架構 0B/1M/3m，皆 0 阻斷；藥方見 research 抬頭 v1.1 段（需求 §4 解讀、game-modes／results-view MODIFIED、寫回範圍改「有得主＋上次寫過」、匯出鎖、推播口徑、錯誤碼 401→422）。
+- 實作輪：紅隊 **CLEARED**（0B/0M/2m）、架構 **CLEARED**（0B/0M/0m）。紅隊實測：並發 5 個對同一候選的「答錯」⇒ 狀態碼 `[200, 409, 409, 409, 409]`（候選只移一組）；A-6 重置後新一場寫回 ⇒ H5／H6 還原、G13 寫入新得主。紅隊次要兩條（重新匯入清空、寫回期間換副本不記錄）已落永久測試與變異實錄（上表）；架構外包檢查兩條：M-022 守門欄改列具體測試名、`spec.md` FR-005 與 US3 情境 5、6 補「重置保留、重新匯入清空」並由測試守。
+
+## followup（不阻塞，主人 @yue083139）
+
+- 匯出鎖（`app.py` `export_lock`）沒有並發測試：兩個寫回請求真正交錯需要可控的 Google 替身延遲；目前只以程式結構（鎖內取快照、鎖內 `mark_sheet_written`）保證。
+- 老師端「答對／答錯／重設本題」按鈕、匯出中停用、`ImportPanel.tsx` 副本名稱文案：`web-workbench`（antd）合入後整合。
 
 ## 人工驗證（需求 P-05）
 

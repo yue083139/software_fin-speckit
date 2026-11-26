@@ -62,7 +62,7 @@
 - Google 寫回 `google_sheets.write_answers(..., restore)`：寫入範圍＝**目前有得主的題**（`fill(slot, answer)`）＋**上次寫回寫過、這次已無得主的題**（`slot.label` 還原：佔位符原文、標籤原文，或右側填空格的 `""`）；無得主且從未寫過的格**不碰**（維持「無人搶答的題目不變」）。沒有任何格要寫就不發請求。
 - 「上次寫過的題號」存 `Activity.sheet_written`，寫回成功後以 `Activity.mark_sheet_written(sheet_id, 題號集合)` 在活動鎖內更新（副本 id 已換則不記）。隨副本走：重新匯入（新副本）清空；**重置保留**（實作偏離回稿②：重置後仍寫同一份副本）。
 - 匯出（xlsx）與寫回（Google）在 `app.py` 以同一把 `asyncio.Lock` 序列化，階段檢查與快照（`winning_answers`、`sheet_written`）都在鎖內取（v1.1；原 `app.py`「`url = await google_sheets.write_answers(gs, act.source_sheet_id, act.notes,`」快照在鎖外）；前端匯出中停用按鈕（`web-workbench` 整合時做）。
-- 證偽欄｜可證偽：`test_api_google.py::test_reexport_restores_previously_written_cells`（第一次寫第 1 題、判錯後第二次只寫 H5／H6 為 `""`、第三次不再寫）；既有 `test_export_sheet_writes_copy` 第二題無人搶答不出現在寫入範圍。變異實錄：`restore=frozenset()` ⇒ 該測試紅。屬取捨：「寫全部子題」（v1.0）較簡單但會改動從未寫過的格（評審抽中）。
+- 證偽欄｜可證偽：`test_api_google.py::test_reexport_restores_previously_written_cells`（第一次寫第 1 題、判錯後第二次只寫 H5／H6 為 `""`、第三次不再寫）；既有 `test_export_sheet_writes_copy` 第二題無人搶答不出現在寫入範圍。變異實錄：`restore=frozenset()` ⇒ 該測試紅。實作輪紅隊次要兩條落永久測試：`test_reimport_clears_written`（刪 `load_questions` 內清空 ⇒ 紅）、`test_written_not_recorded_when_copy_changed_during_write`（拿掉 `mark_sheet_written` 副本 id 條件 ⇒ 紅）；重置保留由 `test_reset_keeps_written_and_restores_in_next_round` 守（重置加清空 ⇒ 紅）。屬取捨：「寫全部子題」（v1.0）較簡單但會改動從未寫過的格（評審抽中）。
 - 已知限制：`slot.label` 是匯入時讀到的**計算後的值**，作答格原本放公式或數字時會還原成文字（官方範本作答格皆為字串或空白）；匯入後副本被插列時，寫錯格的範圍＝寫過的格。
 
 ## R6 副本與下載檔名：「_作答情況」

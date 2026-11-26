@@ -41,5 +41,5 @@
 - [x] T041 `eval/acceptance/matrix.yaml`：M-005、M-006、M-008 更新；新增 M-022
 - [x] T042 文件：`README.md`、`docs/requirements.md` §4（負責人對 R-10／R-05 的解讀）、`docs/manual-verification.md` 場次 A 第 15a～15c、16、18 步
 - [x] T043 `make gate` 原樣輸出、圖碼一致核對寫入 `verification.md`
-- [ ] T044 實作輪評審（雙通道 1 輪）
+- [x] T044 實作輪評審（紅隊 CLEARED 0B/0M/2m、架構 CLEARED 0B/0M/0m；次要藥方已落：重新匯入清空、寫回期間換副本不記錄、重置保留三條負例）
 - [ ] T045 人工驗證（負責人，場次 A）；`docs/parity.md` 狀態更新、`make gate-parity SIBLING=../software_fin-openspec` 綠

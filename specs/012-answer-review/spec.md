@@ -57,6 +57,8 @@
 2. **Given** 已寫回 Google 試算表，**When** 老師把第 3 題全部判錯再寫回，**Then** 副本第 3 題填空格回到匯入時原內容；從未寫過且無人搶答的題不被寫入。
 3. **Given** 以 Google 試算表連結匯入，**When** 匯入完成，**Then** 雲端硬碟多一份「<原標題>_作答情況」。
 4. **Given** 以 `group.xlsx` 匯入，**When** 下載 xlsx，**Then** 檔名為 `group_作答情況.xlsx`。
+5. **Given** 寫回後重置活動，**When** 新一場第 1 題無人搶答、第 4 題有得主再寫回，**Then** 副本第 1 題還原為原內容、第 4 題為新得主答案。
+6. **Given** 寫回後重置並重新匯入（新副本），**When** 新一場只有第 4 題有得主再寫回，**Then** 寫入範圍只有第 4 題的填空格。
 
 ---
 
@@ -76,7 +78,7 @@
 - **FR-002**：老師 MUST 能以 `POST /api/teacher/review {question, team, correct}` 對目前候選判定，`team` MUST 等於候選；以 `POST /api/teacher/review-reset {question}` 重設該題。
 - **FR-003**：檢查 MUST 只在經典搶答 `ended` 允許；其餘模式或階段 MUST 回 409 且狀態不變。
 - **FR-004**：得主、各組分數、老師 `board`、學生 `results` 與匯出 MUST 經同一判定規則產生，檢查後 MUST 立即推播。
-- **FR-005**：寫回 Google 試算表 MUST 寫入目前有得主的作答格，並 MUST 把上次寫過、這次已無得主的作答格還原為原內容；無得主且從未寫過的格 MUST NOT 被寫入；匯出與寫回 MUST 依序執行；xlsx 下載 MUST 由原檔重產。
+- **FR-005**：寫回 Google 試算表 MUST 寫入目前有得主的作答格，並 MUST 把上次寫過、這次已無得主的作答格還原為原內容；無得主且從未寫過的格 MUST NOT 被寫入；「上次寫過」的紀錄 MUST 在重置活動時保留（仍寫同一份副本）、在重新匯入時清空（新副本），寫回期間副本已被更換時 MUST NOT 更新；匯出與寫回 MUST 依序執行；xlsx 下載 MUST 由原檔重產。
 - **FR-006**：雲端副本名稱 MUST 為「<原標題>_作答情況」；xlsx 下載檔名 MUST 為 `<原檔名>_作答情況.xlsx`。
 - **FR-007**：搶答結束前送往學生的資料 MUST NOT 含他組答案與判定（既有隔離不變）。
 - **FR-008**：老師畫面 MUST 在經典搶答結束後顯示每題檢查狀態（`board[].review`：候選、已判錯組、是否鎖定）；學生畫面結束後 MUST 顯示被檢查送出的對錯，MUST NOT 含 `review`。
