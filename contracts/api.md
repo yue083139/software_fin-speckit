@@ -12,6 +12,8 @@
 
 伺服器一律由憑證反查組別，不採信客戶端自報的組別名稱。
 
+**老師身分只在本機**（student-qr，負責人 2026-11-26 批准）：老師 REST 端點、`role=teacher` 的 WebSocket 與 `GET /api/google/callback` 只接受 Host 主機名為 `127.0.0.1`、`localhost`、`[::1]` 且不帶 `cf-connecting-ip`／`cf-ray` 標頭的請求；否則在驗金鑰前回 403 `{"detail": "老師頁只能在本機開啟"}`（WebSocket 以代碼 `4403` 關閉；回呼為固定 HTML）。學生與公開端點不受限。
+
 ## 列舉
 
 `phase`：`preparing`（準備中）｜`answering`（搶答中）｜`judging`（判定中，經典模式不使用）｜`ended`（已結束）
@@ -56,7 +58,7 @@
 
 ## WebSocket `/ws`
 
-- 老師金鑰錯誤 ⇒ 以代碼 `4401` 關閉；`role` 不是 `teacher`／`student` ⇒ `1008` 關閉。
+- 老師金鑰錯誤 ⇒ 以代碼 `4401` 關閉；`role=teacher` 但 Host 不是本機或帶 Cloudflare 轉送標頭 ⇒ 先於金鑰檢查以 `4403` 關閉（student-qr）；`role` 不是 `teacher`／`student` ⇒ `1008` 關閉。
 - 連線後立即收到一則完整 view；之後**只在本連線自己的 view 內容改變時**才收到新訊息。
 - 訊息：`{"type": "state", "seq": <本連線自己的遞增序號，從 1 起>, "view": <view>}`。不含全域版本號。
 - 客戶端送來的文字一律忽略（僅供保持連線）。
@@ -73,6 +75,8 @@
 老師與學生 view 皆含 `round`（mode-timed-scoring）：目前回合 `{question, state: "open"|"closed", deadline_epoch_ms}`，沒有則 `null`；`deadline_epoch_ms` 只供倒數顯示，截止以伺服器為準。`mode` 另含 `sequential`（是否逐題開放）。時間計分模式下老師 view 另含 `leaderboard: [{team, rank, score}]`（只計已揭曉題）。
 
 老師 view 另含（game-mode-framework）：`mode: {key, label, judged}`、`modes: [{key, label}]`、`score_label`（經典模式且全部倍率為 1 時「得題數」，其餘「得分」）、`pending_judgments`（未判定筆數）；`board[]` 另含 `reference: [每個子題的參考答案或 null]`，`board[].ranking[]` 另含 `suggestion`（`true`／`false`／`null`）。參考答案與建議**只在老師 view**。
+
+老師 view 另含（student-qr）：`student_url`——以 `--tunnel` 啟動且通道建立成功時為學生公開網址（`https://<隨機>.trycloudflare.com/`），否則 `null`（前端改用自身網址）；學生 view 不含。
 
 老師 view 另含（team-mode）：`team_play`、`devices: {組名: 已發出的憑證數}`、`invite_codes: {組名: 邀請碼}`（只列有邀請碼的組，含被釋放後待重新加入者）。老師 view 不含組內草稿。開始搶答時所有邀請碼換新。
 

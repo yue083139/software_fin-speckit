@@ -1,4 +1,6 @@
 ﻿# Windows 啟動腳本，由 start.cmd 呼叫；只需 uv 與 Node.js。開發者改用 make dev（步驟相同）
+# -Tunnel（start-tunnel.cmd）：另以 Cloudflare 快速通道取得公開網址，讓手機掃 QR code 進學生頁（student-qr）
+param([switch]$Tunnel)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $env:PYTHONUTF8 = '1'
@@ -25,4 +27,8 @@ if ($LASTEXITCODE -ne 0) { Fail '建置前端失敗。請把上面的錯誤訊�
 
 Write-Host ''
 Write-Host '伺服器啟動中。關閉這個視窗就會停止活動，活動資料會清空，結束前請先匯出。'
-uv run --project server python -m quiz_server
+if ($Tunnel) {
+    uv run --project server python -m quiz_server --tunnel
+} else {
+    uv run --project server python -m quiz_server
+}

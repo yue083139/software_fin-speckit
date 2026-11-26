@@ -34,10 +34,10 @@ export interface QuestionOutline {
 export interface TeacherView {
   role: "teacher";
   phase: Phase;
-  student_url?: string; // student-qr：伺服器給的學生公開網址；沒有就用本頁網址
   teams: string[];
   joined: string[];
   source: string | null;
+  student_url?: string | null; // student-qr：通道公開網址，給 QR code；null＝改用自身網址
   questions: QuestionOutline[];
   board: QuestionResult[];
   team_scores: Record<string, number>;

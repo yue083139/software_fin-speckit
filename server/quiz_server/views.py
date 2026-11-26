@@ -68,6 +68,7 @@ def teacher_view(a: Activity) -> dict[str, Any]:
         "devices": {t: a.devices(t) for t in a.teams},
         "invite_codes": {t: c for t in a.teams if (c := a.invite_code(t))},  # 老師看得到邀請碼，看不到草稿
         "source": a.source_name,
+        "student_url": a.public_url,  # 只在老師 view（student-qr D3）：給 QR code 用
         "questions": question_outline(a, teacher=True),
         "mode": mode_info(a, teacher=True),
         "round": round_view(a),

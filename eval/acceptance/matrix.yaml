@@ -135,3 +135,9 @@ rows:
     守門: server/tests/test_review.py::test_unreviewed_question_keeps_fastest、test_reject_falls_back_to_next_rank、test_correct_locks_and_blocks_further_review、test_double_click_does_not_skip_a_team、test_all_rejected_has_no_winner_and_export_keeps_original、test_export_writes_fallback_answer、test_reset_returns_to_rank_one、test_no_submission_and_unknown_question、test_only_classic_and_only_ended、test_error_order_401_then_422、test_successful_review_pushes_once_and_failures_push_nothing、test_reset_activity_clears_reviews；server/tests/test_results_view.py::test_teacher_and_student_agree
     狀態: covered
     卡: answer-review
+  - id: M-023
+    需求: X-04、P-06
+    聲明: 經公開網域（Cloudflare 快速通道）或非本機 Host 的請求拿不到老師身分：老師 REST 403、老師 WebSocket 4403、Google 回呼 403，且先於金鑰檢查；學生端點不受限；通道網址只在老師 view
+    守門: server/tests/test_api_host.py；server/tests/test_tunnel.py
+    狀態: covered
+    卡: student-qr

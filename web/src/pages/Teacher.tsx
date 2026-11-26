@@ -1,4 +1,5 @@
 import {
+  CopyOutlined,
   AppstoreOutlined,
   FileTextOutlined,
   GoogleOutlined,
@@ -7,9 +8,9 @@ import {
   TableOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { Alert, Checkbox, Input, Menu, QRCode, Radio, Tag } from "antd";
+import { Alert, Checkbox, Input, Menu, QRCode, Radio, Result, Tag } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { type GoogleStatus, googleStatus, teacherDownload, teacherPost, teacherUpload } from "../api";
+import { ApiError, type GoogleStatus, googleStatus, teacherDownload, teacherPost, teacherUpload } from "../api";
 import { GooglePanel } from "./GooglePanel";
 import { ImportPanel } from "./ImportPanel";
 import { Board, type Judge, type ReviewReset } from "./Results";
@@ -211,20 +212,51 @@ export function TeamSettings({ view, act }: { view: TeacherView; act: Act }) {
   );
 }
 
-// 學生連結：伺服器給公開網址（student-qr）就用它，否則用本頁網址
-export function StudentLink({ url }: { url: string }) {
+// 學生連結：伺服器給公開網址（student-qr D3）就用它，否則用本頁網址
+export function StudentLink({ studentUrl }: { studentUrl?: string | null }) {
+  const url = studentUrl ?? `${window.location.origin}/`;
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    void navigator.clipboard?.writeText(url).then(() => setCopied(true));
+  };
   return (
     <Section id="link" title="學生連結">
-      <div className="qz-qr">
-        <QRCode value={url} size={168} bordered={false} />
+      <div className="qz-qr" data-testid="student-qr" data-qr-value={url}>
+        <QRCode value={url} size={220} bordered={false} />
         <div className="stack" style={{ minWidth: 0, flex: 1 }}>
           <span className="muted">學生用手機掃描 QR code，或在瀏覽器輸入：</span>
           <a className="qz-url" href={url} target="_blank" rel="noreferrer">
             {url}
           </a>
+          <div>
+            <Btn icon={<CopyOutlined />} onClick={copy}>
+              {copied ? "已複製" : "複製連結"}
+            </Btn>
+          </div>
+          {!studentUrl && (
+            <Alert
+              type="info"
+              showIcon
+              message="目前只在本機可連；要讓手機掃碼請用 start-tunnel.cmd 或 make dev-tunnel 啟動"
+            />
+          )}
         </div>
       </div>
     </Section>
+  );
+}
+
+const NOT_LOCAL = "老師頁只能在本機開啟";
+
+// 經公開網址開老師頁：伺服器 WebSocket 以 4403 關閉、REST 回 403（student-qr D2）
+export function NotLocalNotice() {
+  return (
+    <Shell>
+      <GlassHeader title="課堂搶答・老師工作檯" />
+      <div className="qz-narrow">
+        <Result status="403" title={NOT_LOCAL} subTitle="請用 http://127.0.0.1:8000 開老師頁。" />
+      </div>
+    </Shell>
   );
 }
 
@@ -272,7 +304,7 @@ export function TeacherPanel({
           onReviewReset={reviewing ? reviewReset : undefined}
         />
       </Section>
-      <StudentLink url={view.student_url ?? `${window.location.origin}/`} />
+      <StudentLink studentUrl={view.student_url} />
       {google && (
         <GooglePanel status={google.status} waiting={google.waiting} onLogin={google.login} onLogout={google.logout} />
       )}
@@ -304,22 +336,28 @@ const NAV = [
 
 export default function Teacher({ teacherKey }: { teacherKey: string }) {
   const { view, closedCode } = useLiveView(`role=teacher&key=${encodeURIComponent(teacherKey)}`);
-  const [error, setError] = useState("");
+  const [error, setErrorText] = useState("");
+  const [notLocal, setNotLocal] = useState(false);
   const [active, setActive] = useState("control");
+  // REST 403「老師頁只能在本機開啟」改顯示整頁提示，其餘錯誤照常列在上方
+  const setError = (e: string | Error) => {
+    if (e instanceof ApiError && e.status === 403 && e.message === NOT_LOCAL) setNotLocal(true);
+    else setErrorText(typeof e === "string" ? e : e.message);
+  };
   const act: Act = (path, body) => {
     setError("");
-    teacherPost(path, teacherKey, body).catch((e: Error) => setError(e.message));
+    teacherPost(path, teacherKey, body).catch((e: Error) => setError(e));
   };
   const upload: Upload = (file) => {
     setError("");
-    teacherUpload(teacherKey, file).catch((e: Error) => setError(e.message));
+    teacherUpload(teacherKey, file).catch((e: Error) => setError(e));
   };
   const [exporting, setExporting] = useState(false);
   const download = () => {
     setError("");
     setExporting(true);
     teacherDownload(teacherKey)
-      .catch((e: Error) => setError(e.message))
+      .catch((e: Error) => setError(e))
       .finally(() => setExporting(false));
   };
   const [gStatus, setGStatus] = useState<GoogleStatus | null>(null);
@@ -333,7 +371,10 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
           setGStatus(s);
           if (s.signed_in) setWaiting(false);
         })
-        .catch(() => undefined),
+        .catch((e: unknown) => {
+          // 開頁就會查 Google 狀態：經公開網址時這裡最先收到 403
+          if (e instanceof ApiError && e.status === 403 && e.message === NOT_LOCAL) setNotLocal(true);
+        }),
     [teacherKey],
   );
   useEffect(() => {
@@ -372,7 +413,7 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
       setError("");
       teacherPost("google/logout", teacherKey)
         .then(() => refreshGoogle())
-        .catch((e: Error) => setError(e.message));
+        .catch((e: Error) => setError(e));
     },
   };
   const actWithGoogle: Act = (path, body) => {
@@ -381,7 +422,7 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     teacherPost(path, teacherKey, body)
       .then((r) => setSheetUrl((r as { sheet_url?: string }).sheet_url ?? null))
       .catch((e: Error) => {
-        setError(e.message);
+        setError(e);
         void refreshGoogle();
       });
   };
@@ -391,11 +432,12 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     teacherPost("export-sheet", teacherKey)
       .then((r) => setSheetUrl((r as { url: string }).url))
       .catch((e: Error) => {
-        setError(e.message);
+        setError(e);
         void refreshGoogle();
       })
       .finally(() => setExporting(false));
   };
+  if (closedCode === 4403 || notLocal) return <NotLocalNotice />;
   if (closedCode === 4401)
     return (
       <Shell>
