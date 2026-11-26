@@ -12,10 +12,10 @@ node "老師電腦" {
     [__main__\nuvicorn.Server 就緒後\n開老師頁一次（--no-browser 可關）] as Main
     [app 老師端點\n先 is_local 再驗金鑰] as Api
     [app Google 設定端點\nGET 狀態・POST 設定・DELETE 清除] as Cfg
-    [app 手機連線端點\nPOST 開啟・DELETE 關閉\ntunnel_lock 序列化] as TunApi
+    [app 手機連線端點\nPOST 開啟・DELETE 關閉（非準備階段 409）\ntunnel_lock・取消旗標・監看意外結束] as TunApi
     [envfile\n只改兩鍵・原子寫入\n固定路徑] as EnvMod
     [google_auth.GoogleSession\nreconfigure・client_id_hint] as GS
-    [tunnel.Tunnel\nstart・stop・find_cloudflared] as Tun
+    [tunnel.Tunnel（以伺服器埠建立後注入 app）\navailable・alive・start・stop] as Tun
     [activity.Activity\npublic_url・tunnel 狀態] as Act
     [views.teacher_view\nstudent_url・tunnel（學生 view 不帶）] as Views
   }
@@ -28,6 +28,7 @@ package "web（老師頁）" {
 }
 
 Launcher --> Main : uv run python -m quiz_server
+Main --> Tun : Tunnel(伺服器埠)，--tunnel 共用
 Main --> Teacher : webbrowser.open（一次）
 Teacher --> Check
 Check ..> Wizard : 點 Google 列捲動

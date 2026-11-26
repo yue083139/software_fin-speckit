@@ -147,3 +147,21 @@ rows:
     守門: web/src/route.test.ts；web/src/pages/teacherkey.test.tsx
     狀態: covered
     卡: teacher-key-hidden
+  - id: M-025
+    需求: P-06、X-04
+    聲明: Google 用戶端密鑰只寫入本機 .env，永不出現在任何回應、view 與日誌；設定端點限本機＋老師金鑰、白名單 fullmatch（含尾端換行負例）、只改兩鍵且同鍵多行只留一行、已登入不可變更；設定變更作廢進行中的登入
+    守門: server/tests/test_google_config.py（test_save_writes_two_keys_keeps_other_lines_and_takes_effect、test_spaced_and_duplicate_keys_collapse_to_one、test_invalid_rejected_and_file_unchanged、test_public_host_rejected_before_key、test_signed_in_cannot_change_or_clear、test_secret_never_logged、test_reconfigure_discards_inflight_login）；web/src/pages/setup.test.tsx（Google 設定精靈）
+    狀態: covered
+    卡: easy-setup
+  - id: M-026
+    需求: X-04、R-09
+    聲明: 手機連線由老師（本機）在執行期起停，建立中再開 409、建立中關閉即取消、搶答開始後不能關閉、子行程意外結束轉 off；狀態推播給老師，學生 view 不含 tunnel 與 student_url
+    守門: server/tests/test_tunnel_api.py（test_open_then_close、test_starting_second_open_409_and_close_cancels、test_close_rejected_after_start、test_unexpected_exit_turns_off、test_public_host_rejected、test_student_view_never_has_tunnel_fields）；web/src/pages/setup.test.tsx（一鍵手機連線）
+    狀態: covered
+    卡: easy-setup
+  - id: M-027
+    需求: R-01
+    聲明: 啟動就緒後自動開本機老師頁恰一次，--no-browser／QUIZ_NO_BROWSER=1／CI 不開；通道實例以伺服器埠建立並注入 app；準備階段顯示開始前的設定清單
+    守門: server/tests/test_launch.py；web/src/pages/setup.test.tsx（開始前的設定清單）
+    狀態: covered
+    卡: easy-setup

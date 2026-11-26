@@ -37,7 +37,11 @@
 | `POST /api/teacher/import` | 老師 | `multipart/form-data`，欄位 `file`（.xlsx，≤5 MB） | `{source, count}`；取代題目並清空作答 | 400 檔案或格式不符；401；409 非 preparing |
 | `POST /api/teacher/import-url` | 老師 | `{url}`（`https://docs.google.com/spreadsheets/d/<id>/…`；須已以 Google 帳號登入） | `{source, count, sheet_url}`：先以 Drive 複製一份「<原標題>_作答情況」（answer-review 改名），再以 Sheets API 讀取並解析**副本**；`sheet_url` 為副本連結（guided-notes-sheets-sync 語意改變，負責人 2026-11-17 批准） | 依序：401 老師金鑰；409 非 preparing；400 連結不符、分頁不存在（不建立副本）或解析錯誤；401「請先以 Google 帳號登入」「Google 登入已過期，請重新登入」；502 Google 錯誤。登入檢查前不發任何對外請求；副本建立後任何失敗都盡力刪除副本 |
 | `POST /api/teacher/export-sheet` | 老師 | — | `{url}`：把得主答案以 `RAW` 寫入匯入時建立的副本（分頁名中的 `'` 以 `''` 跳脫），原試算表不動（guided-notes-sheets-sync）；寫入範圍＝目前有得主的作答格＋上次寫回寫過、這次已無得主的作答格（以匯入時原內容還原），無得主且從未寫過的格不碰；與下載 xlsx 以同一把伺服器鎖序列化（answer-review） | 依序：401 老師金鑰；409「搶答結束後才能匯出」「尚未匯入題目」「題目不是從 Google 試算表匯入，請改用下載 xlsx」；401 Google 未登入／已過期；502 Google 錯誤 |
-| `GET /api/teacher/google` | 老師 | — | `{configured, signed_in, email}`（不含任何權杖；guided-notes-sheets-sync） | 401 |
+| `GET /api/teacher/google` | 老師 | — | `{configured, signed_in, email, client_id_hint, redirect_uri}`（不含任何權杖與用戶端密鑰；guided-notes-sheets-sync；easy-setup 增 `client_id_hint`＝遮罩後的用戶端 ID 前 6 碼＋「…」＋`apps.googleusercontent.com`、未設定為 `null`，`redirect_uri` 固定 `http://127.0.0.1:8000/api/google/callback`——負責人 2026-11-26 批准） | 401 |
+| `POST /api/teacher/google/config` | 老師 | `{client_id, client_secret}`（不去空白，以 fullmatch 比對：ID `[0-9]{4,30}-[a-z0-9]{8,64}\.apps\.googleusercontent\.com`、密鑰 `GOCSPX-[A-Za-z0-9_-]{20,64}`，各 ≤128 字） | 同 `GET /api/teacher/google`：只改寫 repo 根目錄 `.env` 的 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`（同鍵多行只留第一行、其他行保留、原子寫入）並立即生效，不需重啟；作廢進行中的登入（easy-setup） | 依序：403 非本機；401；422「用戶端 ID 格式不符（應以 .apps.googleusercontent.com 結尾）」「用戶端密鑰格式不符（應以 GOCSPX- 開頭）」（不回顯輸入）；409「請先登出 Google 再變更設定」 |
+| `DELETE /api/teacher/google/config` | 老師 | — | 同上狀態（`configured: false`）；自 `.env` 移除兩鍵、其他行保留（easy-setup） | 依序：403；401；409「請先登出 Google 再變更設定」 |
+| `POST /api/teacher/tunnel` | 老師 | — | `{tunnel: "on", student_url}`：伺服器即時起 cloudflared 快速通道（已開啟則直接回現值）；建立中被關閉則回 `{tunnel: "off", student_url: null}`；不限階段（easy-setup） | 依序：403；401；409「手機連線建立中」；503「找不到 cloudflared，請先安裝：winget install --id Cloudflare.cloudflared -e」；504「建立手機連線逾時，請再試一次」 |
+| `DELETE /api/teacher/tunnel` | 老師 | — | `{tunnel: "off", student_url: null}`：停止通道（已關閉則直接回；建立中則等建立完成後停止）（easy-setup） | 依序：403；401；409「搶答進行中不能關閉手機連線」（非準備階段） |
 | `POST /api/teacher/google/login` | 老師 | — | `{url}`（Google 授權網址：授權碼＋PKCE S256、`access_type=offline`、`prompt=consent`、scope `openid email spreadsheets drive`）；設 cookie `qz_gstate`＝`sha256(state)`（`HttpOnly`、`SameSite=Lax`、`Path=/api/google`、10 分鐘） | 401；400「伺服器未設定 Google OAuth 用戶端」 |
 | `GET /api/google/callback?code&state` | 任何人（以 `state`＋cookie 綁定發起登入的老師瀏覽器） | — | HTML「登入完成，可關閉此分頁」；清 cookie | 400 HTML「登入失敗，請回老師頁重新登入」：`state` 非伺服器發出、過期、已用過、cookie 不符或帶 `error`；回應不回顯任何查詢參數 |
 | `POST /api/teacher/google/logout` | 老師 | — | `{signed_in: false}`；以表單本體向 Google 撤銷權杖（失敗也清空本機） | 401 |
@@ -76,7 +80,9 @@
 
 老師 view 另含（game-mode-framework）：`mode: {key, label, judged}`、`modes: [{key, label}]`、`score_label`（經典模式且全部倍率為 1 時「得題數」，其餘「得分」）、`pending_judgments`（未判定筆數）；`board[]` 另含 `reference: [每個子題的參考答案或 null]`，`board[].ranking[]` 另含 `suggestion`（`true`／`false`／`null`）。參考答案與建議**只在老師 view**。
 
-老師 view 另含（student-qr）：`student_url`——以 `--tunnel` 啟動且通道建立成功時為學生公開網址（`https://<隨機>.trycloudflare.com/`），否則 `null`（前端改用自身網址）；學生 view 不含。
+老師 view 另含（student-qr）：`student_url`——以 `--tunnel` 啟動或老師頁開啟手機連線（easy-setup）且通道建立成功時為學生公開網址（`https://<隨機>.trycloudflare.com/`），否則 `null`（前端改用自身網址）；學生 view 不含。
+
+老師 view 另含（easy-setup）：`tunnel`——手機連線狀態 `"off"`｜`"starting"`｜`"on"`，變化時推播；cloudflared 子行程意外結束自動轉 `"off"` 並清 `student_url`。學生 view 不含 `tunnel`。
 
 老師 view 另含（team-mode）：`team_play`、`devices: {組名: 已發出的憑證數}`、`invite_codes: {組名: 邀請碼}`（只列有邀請碼的組，含被釋放後待重新加入者）。老師 view 不含組內草稿。開始搶答時所有邀請碼換新。
 

@@ -42,6 +42,10 @@ export async function teacherPost(path: string, key: string, body?: unknown): Pr
   return parse(await fetch(`/api/teacher/${path}`, jsonInit({ "X-Teacher-Key": key }, body)));
 }
 
+export async function teacherDelete(path: string, key: string): Promise<unknown> {
+  return parse(await fetch(`/api/teacher/${path}`, { method: "DELETE", headers: { "X-Teacher-Key": key } }));
+}
+
 export async function teacherUpload(key: string, file: File): Promise<unknown> {
   const form = new FormData();
   form.append("file", file);
@@ -115,7 +119,17 @@ export interface GoogleStatus {
   configured: boolean;
   signed_in: boolean;
   email: string | null;
+  client_id_hint?: string | null; // easy-setup：遮罩後的用戶端 ID；密鑰永不回傳
+  redirect_uri?: string; // easy-setup：給設定精靈複製
 }
+
+// 手機連線（easy-setup D3）：伺服器即時起停 cloudflared，狀態也會經 WebSocket 推來
+export interface TunnelResult {
+  tunnel: TunnelState;
+  student_url: string | null;
+}
+
+export type TunnelState = "off" | "starting" | "on";
 
 export async function googleStatus(key: string): Promise<GoogleStatus> {
   return (await parse(await fetch("/api/teacher/google", { headers: { "X-Teacher-Key": key } }))) as GoogleStatus;

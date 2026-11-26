@@ -66,8 +66,11 @@ def test_login_requires_teacher(gclient):
 
 def test_callback_signs_in(gclient, fake):
     sign_in(gclient, H)
+    # easy-setup D2 擴充 client_id_hint、redirect_uri（契約批准）；仍不含任何權杖與密鑰
     assert gclient.get("/api/teacher/google", headers=H).json() == {
-        "configured": True, "signed_in": True, "email": "teacher@example.com"}
+        "configured": True, "signed_in": True, "email": "teacher@example.com",
+        "client_id_hint": "test-c…apps.googleusercontent.com",
+        "redirect_uri": "http://127.0.0.1:8000/api/google/callback"}
     form = parse_qs(next(r for r in fake.calls if r.url.path == "/token").content.decode())
     assert form["code"] == [CODE] and len(form["code_verifier"][0]) >= 43
 

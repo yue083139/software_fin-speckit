@@ -3,6 +3,8 @@ import asyncio
 import logging
 import os
 import secrets
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import quote
@@ -26,6 +28,7 @@ from pydantic import BaseModel
 
 from . import google_sheets, results
 from .activity import Activity, AlreadySubmittedError, InviteCodeError, TeamTakenError
+from .envfile import ENV_FILE, remove_keys, write_keys
 from .google_auth import (
     COOKIE_NAME,
     STATE_TTL,
@@ -33,12 +36,15 @@ from .google_auth import (
     GoogleAuthError,
     GoogleCallbackError,
     GoogleConfigError,
+    GoogleConfigInvalid,
     GoogleSession,
     state_digest,
+    validate_client,
 )
 from .guided_notes import GuidedNotesError, grids_to_xlsx, parse_grids, rename_sheets, write_answers
 from .phases import Phase, PhaseError
 from .sources import MAX_BYTES, SourceError, check_upload, parse_sheet_url
+from .tunnel import Tunnel
 from .views import view_for
 
 log = logging.getLogger("quiz_server")
@@ -51,6 +57,13 @@ WS_NOT_LOCAL = 4403
 LOCAL_HOSTNAMES = frozenset({"127.0.0.1", "localhost", "[::1]"})
 TUNNEL_HEADERS = ("cf-connecting-ip", "cf-ray")
 NOT_LOCAL = "老師頁只能在本機開啟"
+# easy-setup D2、D3
+CONFIG_SIGNED_IN = "請先登出 Google 再變更設定"
+TUNNEL_STARTING = "手機連線建立中"
+TUNNEL_MISSING = "找不到 cloudflared，請先安裝：winget install --id Cloudflare.cloudflared -e"
+TUNNEL_TIMEOUT = "建立手機連線逾時，請再試一次"
+TUNNEL_IN_USE = "搶答進行中不能關閉手機連線"
+TUNNEL_START_TIMEOUT = 30
 
 
 class TeamsBody(BaseModel):
@@ -110,6 +123,11 @@ class ReviewResetBody(BaseModel):
     question: int
 
 
+class GoogleConfigBody(BaseModel):
+    client_id: str
+    client_secret: str
+
+
 XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 COOKIE_PATH = "/api/google"
 # 回呼頁只用固定文案，不回顯任何查詢參數（guided-notes-sheets-sync D1：避免反射型 XSS 偷老師金鑰）
@@ -133,15 +151,45 @@ def resolve_teacher_key(explicit: str | None = None) -> str:
 def create_app(activity: Activity | None = None, teacher_key: str | None = None,
                static_dir: Path | None = DEFAULT_STATIC,
                http_transport: httpx.AsyncBaseTransport | None = None,
-               google: GoogleSession | None = None, student_url: str | None = None) -> FastAPI:
-    app = FastAPI(title="課堂搶答系統")
+               google: GoogleSession | None = None, student_url: str | None = None,
+               tunnel: Tunnel | None = None, env_file: Path = ENV_FILE,
+               tunnel_watch_interval: float = 2.0) -> FastAPI:
     act = activity or Activity()
+    act.public_url = student_url
+    act.tunnel_state = "on" if student_url else "off"
+    # 手機連線（easy-setup D3）：鎖只包狀態轉換，不包約 4 秒的 tunnel.start
+    tunnel_lock = asyncio.Lock()
+    tunnel_flags = {"cancel": False}
+    start_done = asyncio.Event()
+    start_done.set()
+
+    async def watch_tunnel() -> None:
+        """子行程意外結束 ⇒ 轉 off（v1.1 藥方 6）；只記結果，不記網址。"""
+        while True:
+            await asyncio.sleep(tunnel_watch_interval)
+            if tunnel is None or act.tunnel_state != "on" or tunnel.alive():
+                continue
+            async with tunnel_lock:
+                if act.tunnel_state == "on" and not tunnel.alive():
+                    await act.set_tunnel("off", None)
+                    log.warning("手機連線的 cloudflared 已結束，改為只在本機")
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        watcher = asyncio.create_task(watch_tunnel())
+        try:
+            yield
+        finally:
+            watcher.cancel()
+            if tunnel is not None:
+                await asyncio.to_thread(tunnel.stop)
+
+    app = FastAPI(title="課堂搶答系統", lifespan=lifespan)
     gs = google or GoogleSession(os.environ.get("GOOGLE_CLIENT_ID"), os.environ.get("GOOGLE_CLIENT_SECRET"),
                                  transport=http_transport)
     app.state.google = gs
     secret = resolve_teacher_key(teacher_key)
     app.state.activity = act
-    act.public_url = student_url
 
     def is_local(headers: Any) -> bool:
         host = headers.get("host", "").strip().lower()
@@ -189,6 +237,10 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
     @app.exception_handler(google_sheets.SheetNotFoundError)
     async def _google_bad_request(_: Request, exc: ValueError) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=400)
+
+    @app.exception_handler(GoogleConfigInvalid)
+    async def _google_config_invalid(_: Request, exc: GoogleConfigInvalid) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=422)
 
     @app.exception_handler(GoogleAuthError)
     async def _google_auth(_: Request, exc: GoogleAuthError) -> JSONResponse:
@@ -325,6 +377,91 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
             resp = HTMLResponse(CALLBACK_OK)
         resp.delete_cookie(COOKIE_NAME, path=COOKIE_PATH)
         return resp
+
+    # Google 設定精靈（easy-setup D2）：檢查已登入 → 寫 .env → 立即生效 → 設環境變數，整段在鎖內
+    config_lock = asyncio.Lock()
+    config_keys = ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET")
+
+    @app.post("/api/teacher/google/config", dependencies=teacher)
+    async def google_config(body: GoogleConfigBody) -> dict[str, Any]:
+        validate_client(body.client_id, body.client_secret)  # 不 strip：寫入的就是驗證過的原值
+        async with config_lock:
+            if gs.signed_in:
+                raise HTTPException(409, CONFIG_SIGNED_IN)
+            values = dict(zip(config_keys, (body.client_id, body.client_secret), strict=True))
+            await asyncio.to_thread(write_keys, values, env_file)
+            gs.reconfigure(body.client_id, body.client_secret)
+            os.environ.update(values)
+        log.info("已更新 Google OAuth 用戶端設定")  # 不記 ID 與密鑰
+        return gs.status()
+
+    @app.delete("/api/teacher/google/config", dependencies=teacher)
+    async def google_config_clear() -> dict[str, Any]:
+        async with config_lock:
+            if gs.signed_in:
+                raise HTTPException(409, CONFIG_SIGNED_IN)
+            await asyncio.to_thread(remove_keys, config_keys, env_file)
+            gs.reconfigure(None, None)
+            for k in config_keys:
+                os.environ.pop(k, None)
+        log.info("已清除 Google OAuth 用戶端設定")
+        return gs.status()
+
+    def tunnel_body() -> dict[str, Any]:
+        return {"tunnel": act.tunnel_state, "student_url": act.public_url}
+
+    @app.post("/api/teacher/tunnel", dependencies=teacher)
+    async def tunnel_open() -> dict[str, Any]:
+        async with tunnel_lock:
+            if act.tunnel_state == "on":
+                return tunnel_body()
+            if act.tunnel_state == "starting":
+                raise HTTPException(409, TUNNEL_STARTING)
+            if tunnel is None or not tunnel.available():
+                raise HTTPException(503, TUNNEL_MISSING)
+            tunnel_flags["cancel"] = False
+            start_done.clear()
+            await act.set_tunnel("starting", None)
+        url: str | None = None
+        cancelled = False
+        try:
+            url = await asyncio.to_thread(tunnel.start, TUNNEL_START_TIMEOUT)
+        finally:
+            async with tunnel_lock:
+                cancelled = tunnel_flags["cancel"]
+                try:
+                    if cancelled or url is None:
+                        if url is not None:
+                            await asyncio.to_thread(tunnel.stop)
+                        await act.set_tunnel("off", None)
+                    else:
+                        await act.set_tunnel("on", url)
+                finally:
+                    start_done.set()
+        if cancelled:
+            return {"tunnel": "off", "student_url": None}
+        if url is None:
+            raise HTTPException(504, TUNNEL_TIMEOUT)
+        log.info("手機連線已開啟")
+        return tunnel_body()
+
+    @app.delete("/api/teacher/tunnel", dependencies=teacher)
+    async def tunnel_close() -> dict[str, Any]:
+        if act.phase is not Phase.PREPARING:
+            raise HTTPException(409, TUNNEL_IN_USE)  # 關掉會讓手機上的組別全部斷線（v1.1 藥方 3）
+        wait = False
+        async with tunnel_lock:
+            if act.tunnel_state == "starting":
+                tunnel_flags["cancel"] = True  # 建立完成後由開啟那端停掉子行程（v1.1 藥方 2）
+                wait = True
+            elif act.tunnel_state == "on":
+                if tunnel is not None:
+                    await asyncio.to_thread(tunnel.stop)
+                await act.set_tunnel("off", None)
+        if wait:
+            await start_done.wait()
+        log.info("手機連線已關閉")
+        return tunnel_body()
 
     @app.post("/api/teacher/google/logout", dependencies=teacher)
     async def google_logout() -> dict[str, bool]:

@@ -6,6 +6,7 @@
 import base64
 import hashlib
 import json
+import re
 import secrets
 import time
 from collections.abc import Callable
@@ -23,6 +24,13 @@ REFRESH_MARGIN = 60
 TIMEOUT_SECONDS = 15
 COOKIE_NAME = "qz_gstate"
 
+# 設定精靈白名單（easy-setup D2）：以 fullmatch 比對原值（`$` 會放過尾端換行），
+# 字元集本身排除換行、`=`、引號、`#`
+CLIENT_ID_PATTERN = re.compile(r"[0-9]{4,30}-[a-z0-9]{8,64}\.apps\.googleusercontent\.com")
+CLIENT_SECRET_PATTERN = re.compile(r"GOCSPX-[A-Za-z0-9_-]{20,64}")
+MAX_LEN = 128
+BAD_CLIENT_ID = "用戶端 ID 格式不符（應以 .apps.googleusercontent.com 結尾）"
+BAD_CLIENT_SECRET = "用戶端密鑰格式不符（應以 GOCSPX- 開頭）"  # noqa: S105 錯誤訊息，不是密碼
 NOT_CONFIGURED = "伺服器未設定 Google OAuth 用戶端"
 NOT_SIGNED_IN = "請先以 Google 帳號登入"
 EXPIRED = "Google 登入已過期，請重新登入"
@@ -30,6 +38,17 @@ EXPIRED = "Google 登入已過期，請重新登入"
 
 class GoogleConfigError(ValueError):
     """伺服器未設定 OAuth 用戶端；API 層轉 400。"""
+
+
+class GoogleConfigInvalid(ValueError):
+    """設定精靈送來的用戶端 ID 或密鑰不符白名單；API 層轉 422，訊息不含輸入值。"""
+
+
+def validate_client(client_id: str, client_secret: str) -> None:
+    if len(client_id) > MAX_LEN or not CLIENT_ID_PATTERN.fullmatch(client_id):
+        raise GoogleConfigInvalid(BAD_CLIENT_ID)
+    if len(client_secret) > MAX_LEN or not CLIENT_SECRET_PATTERN.fullmatch(client_secret):
+        raise GoogleConfigInvalid(BAD_CLIENT_SECRET)
 
 
 class GoogleAuthError(Exception):
@@ -82,6 +101,24 @@ class GoogleSession:
         self._refresh_token: str | None = None
         self._expires_at = 0.0
         self.email: str | None = None
+        # 設定世代：reconfigure 遞增；complete() await 回來若世代已變即丟棄（easy-setup D2 v1.1）
+        self._generation = 0
+
+    def reconfigure(self, client_id: str | None, client_secret: str | None) -> None:
+        """設定精靈存檔後立即生效：換用戶端並作廢進行中的登入與既有權杖。"""
+        self._client_id = client_id or ""
+        self._client_secret = client_secret or ""
+        self._generation += 1
+        self._pending.clear()
+        self._clear()
+
+    @property
+    def client_id_hint(self) -> str | None:
+        """遮罩後的用戶端 ID（前 6 碼）：老師認得出是哪一組設定，又不整串外露。"""
+        if not self.configured:
+            return None
+        suffix = "apps.googleusercontent.com"
+        return self._client_id[:6] + "…" + (suffix if self._client_id.endswith(suffix) else "")
 
     @property
     def configured(self) -> bool:
@@ -93,7 +130,8 @@ class GoogleSession:
 
     def status(self) -> dict[str, object]:
         return {"configured": self.configured, "signed_in": self.signed_in,
-                "email": self.email if self.signed_in else None}
+                "email": self.email if self.signed_in else None,
+                "client_id_hint": self.client_id_hint, "redirect_uri": REDIRECT_URI}
 
     def client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(transport=self._transport, timeout=TIMEOUT_SECONDS, follow_redirects=False)
@@ -123,9 +161,12 @@ class GoogleSession:
                 or not secrets.compare_digest(cookie.encode(), state_digest(state or "").encode())):
             raise GoogleCallbackError
         verifier = entry[0]
+        generation = self._generation
         data = {"client_id": self._client_id, "client_secret": self._client_secret, "code": code,
                 "code_verifier": verifier, "grant_type": "authorization_code", "redirect_uri": REDIRECT_URI}
         body = await self._token_request(data)
+        if generation != self._generation:
+            raise GoogleCallbackError  # 等 Google 回應時設定被換掉：舊用戶端的授權不得落地
         self._store(body)
         self.email = _email_from_id_token(body.get("id_token"))
 
