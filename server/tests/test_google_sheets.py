@@ -58,7 +58,7 @@ def test_import_copies_first_then_reads_the_copy(fixture_bytes):
         ("POST", "www.googleapis.com", "copy", None),                  # 複製
         ("GET", "sheets.googleapis.com", COPY_ID, "true"),             # 讀副本
     ]
-    assert json.loads(fake.calls[1].content) == {"name": "題組＋單題範本-搶答結果"}
+    assert json.loads(fake.calls[1].content) == {"name": "題組＋單題範本_作答情況"}
     assert [len(q.slots) for q in notes.questions] == [2, 2, 1, 1]
 
 

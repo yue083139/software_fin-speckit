@@ -5,6 +5,7 @@ import type { QuestionOutline, QuestionResult, RankedAnswer } from "../types";
 import { Btn, Section } from "../ui";
 
 export type Judge = (question: number, team: string, correct: boolean) => void;
+export type ReviewReset = (question: number) => void;
 
 function formatAnswers(labels: string[], answers: string[]): string {
   return answers.map((a, i) => `${labels[i] ?? ""}${a}`).join(" ／ ");
@@ -42,6 +43,50 @@ function JudgeCell({ question, r, onJudge }: { question: number; r: RankedAnswer
   );
 }
 
+// 經典搶答結束後依順位檢查（answer-review）：只有候選格有「答對／答錯」，狀態全來自伺服器的 review
+function ReviewCell({ q, r, onReview }: { q: QuestionResult; r: RankedAnswer; onReview: Judge }) {
+  const review = q.review;
+  if (!review) return null;
+  if (review.rejected.includes(r.team)) return <div className="error">✗ 答錯</div>;
+  if (review.candidate !== r.team) return null;
+  if (review.locked)
+    return (
+      <div className="ok">
+        ✓ 答對 <Tag color="success">已鎖定</Tag>
+      </div>
+    );
+  return (
+    <div className="stack" style={{ gap: 4 }}>
+      <Tag color="processing">檢查中</Tag>
+      <div className="row">
+        <Btn size="small" type="primary" aria-label={`第 ${q.number} 題 ${r.team} 答對`} onClick={() => onReview(q.number, r.team, true)}>
+          答對
+        </Btn>
+        <Btn size="small" danger aria-label={`第 ${q.number} 題 ${r.team} 答錯`} onClick={() => onReview(q.number, r.team, false)}>
+          答錯
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+function ReviewSummary({ q, onReset }: { q: QuestionResult; onReset: ReviewReset }) {
+  const review = q.review;
+  if (!review) return null;
+  const allWrong = review.candidate === null && q.ranking.length > 0;
+  const touched = review.locked || review.rejected.length > 0;
+  return (
+    <div className="stack" style={{ gap: 4 }}>
+      {allWrong && <div className="error">全部答錯，無得主</div>}
+      {touched && (
+        <Btn size="small" aria-label={`第 ${q.number} 題 重設本題`} onClick={() => onReset(q.number)}>
+          重設本題
+        </Btn>
+      )}
+    </div>
+  );
+}
+
 // 老師即時作答狀況表：列＝題號、欄＝組別，格內為答案與順位，得主加底色（results-view D4）
 export function Board({
   board,
@@ -51,6 +96,8 @@ export function Board({
   winnerTag = "搶答成功",
   onJudge,
   judgeQuestion,
+  onReview,
+  onReviewReset,
   questions,
 }: {
   board: QuestionResult[];
@@ -61,6 +108,8 @@ export function Board({
   winnerTag?: string;
   onJudge?: Judge;
   judgeQuestion?: number; // 逐題模式只能判定目前那一題
+  onReview?: Judge; // 經典搶答結束後才給（answer-review）
+  onReviewReset?: ReviewReset;
 }) {
   if (board.length === 0) return <p className="muted">尚未匯入題目。</p>;
   const columns: ColumnsType<QuestionResult> = [
@@ -78,6 +127,7 @@ export function Board({
           {q.reference?.some((x) => x != null) && (
             <div className="muted">參考答案：{q.reference.map((x) => x ?? "—").join(" ／ ")}</div>
           )}
+          {onReview && onReviewReset && <ReviewSummary q={q} onReset={onReviewReset} />}
         </div>
       ),
     },
@@ -96,7 +146,9 @@ export function Board({
             <div>{formatAnswers(q.labels, r.answers)}</div>
             <div className="muted">第 {r.rank} 順位</div>
             {r.is_winner && <div className="tag">{winnerTag}</div>}
-            {onJudge && (judgeQuestion === undefined || judgeQuestion === q.number) ? (
+            {onReview && q.review ? (
+              <ReviewCell q={q} r={r} onReview={onReview} />
+            ) : onJudge && (judgeQuestion === undefined || judgeQuestion === q.number) ? (
               <JudgeCell question={q.number} r={r} onJudge={onJudge} />
             ) : (
               r.correct != null && <div>{verdict(r.correct)}</div>

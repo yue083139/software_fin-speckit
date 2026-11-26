@@ -93,6 +93,16 @@ class JudgeBody(BaseModel):
     correct: bool
 
 
+class ReviewBody(BaseModel):
+    question: int
+    team: str
+    correct: bool
+
+
+class ReviewResetBody(BaseModel):
+    question: int
+
+
 XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 COOKIE_PATH = "/api/google"
 # 回呼頁只用固定文案，不回顯任何查詢參數（guided-notes-sheets-sync D1：避免反射型 XSS 偷老師金鑰）
@@ -104,7 +114,7 @@ CALLBACK_FAIL = ("<!doctype html><meta charset=utf-8><title>登入失敗</title>
 
 def export_filename(source: str | None) -> str:
     stem = (source or "guided-notes").rsplit(".", 1)[0]
-    return f"{stem}-搶答結果.xlsx"
+    return f"{stem}_作答情況.xlsx"
 
 
 def resolve_teacher_key(explicit: str | None = None) -> str:
@@ -131,6 +141,9 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
             raise HTTPException(401, "需要老師金鑰")
 
     teacher = [Depends(require_teacher)]
+    # 匯出與寫回序列化（answer-review D5 v1.1）：快照在鎖內取，兩次寫回不交錯，
+    # 「上次寫過的題號」才與副本實際內容一致
+    export_lock = asyncio.Lock()
 
     @app.exception_handler(PhaseError)
     async def _phase_error(_: Request, exc: PhaseError) -> JSONResponse:
@@ -255,14 +268,16 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
 
     @app.post("/api/teacher/export-sheet", dependencies=teacher)
     async def export_sheet() -> dict[str, str]:
-        if act.phase is not Phase.ENDED:
-            raise PhaseError("搶答結束後才能匯出")
-        if act.notes is None:
-            raise PhaseError("尚未匯入題目")
-        if act.source_sheet_id is None:
-            raise PhaseError("題目不是從 Google 試算表匯入，請改用下載 xlsx")
-        url = await google_sheets.write_answers(gs, act.source_sheet_id, act.notes,
-                                                results.winning_answers(act))
+        async with export_lock:
+            if act.phase is not Phase.ENDED:
+                raise PhaseError("搶答結束後才能匯出")
+            if act.notes is None:
+                raise PhaseError("尚未匯入題目")
+            if act.source_sheet_id is None:
+                raise PhaseError("題目不是從 Google 試算表匯入，請改用下載 xlsx")
+            sheet_id, notes, answers = act.source_sheet_id, act.notes, results.winning_answers(act)
+            url = await google_sheets.write_answers(gs, sheet_id, notes, answers, restore=act.sheet_written)
+            await act.mark_sheet_written(sheet_id, frozenset(answers))
         log.info("寫回 Google 試算表副本：活動 v%s", act.version)
         return {"url": url}
 
@@ -299,12 +314,13 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
 
     @app.get("/api/teacher/export", dependencies=teacher)
     async def export() -> Response:
-        if act.phase is not Phase.ENDED:
-            raise PhaseError("搶答結束後才能匯出")
-        if act.notes is None or act.source_bytes is None:
-            raise PhaseError("尚未匯入題目")
-        notes = rename_sheets(act.notes, act.source_xlsx_sheets) if act.source_xlsx_sheets else act.notes
-        data = write_answers(act.source_bytes, notes, results.winning_answers(act))
+        async with export_lock:
+            if act.phase is not Phase.ENDED:
+                raise PhaseError("搶答結束後才能匯出")
+            if act.notes is None or act.source_bytes is None:
+                raise PhaseError("尚未匯入題目")
+            notes = rename_sheets(act.notes, act.source_xlsx_sheets) if act.source_xlsx_sheets else act.notes
+            data = write_answers(act.source_bytes, notes, results.winning_answers(act))
         name = export_filename(act.source_name)
         disposition = f"attachment; filename=\"guided-notes-result.xlsx\"; filename*=UTF-8''{quote(name)}"
         return Response(data, media_type=XLSX_MEDIA, headers={"Content-Disposition": disposition})
@@ -352,6 +368,18 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
         await act.judge(body.question, body.team, body.correct)
         log.info("判定：題 %s 組別 %s 結果 %s", body.question, body.team, body.correct)
         return {"question": body.question, "team": body.team, "correct": body.correct}
+
+    @app.post("/api/teacher/review", dependencies=teacher)
+    async def review(body: ReviewBody) -> dict[str, Any]:
+        await act.review(body.question, body.team, body.correct)
+        log.info("檢查：題 %s 組別 %s 結果 %s", body.question, body.team, body.correct)
+        return {"question": body.question, "team": body.team, "correct": body.correct}
+
+    @app.post("/api/teacher/review-reset", dependencies=teacher)
+    async def review_reset(body: ReviewResetBody) -> dict[str, int]:
+        await act.review_reset(body.question)
+        log.info("重設檢查：題 %s", body.question)
+        return {"question": body.question}
 
     @app.post("/api/teacher/accept-suggestions", dependencies=teacher)
     async def accept_suggestions() -> dict[str, int]:

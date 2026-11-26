@@ -50,18 +50,26 @@ class ScoringRule(Protocol):
 
 
 class ClassicBuzzRule:
-    """經典搶答：伺服器接收序最小者得該題（R-10），得 1 × 倍率分；不判對錯。"""
+    """經典搶答：依伺服器接收序第一個未被老師判錯者得該題，得 1 × 倍率分。
+
+    `judgments` 只在結束後的檢查寫入（answer-review D1）；沒有任何判定時＝順位 1 得主（R-10）。
+    判錯者往後遞補、判對即鎖定；全部判錯則無得主。
+    """
 
     name = "classic"
 
     def rank(self, submissions: Sequence[Submission], judgments: Mapping[str, bool] | None = None,
              attrs: QuestionAttrs | None = None) -> list[Ranked]:
+        judged = judgments or {}
         m = (attrs or DEFAULT_ATTRS).multiplier
-        ordered = sorted(submissions, key=lambda s: s.seq)
-        return [
-            Ranked(s.team, s.answers, s.seq, i, i == 1, m if i == 1 else 0)
-            for i, s in enumerate(ordered, 1)
-        ]
+        out: list[Ranked] = []
+        winner_found = False
+        for i, s in enumerate(sorted(submissions, key=lambda s: s.seq), 1):
+            correct = judged.get(s.team)
+            is_winner = correct is not False and not winner_found
+            winner_found = winner_found or is_winner
+            out.append(Ranked(s.team, s.answers, s.seq, i, is_winner, m if is_winner else 0, correct))
+        return out
 
     def team_scores(self, teams: Sequence[str], ranked: Sequence[Sequence[Ranked]]) -> dict[str, int]:
         return _sum_scores(teams, ranked)

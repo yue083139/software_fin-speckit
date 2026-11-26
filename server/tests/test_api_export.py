@@ -41,7 +41,7 @@ def test_filename_header(loaded_client, teacher_headers):
     loaded_client.post("/api/teacher/start", headers=teacher_headers)
     loaded_client.post("/api/teacher/end", headers=teacher_headers)
     r = loaded_client.get("/api/teacher/export", headers=teacher_headers)
-    assert f"filename*=UTF-8''{quote('group-搶答結果.xlsx')}" in r.headers["content-disposition"]
+    assert f"filename*=UTF-8''{quote('group_作答情況.xlsx')}" in r.headers["content-disposition"]
 
 
 def test_export_only_when_ended(loaded_client, teacher_headers):

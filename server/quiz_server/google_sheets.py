@@ -1,6 +1,7 @@
 """直接讀寫雲端 Google 試算表（guided-notes-sheets-sync D2、D3）。
 
-匯入時先以 Drive 複製一份「<原標題>-搶答結果」，解析與寫回都對這份副本；原試算表只在匯入時讀標題、複製各一次。
+匯入時先以 Drive 複製一份「<原標題>_作答情況」（answer-review D6），解析與寫回都對這份副本；
+原試算表只在匯入時讀標題、複製各一次。
 所有 httpx 例外在本模組攔下轉成 GoogleApiError（訊息不含網址），以免權杖或網址進 traceback。
 """
 from urllib.parse import quote
@@ -14,7 +15,7 @@ SHEETS = "https://sheets.googleapis.com/v4/spreadsheets"
 DRIVE = "https://www.googleapis.com/drive/v3/files"
 GRID_FIELDS = ("sheets(properties(title,sheetId),merges,"
                "data.rowData.values(formattedValue,effectiveValue))")
-COPY_SUFFIX = "-搶答結果"
+COPY_SUFFIX = "_作答情況"
 
 
 class SheetNotFoundError(ValueError):
@@ -121,15 +122,23 @@ def _a1(sheet: str, cell: str) -> str:
 
 
 async def write_answers(session: GoogleSession, copy_id: str, notes: ParsedNotes,
-                        answers: dict[int, tuple[str, ...]]) -> str:
-    """只寫副本；RAW 讓「=」開頭的答案存成文字（D3）。回傳副本網址。"""
+                        answers: dict[int, tuple[str, ...]], restore: frozenset[int] = frozenset()) -> str:
+    """只寫副本；RAW 讓「=」開頭的答案存成文字（D3）。回傳副本網址。
+
+    `restore`：上次寫過答案、這次已無得主的題（例：結束後全部判錯）以原標籤還原（answer-review D5 v1.1）；
+    無得主且從未寫過的題不碰，維持「無人搶答的題目不變」。
+    """
     data = []
     for q in notes.questions:
         values = answers.get(q.number)
         if values is None:
-            continue
-        for slot, answer in zip(q.slots, values, strict=True):
-            data.append({"range": _a1(slot.sheet, slot.cell), "values": [[fill(slot, answer)]]})
+            if q.number not in restore:
+                continue
+            texts = [slot.label for slot in q.slots]
+        else:
+            texts = [fill(slot, answer) for slot, answer in zip(q.slots, values, strict=True)]
+        for slot, text in zip(q.slots, texts, strict=True):
+            data.append({"range": _a1(slot.sheet, slot.cell), "values": [[text]]})
     token = await session.token()
     if data:
         async with session.client() as c:

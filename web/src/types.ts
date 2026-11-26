@@ -83,7 +83,7 @@ export interface RankedAnswer {
   rank: number;
   is_winner: boolean;
   score: number;
-  correct?: boolean | null; // 經典為 null；判定模式為老師判定
+  correct?: boolean | null; // 經典：未檢查為 null、結束後老師檢查為 true／false（answer-review）；判定模式為老師判定
   suggestion?: boolean | null; // 只在老師 view
 }
 
@@ -94,6 +94,14 @@ export interface QuestionResult {
   winner: { team: string; answers: string[] } | null;
   multiplier?: number;
   reference?: (string | null)[]; // 只在老師 view
+  review?: ReviewState; // 只在老師 view、只在經典模式（answer-review）
+}
+
+// 經典搶答結束後的檢查狀態（answer-review）：候選＝目前得主；rejected 依順位；locked＝候選已判對
+export interface ReviewState {
+  candidate: string | null;
+  rejected: string[];
+  locked: boolean;
 }
 
 export type View = TeacherView | StudentView;

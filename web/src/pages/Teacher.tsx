@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { type GoogleStatus, googleStatus, teacherDownload, teacherPost, teacherUpload } from "../api";
 import { GooglePanel } from "./GooglePanel";
 import { ImportPanel } from "./ImportPanel";
-import { Board, type Judge } from "./Results";
+import { Board, type Judge, type ReviewReset } from "./Results";
 import { Leaderboard, RoundStatus } from "./Round";
 import { useLiveView } from "../live";
 import { PHASE_LABEL, type TeacherView } from "../types";
@@ -26,11 +26,13 @@ export function PhaseControls({
   act,
   download,
   exportSheet,
+  exporting = false,
 }: {
   view: TeacherView;
   act: Act;
   download: () => void;
   exportSheet?: () => void;
+  exporting?: boolean; // 匯出或寫回進行中：兩顆匯出鈕都停用（answer-review D5）
 }) {
   return (
     <Section id="control" title="活動控制" extra={<PhaseTag phase={view.phase} />}>
@@ -84,11 +86,11 @@ export function PhaseControls({
         </div>
         <div className="row">
           {exportSheet && (
-            <Btn type="primary" disabled={view.phase !== "ended" || !view.source} onClick={exportSheet}>
+            <Btn type="primary" disabled={view.phase !== "ended" || !view.source || exporting} loading={exporting} onClick={exportSheet}>
               匯出到 Google 試算表
             </Btn>
           )}
-          <Btn disabled={view.phase !== "ended" || !view.source} onClick={download}>
+          <Btn disabled={view.phase !== "ended" || !view.source || exporting} onClick={download}>
             下載 xlsx（備援）
           </Btn>
         </div>
@@ -234,6 +236,7 @@ export function TeacherPanel({
   upload,
   download = () => {},
   exportSheet,
+  exporting,
   google,
   sheetUrl,
 }: {
@@ -242,13 +245,18 @@ export function TeacherPanel({
   upload: Upload;
   download?: () => void;
   exportSheet?: () => void;
+  exporting?: boolean;
   google?: { status: GoogleStatus | null; waiting: boolean; login: () => void; logout: () => void };
   sheetUrl?: string | null;
 }) {
   const judge: Judge = (question, team, correct) => act("judge", { question, team, correct });
+  const review: Judge = (question, team, correct) => act("review", { question, team, correct });
+  const reviewReset: ReviewReset = (question) => act("review-reset", { question });
+  // 答對／答錯只在經典搶答結束後（answer-review）；舊伺服器沒有 mode 時視為經典
+  const reviewing = view.phase === "ended" && (view.mode?.key ?? "classic") === "classic";
   return (
     <>
-      <PhaseControls view={view} act={act} download={download} exportSheet={exportSheet} />
+      <PhaseControls view={view} act={act} download={download} exportSheet={exportSheet} exporting={exporting} />
       <ModeSelector view={view} act={act} />
       <Section id="board" title="作答狀況與結果">
         <Board
@@ -260,6 +268,8 @@ export function TeacherPanel({
           winnerTag={view.mode?.judged ? "最早答對" : "搶答成功"}
           onJudge={view.phase === "judging" || view.round?.state === "closed" ? judge : undefined}
           judgeQuestion={view.mode?.sequential ? view.round?.question : undefined}
+          onReview={reviewing ? review : undefined}
+          onReviewReset={reviewing ? reviewReset : undefined}
         />
       </Section>
       <StudentLink url={view.student_url ?? `${window.location.origin}/`} />
@@ -304,9 +314,13 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     setError("");
     teacherUpload(teacherKey, file).catch((e: Error) => setError(e.message));
   };
+  const [exporting, setExporting] = useState(false);
   const download = () => {
     setError("");
-    teacherDownload(teacherKey).catch((e: Error) => setError(e.message));
+    setExporting(true);
+    teacherDownload(teacherKey)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setExporting(false));
   };
   const [gStatus, setGStatus] = useState<GoogleStatus | null>(null);
   const [waiting, setWaiting] = useState(false);
@@ -373,12 +387,14 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
   };
   const exportSheet = () => {
     setError("");
+    setExporting(true);
     teacherPost("export-sheet", teacherKey)
       .then((r) => setSheetUrl((r as { url: string }).url))
       .catch((e: Error) => {
         setError(e.message);
         void refreshGoogle();
-      });
+      })
+      .finally(() => setExporting(false));
   };
   if (closedCode === 4401)
     return (
@@ -422,6 +438,7 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
               upload={upload}
               download={download}
               exportSheet={exportSheet}
+              exporting={exporting}
               google={google}
               sheetUrl={sheetUrl}
             />

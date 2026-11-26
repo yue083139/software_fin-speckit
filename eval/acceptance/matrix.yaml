@@ -29,14 +29,14 @@ rows:
     卡: buzz-answering
   - id: M-005
     需求: R-10
-    聲明: 同一題並發送出時恰一組成功，順位依伺服器接收序且無重號
-    守門: server/tests/test_submit.py::test_concurrent_same_question、test_concurrent_same_team_same_question（拿掉鎖必紅）
+    聲明: 同一題並發送出時恰一組成功，順位依伺服器接收序且無重號；經典搶答結束後老師判錯時依順位遞補、判對鎖定，未檢查＝順位 1（answer-review）
+    守門: server/tests/test_submit.py::test_concurrent_same_question、test_concurrent_same_team_same_question（拿掉鎖必紅）；server/tests/test_scoring.py::test_classic_without_judgments_unchanged、test_classic_rejected_falls_back_to_next_rank、test_classic_locked_candidate、test_classic_all_rejected_has_no_winner
     狀態: covered
     卡: buzz-answering
   - id: M-006
     需求: R-05
-    聲明: 匯出的 Guided Notes 中每題作答格填入搶答成功的答案。xlsx 來源：其餘格內容與格式不變；Google 來源：答案以 Sheets API 寫入匯入時建立的副本、副本其餘格不被寫入、原試算表 0 次寫入；Google 來源的 xlsx 下載備援只保證值與合併（guided-notes-sheets-sync）
-    守門: server/tests/test_guided_notes_export.py（三份夾具往返、公式形式答案存為文字、題組子題寫入標籤右側填空格）；server/tests/test_api_export.py；probes/results/2026-11-11-e2e-flow.txt；server/tests/test_google_sheets.py::test_write_targets_only_the_copy_with_raw、test_sheet_name_quote_is_escaped；server/tests/test_api_google.py::test_export_sheet_writes_copy；probes/results/2026-11-17-google-sheets.txt
+    聲明: 匯出的 Guided Notes 中每題作答格填入搶答成功的答案（經典搶答為老師檢查後鎖定或遞補的得主；重新寫回 Google 副本時，上次寫過、這次已無得主的格以原內容還原——answer-review）。xlsx 來源：其餘格內容與格式不變；Google 來源：答案以 Sheets API 寫入匯入時建立的副本、副本其餘格不被寫入、原試算表 0 次寫入；Google 來源的 xlsx 下載備援只保證值與合併（guided-notes-sheets-sync）
+    守門: server/tests/test_guided_notes_export.py（三份夾具往返、公式形式答案存為文字、題組子題寫入標籤右側填空格）；server/tests/test_api_export.py；probes/results/2026-11-11-e2e-flow.txt；server/tests/test_google_sheets.py::test_write_targets_only_the_copy_with_raw、test_sheet_name_quote_is_escaped；server/tests/test_api_google.py::test_export_sheet_writes_copy；probes/results/2026-11-17-google-sheets.txt；server/tests/test_review.py::test_export_writes_fallback_answer、test_all_rejected_has_no_winner_and_export_keeps_original；server/tests/test_api_google.py::test_reexport_restores_previously_written_cells、test_reset_keeps_written_and_restores_in_next_round、test_reimport_clears_written、test_written_not_recorded_when_copy_changed_during_write
     狀態: covered
     卡: guided-notes-export
   - id: M-007
@@ -48,7 +48,7 @@ rows:
   - id: M-008
     需求: R-08
     聲明: 學生只在搶答結束後看到每題得主、得主答案、全部組別答案與順位，且與老師畫面一致
-    守門: server/tests/test_results_view.py::test_student_results_only_when_ended、test_teacher_and_student_agree
+    守門: server/tests/test_results_view.py::test_student_results_only_when_ended、test_teacher_and_student_agree（經典含結束後判錯遞補）；server/tests/test_review.py::test_successful_review_pushes_once_and_failures_push_nothing
     狀態: covered
     卡: results-view
   - id: M-009
@@ -129,3 +129,9 @@ rows:
     守門: server/tests/test_isolation.py::test_prompts_hidden_until_open、test_prompts_payload_still_has_no_other_team_answers、test_prompts_sequential_only_opened、test_prompts_all_after_timed_end、test_invalid_token_has_no_prompts
     狀態: covered
     卡: question-text
+  - id: M-022
+    需求: R-04、R-10、X-03
+    聲明: 經典搶答結束後老師依順位檢查每題答案（答錯換下一順位、答對鎖定、可重設），只在經典搶答的 ended 允許；送出的組別必須是目前候選，否則 409 且不跳組；得主、分數、老師表、學生結果與匯出一致；檢查狀態只在老師 view
+    守門: server/tests/test_review.py::test_unreviewed_question_keeps_fastest、test_reject_falls_back_to_next_rank、test_correct_locks_and_blocks_further_review、test_double_click_does_not_skip_a_team、test_all_rejected_has_no_winner_and_export_keeps_original、test_export_writes_fallback_answer、test_reset_returns_to_rank_one、test_no_submission_and_unknown_question、test_only_classic_and_only_ended、test_error_order_401_then_422、test_successful_review_pushes_once_and_failures_push_nothing、test_reset_activity_clears_reviews；server/tests/test_results_view.py::test_teacher_and_student_agree
+    狀態: covered
+    卡: answer-review
