@@ -13,7 +13,7 @@
 
 ## R2 老師身分只在本機
 
-- **Decision**：`app.is_local(headers)`：Host 去掉埠後小寫 ∈ `LOCAL_HOSTNAMES = {127.0.0.1, localhost, [::1]}`，且無 `cf-connecting-ip`、`cf-ray`。`require_teacher` 在驗金鑰前檢查（403「老師頁只能在本機開啟」）；老師 WebSocket 不符 ⇒ 4403；Google 回呼不符 ⇒ 403 固定 HTML。測試：conftest autouse fixture 把 TestClient 的 `testserver` 加進 `LOCAL_HOSTNAMES`（正式碼不含）。
+- **Decision**：`app.is_local(headers)`：Host 去掉埠後小寫 ∈ `LOCAL_HOSTNAMES = {127.0.0.1, localhost, [::1]}`，且無 `cf-connecting-ip`、`cf-ray`。`require_teacher` 在驗金鑰前檢查（403「老師頁只能在本機開啟」）；老師 WebSocket 不符 ⇒ **先 accept、不送任何 view** 再以 4403 關閉（實作偏離回稿：交握前就關，瀏覽器只收到 HTTP 403、關閉碼為 1006，前端無從分辨；真實用戶端實測帶 `cf-connecting-ip` 收到關閉碼 4403）；Google 回呼不符 ⇒ 403 固定 HTML。測試：conftest autouse fixture 把 TestClient 的 `testserver` 加進 `LOCAL_HOSTNAMES`（正式碼不含）。
 - **Rationale**：經通道的 Host 是公開網域，且 Cloudflare 邊緣一定加 `cf-connecting-ip`；雙條件任一被繞過另一條仍擋。
 - **Alternatives**：以 `client.host` 判斷（不採：uvicorn 預設信任 127.0.0.1 的 `X-Forwarded-For` 改寫它，而通道請求都從 127.0.0.1 進來）。
 - **證偽欄｜可證偽**：探針②經通道「'host': 'penny-cheap-centered-fewer.trycloudflare.com'」「'cf-connecting-ip 存在': True」；④「經通道偽造 Host: 127.0.0.1:8020：HTTP 403」；②對照「本機直連、偽造 Host 與 X-Forwarded-For：'client.host': '1.2.3.4'」。變異實錄：拿掉標頭條件 1 failed、一律放行 5 failed。
@@ -22,6 +22,11 @@
 
 - **Decision**：`Activity.public_url`（伺服器設定，重置與重新匯入保留），由 `create_app(student_url=)` 設定；`teacher_view` 帶 `student_url`（無通道為 `null`）；學生 view 不帶。
 - **證偽欄｜可證偽**：`test_student_url_only_in_teacher_view`；真棧「本機老師 view student_url：https://maui-graphic-latino-logistics.trycloudflare.com/」。
+
+## R5 前端（web-workbench 合入後接上；實作輪架構藥方）
+
+- **Decision**：`live.ts` `NO_RECONNECT = {4401, 4403}`、`shouldReconnect(code)`，4403 不重連；老師頁收到 WebSocket 4403 或任何老師 REST（含開頁即查的 Google 狀態）回 403「老師頁只能在本機開啟」⇒ 整頁 antd `Result`「老師頁只能在本機開啟」「請用 http://127.0.0.1:8000 開老師頁。」；「學生連結」分區顯示 `student_url ?? origin + "/"`、「複製連結」、antd `QRCode`（220 px），`student_url` 為 null 時提示「目前只在本機可連；要讓手機掃碼請用 start-tunnel.cmd 或 make dev-tunnel 啟動」。
+- **證偽欄｜可證偽**：`web/src/live.test.tsx`（4403 後 5 秒內不開新連線、1006 一秒後重連）；`web/src/pages/qr.test.tsx`（QR 值＝`student_url`；null 退回 origin 並提示；本機提示文案）。
 
 ## R4 不變
 

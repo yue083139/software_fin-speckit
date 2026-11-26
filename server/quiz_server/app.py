@@ -422,6 +422,9 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
             await socket.close(code=1008)
             return
         if role == "teacher" and not is_local(socket.headers):
+            # 先 accept 再關：交握前就關，瀏覽器只會收到 HTTP 403、關閉碼變 1006，前端無從分辨
+            #（student-qr 實作偏離回稿）；accept 後不送任何 view 就關閉
+            await socket.accept()
             await socket.close(code=WS_NOT_LOCAL)
             return
         if role == "teacher" and not is_teacher(key):

@@ -118,9 +118,9 @@
 前置：已安裝 cloudflared（`winget install --id Cloudflare.cloudflared -e`）；手機關掉 Wi-Fi 改用 4G。
 
 1. 雙擊 `start-tunnel.cmd` ⇒ 視窗印出「學生頁（手機掃老師頁的 QR code，或直接開）：https://….trycloudflare.com/」。
-2. 等約 1 分鐘，以本機開老師頁 ⇒ 老師頁顯示學生網址的 QR code，網址與視窗印的相同。
+2. 等約 1 分鐘，以本機開老師頁 ⇒ 左側導覽「學生連結」區顯示學生網址的 QR code，網址與視窗印的相同；按「複製連結」變「已複製」。（以 `start.cmd` 啟動時同一區顯示本機網址，並提示「目前只在本機可連；要讓手機掃碼請用 start-tunnel.cmd 或 make dev-tunnel 啟動」。）
 3. 手機掃 QR code ⇒ 開啟學生頁，可選第1組加入；電腦另開一個學生分頁選第2組。匯入題目、開始搶答，手機送出第 3 題 ⇒ 老師表即時出現，電腦第2組看不到。
-4. 電腦瀏覽器改用公開網址開老師頁（`https://….trycloudflare.com/#/teacher?key=<金鑰>`）⇒ 顯示「老師頁只能在本機開啟」，看不到任何活動資料。
+4. 電腦瀏覽器改用公開網址開老師頁（`https://….trycloudflare.com/#/teacher?key=<金鑰>`）⇒ 顯示「老師頁只能在本機開啟」與「請用 http://127.0.0.1:8000 開老師頁。」，不會停在「連線中…」，看不到任何活動資料。
 5. 關閉視窗 ⇒ 手機學生頁斷線；工作管理員裡沒有殘留的 `cloudflared.exe`。
 
 ## 4. Demo 影片可順便錄

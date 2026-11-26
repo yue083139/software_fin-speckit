@@ -36,6 +36,9 @@ P -> E : /api/teacher/state 帶老師金鑰
 E -> CF
 CF -> A : Host＝公開網域且帶 cf-connecting-ip
 A --> P : 403 老師頁只能在本機開啟（先於金鑰檢查）
+P -> A : WebSocket role=teacher（經通道）
+A --> P : 先 accept、不送 view，再以 4403 關閉
+P -> P : live 不重連，顯示 NotLocalNotice
 P -> E : 偽造 Host 127.0.0.1
 E --> P : 邊緣直接 403，到不了本機
 @enduml

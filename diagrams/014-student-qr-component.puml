@@ -8,6 +8,12 @@ cloud "Cloudflare 邊緣" {
   [trycloudflare.com 快速通道\n轉送時加 cf-connecting-ip、cf-ray\n偽造 Host 回 403] as Edge
 }
 
+package "web" {
+  [live.useLiveView\nNO_RECONNECT 4401、4403 不重連] as Live
+  [Teacher.StudentLink\nstudent_url 或本頁網址\nQRCode 220・複製連結・本機提示] as Link
+  [Teacher.NotLocalNotice\n老師頁只能在本機開啟] as NL
+}
+
 node "老師電腦" {
   [cloudflared 子行程\ntunnel --url http://127.0.0.1:埠] as CF
   package "server/quiz_server" {
@@ -31,6 +37,8 @@ CF --> StudentApi : Host＝公開網域
 CF --> Guard : 公開網域打老師端點
 Guard --> TeacherApi : 只有本機放行
 Teacher --> TeacherApi : http://127.0.0.1:8000
+Link ..> Views : student_url
+Live ..> NL : 收到 4403 或 REST 403
 note bottom of Guard
   不用 client.host：uvicorn 會依
   X-Forwarded-For 改寫它（探針 ② 對照）

@@ -2,9 +2,18 @@
 
 ## 評審紀錄
 
-S 檔壓縮版一輪（提案輪架構全卡掃＋實作輪對抗 diff，雙通道，與 OpenSpec 組同批）：架構 **CLEARED（0B/3M/1m）**、對抗 **CLEARED（0B/0M/1m）**。藥方落點同 OpenSpec 組 `openspec/changes/student-qr/verification.md`（程式逐字相同）；前端 4403 提示與學生連結 QR 待 `web-workbench` 合入後接上。
+S 檔壓縮版一輪（提案輪架構全卡掃＋實作輪對抗 diff，雙通道，與 OpenSpec 組同批）：架構 **CLEARED（0B/3M/1m）**、對抗 **CLEARED（0B/0M/1m）**。藥方落點同 OpenSpec 組 `openspec/changes/student-qr/verification.md`（程式逐字相同）；前端 4403 提示與學生連結 QR 已於 rebase 到 `web-workbench` 後落地（research R2、R5）。
+
+## 真實 WebSocket 用戶端（4403 關閉碼）
+
+```
+帶 cf-connecting-ip 的老師 WS 關閉碼： 4403
+本機老師 WS 第一則： {"type":"state","seq":1,"view"
+```
 
 ## followup（不阻塞）
+
+- 老師金鑰錯誤（4401）仍在交握前關閉，瀏覽器實際收到 1006 而非 4401，「老師金鑰錯誤」提示顯示不出來（現行行為，本卡不改）。實測：`websockets.connect(".../ws?role=teacher&key=wrong")` → 「錯誤金鑰老師 WS：交握被拒 HTTP 403」。主人：@yue083139。
 
 - 以 `--host 0.0.0.0` 啟動時，同區網的人偽造 `Host: 127.0.0.1` 且不帶 Cloudflare 標頭會被判為本機——仍須老師金鑰，與改版前同強度；預設只綁 127.0.0.1，不另處理。主人：@yue083139。
 
