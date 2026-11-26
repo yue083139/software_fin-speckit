@@ -27,7 +27,7 @@ export function AnswerForm({
   onDraft?: Draft;
 }) {
   return (
-    <div>
+    <div className="qz-question-list">
       {questions.map((q) => {
         const mine = submitted.find((s) => s.question === q.number);
         return (
