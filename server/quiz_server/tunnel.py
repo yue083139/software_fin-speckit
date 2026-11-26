@@ -1,6 +1,7 @@
-"""Cloudflare 快速通道（student-qr D1）：讓手機以公開 https 網址連到學生頁。
+"""Cloudflare 快速通道（student-qr D1、easy-setup D3）：讓手機以公開 https 網址連到學生頁。
 
-只在 `--tunnel` 或 `QUIZ_TUNNEL=1` 時啟動；找不到 cloudflared 或逾時拿不到網址 ⇒ 回 None，伺服器照常只開本機。
+`--tunnel`／`QUIZ_TUNNEL=1` 啟動時，或老師頁按「開啟手機連線」時啟動；
+找不到 cloudflared 或逾時拿不到網址 ⇒ 回 None，伺服器照常只開本機。
 通道網址每次啟動都不同；DNS 生效約需數十秒（探針 2026-11-26：第 31 次、約 60 秒後才連得上）。
 """
 import re
@@ -72,6 +73,12 @@ class Tunnel:
         # 之後持續讀掉輸出，避免管線塞滿讓 cloudflared 卡住；內容不印（含連線細節）
         threading.Thread(target=lambda: [None for _ in stream], daemon=True).start()
         return result[0]
+
+    def available(self) -> bool:
+        return find_cloudflared() is not None
+
+    def alive(self) -> bool:
+        return self.proc is not None and self.proc.poll() is None
 
     def stop(self) -> None:
         if self.proc is None or self.proc.poll() is not None:

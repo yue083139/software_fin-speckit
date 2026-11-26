@@ -17,14 +17,13 @@ NCU SE6005 2026 軟體工程期末專題。老師匯入填空式學習單（Guid
 
 ## 開始使用（老師／Demo）
 
-**先裝兩個工具（只要一次）**：在 PowerShell 執行下面兩行。Python 不用另外裝，uv 會自動下載。
+**三步開始**（easy-setup）：
 
-```powershell
-winget install --id astral-sh.uv -e
-winget install --id OpenJS.NodeJS.LTS -e
-```
+1. 在檔案總管雙擊根目錄的 **`start.cmd`**（習慣終端機的人執行 `make dev` 也一樣）。缺 uv 或 Node.js 時會問「要幫你用 winget 安裝嗎？(Y/N)」，輸入 Y 就自動裝（可能跳出「是否允許變更」視窗，按「是」）；只認 Y／y，直接按 Enter 視為不裝。Python 不用另外裝，uv 會自動下載。第一次啟動會先安裝依賴，約需一兩分鐘。
+2. 伺服器就緒後會**自動用預設瀏覽器開老師頁**（不想自動開：`make dev` 加 `QUIZ_NO_BROWSER=1`，或 `python -m quiz_server --no-browser`）。
+3. 照老師頁最上方「**開始前的設定**」清單完成：Google 帳號（第一次會出現設定精靈）、手機連線（選用）、匯入題目。點清單的任一列會跳到對應區塊。
 
-**啟動**：Windows 在檔案總管雙擊根目錄的 **`start.cmd`**（它會呼叫 `start.ps1`，缺工具時會告訴你要裝什麼）；習慣終端機的人執行 `make dev` 也一樣。第一次啟動會先安裝依賴，約需一兩分鐘。視窗會印出兩個網址：
+想自己裝工具也可以：`winget install --id astral-sh.uv -e`、`winget install --id OpenJS.NodeJS.LTS -e`。視窗仍會印出兩個網址當備援（瀏覽器沒自動開時用）：
 
 ```
 老師頁：http://127.0.0.1:8000/#/teacher?key=<每次啟動隨機產生>
@@ -33,12 +32,12 @@ winget install --id OpenJS.NodeJS.LTS -e
 
 老師頁網址含老師金鑰，不要給學生。開啟老師頁後網址列只剩 `#/teacher`（金鑰已移到本分頁記憶，重新整理仍可用）；關掉分頁後要再開，請重新貼終端機印的完整網址。關閉視窗（或按 Ctrl+C）就停止伺服器，活動隨之清空。
 
-**讓手機掃 QR code 進學生頁**（選用）：先安裝 cloudflared（PowerShell 執行 `winget install --id Cloudflare.cloudflared -e`），改雙擊 **`start-tunnel.cmd`**（終端機：`make dev-tunnel`）。視窗多印一行 `https://….trycloudflare.com/` 的學生網址，老師頁左側「學生連結」區會顯示它的 QR code 與「複製連結」按鈕（未用通道時該區顯示本機網址並提示改用 `start-tunnel.cmd`）；手機用 4G 也能連，不必與電腦同一個 Wi-Fi。新網址約 1 分鐘後才連得上，每次啟動都不同。老師頁**只能在本機**（`127.0.0.1`）開啟，用公開網址開會顯示「老師頁只能在本機開啟，請用 http://127.0.0.1:8000 開老師頁」。找不到 cloudflared 時照常以本機模式啟動。
+**讓手機掃 QR code 進學生頁**（選用）：在老師頁「學生連結」區按「**開啟手機連線**」，伺服器會即時建立 Cloudflare 快速通道，QR code 換成 `https://….trycloudflare.com/` 的公開網址（約 5 秒）；不用了按「關閉手機連線」（搶答開始後不能關，以免手機上的組別斷線）。第一次用要先安裝 cloudflared：找不到時老師頁會顯示安裝指令 `winget install --id Cloudflare.cloudflared -e` 與複製鈕，裝好再按一次即可，不用重新啟動。開發者也可以用 `make dev-tunnel`（`--tunnel`）在啟動時就開。手機用 4G 也能連，不必與電腦同一個 Wi-Fi。新網址約 1 分鐘後才連得上，每次啟動都不同。老師頁**只能在本機**（`127.0.0.1`）開啟，用公開網址開會顯示「老師頁只能在本機開啟，請用 http://127.0.0.1:8000 開老師頁」。找不到 cloudflared 時照常以本機模式啟動。
 
 ### 一場活動
 
 1. 老師開老師頁網址。學生頁在**同一台電腦**開，**每組一個分頁**：組別憑證存在分頁裡，關閉分頁即失效。系統只在本機執行，別台電腦連不到。
-2. 老師在老師頁按「以 Google 帳號登入」（設定見下方「Google 試算表設定」），貼上試算表連結按「從 Google 試算表匯入」：系統會在老師的雲端硬碟複製一份「<原標題>_作答情況」，題目從這份副本讀取，原試算表不動。沒有 Google 設定時可改上傳 xlsx（備援）。
+2. 老師在老師頁按「以 Google 帳號登入」（第一次使用先完成老師頁的 Google 設定精靈，見下方「Google 試算表設定」），貼上試算表連結按「從 Google 試算表匯入」：系統會在老師的雲端硬碟複製一份「<原標題>_作答情況」，題目從這份副本讀取，原試算表不動。沒有 Google 設定時可改上傳 xlsx（備援）。
 3. 老師按「開始搶答」；各組作答、送出（每題每組一次，題組一次送出全部子題）；最先送出的組別得該題。
 4. 老師按「結束搶答」後，學生看到結果；老師按「匯出到 Google 試算表」，答案直接寫進那份副本的填空格，畫面會出現副本連結。另可按「下載 xlsx（備援）」。
 
@@ -48,12 +47,12 @@ winget install --id OpenJS.NodeJS.LTS -e
 
 ### Google 試算表設定（第一次使用做一次）
 
-課程規定 Guided Notes 須直接串接雲端 Google Sheets 讀寫，所以老師要用 Google 帳號登入：
+課程規定 Guided Notes 須直接串接雲端 Google Sheets 讀寫，所以老師要用 Google 帳號登入。**老師頁「Google 帳號」區在未設定時會展開設定精靈**：每一步都有 Google Cloud Console 的直達連結、重新導向 URI 有複製鈕，最後貼上用戶端 ID 與密鑰按「儲存設定」，伺服器會寫進 repo 根目錄的 `.env`（不會進版本控制）並**立即生效，不用重新啟動**；之後可在同一區「變更設定」或「清除設定」（已登入時要先登出）。精靈的步驟與下面相同：
 
 1. 到 [Google Cloud Console](https://console.cloud.google.com/) 建立專案，啟用 **Google Sheets API** 與 **Google Drive API**。
 2. 「Google Auth Platform」：目標對象選「外部」、發布狀態保持「測試中」，把要登入的 Google 帳號加到「測試使用者」（沒加的帳號會看到「已封鎖存取權」）。
 3. 「用戶端 → 建立用戶端」：類型「網頁應用程式」，已授權的重新導向 URI 填 `http://127.0.0.1:8000/api/google/callback`（JavaScript 來源留空）。
-4. 把用戶端 ID 與密鑰寫進 repo 根目錄的 `.env`（格式見 `.env.example`；`.env` 不會進版本控制），重新 `make dev`。
+4. 在老師頁精靈貼上用戶端 ID 與密鑰按「儲存設定」。也可以手動寫進 repo 根目錄的 `.env`（格式見 `.env.example`）後重新啟動；若你在系統環境變數另設了 `GOOGLE_CLIENT_ID`／`GOOGLE_CLIENT_SECRET`，重新啟動後以系統環境變數為準。
 5. 登入時若看到「Google 尚未驗證這個應用程式」，按「繼續」。
 
 ## 開發

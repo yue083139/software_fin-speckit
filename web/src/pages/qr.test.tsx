@@ -11,11 +11,13 @@ describe("學生連結（student-qr D3）", () => {
     expect(screen.getByText("複製連結")).toBeInTheDocument();
   });
 
-  it("student_url 為 null 時退回本頁網址並提示用通道啟動", () => {
+  it("student_url 為 null 時退回本頁網址並提示在老師頁開啟手機連線", () => {
     render(<StudentLink studentUrl={null} />);
     const origin = `${window.location.origin}/`;
     expect(screen.getByTestId("student-qr")).toHaveAttribute("data-qr-value", origin);
-    expect(screen.getByText(/目前只在本機可連；要讓手機掃碼請用 start-tunnel.cmd 或 make dev-tunnel 啟動/)).toBeInTheDocument();
+    // easy-setup：start-tunnel.cmd 移除，改由老師頁一鍵開啟
+    expect(screen.getByText(/目前只在本機可連；要讓手機掃碼請在老師頁開啟手機連線/)).toBeInTheDocument();
+    expect(screen.queryByText(/start-tunnel/)).toBeNull();
   });
 });
 

@@ -94,3 +94,8 @@ code { background: var(--qz-accent-soft); color: var(--qz-accent); padding: 1px 
   .qz-narrow { padding: 10px; }
   .qz-question-list { gap: 20px; }
 }
+/* 開始前的設定（easy-setup D4） */
+.qz-checklist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.qz-check-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: none; border-radius: 12px; background: var(--qz-row-bg); cursor: pointer; font: inherit; color: var(--qz-text); text-align: left; flex-wrap: wrap; }
+.qz-check-row:hover { background: var(--qz-accent-soft); }
+.qz-check-label { font-weight: 600; min-width: 84px; }

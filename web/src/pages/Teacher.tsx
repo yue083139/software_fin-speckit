@@ -10,10 +10,20 @@ import {
 } from "@ant-design/icons";
 import { Alert, Button, Checkbox, Input, Menu, QRCode, Radio, Result, Tag } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, type GoogleStatus, isBadTeacherKey, googleStatus, teacherDownload, teacherPost, teacherUpload } from "../api";
+import {
+  ApiError,
+  type GoogleStatus,
+  isBadTeacherKey,
+  googleStatus,
+  teacherDelete,
+  teacherDownload,
+  teacherPost,
+  teacherUpload,
+} from "../api";
 import { clearTeacherKey } from "../route";
 import { GooglePanel } from "./GooglePanel";
 import { ImportPanel } from "./ImportPanel";
+import { SetupChecklist } from "./SetupChecklist";
 import { Board, type Judge, type ReviewReset } from "./Results";
 import { Leaderboard, RoundStatus } from "./Round";
 import { useLiveView } from "../live";
@@ -213,32 +223,92 @@ export function TeamSettings({ view, act }: { view: TeacherView; act: Act }) {
   );
 }
 
-// 學生連結：伺服器給公開網址（student-qr D3）就用它，否則用本頁網址
-export function StudentLink({ studentUrl }: { studentUrl?: string | null }) {
+export const INSTALL_CLOUDFLARED = "winget install --id Cloudflare.cloudflared -e";
+
+export interface TunnelControl {
+  open: () => void;
+  close: () => void;
+  missing: boolean; // 伺服器回 503：找不到 cloudflared
+}
+
+// 學生連結：伺服器給公開網址（student-qr D3）就用它，否則用本頁網址；手機連線由老師頁一鍵開關（easy-setup D3）
+export function StudentLink({
+  studentUrl,
+  tunnel,
+  control,
+  canClose = true,
+}: {
+  studentUrl?: string | null;
+  tunnel?: TeacherView["tunnel"];
+  control?: TunnelControl;
+  canClose?: boolean;
+}) {
   const url = studentUrl ?? `${window.location.origin}/`;
   const [copied, setCopied] = useState(false);
+  const [cmdCopied, setCmdCopied] = useState(false);
   const copy = () => {
     void navigator.clipboard?.writeText(url).then(() => setCopied(true));
   };
+  const state = tunnel ?? (studentUrl ? "on" : "off");
   return (
     <Section id="link" title="學生連結">
       <div className="qz-qr" data-testid="student-qr" data-qr-value={url}>
-        <QRCode value={url} size={220} bordered={false} />
+        <QRCode value={url} size={220} bordered={false} status={state === "starting" ? "loading" : "active"} />
         <div className="stack" style={{ minWidth: 0, flex: 1 }}>
           <span className="muted">學生用手機掃描 QR code，或在瀏覽器輸入：</span>
           <a className="qz-url" href={url} target="_blank" rel="noreferrer">
             {url}
           </a>
-          <div>
+          <div className="row">
             <Btn icon={<CopyOutlined />} onClick={copy}>
               {copied ? "已複製" : "複製連結"}
             </Btn>
+            {control && state !== "on" && (
+              <Btn type="primary" loading={state === "starting"} disabled={state === "starting"} onClick={control.open}>
+                {state === "starting" ? "手機連線建立中…" : "開啟手機連線"}
+              </Btn>
+            )}
+            {control && state === "on" && (
+              <Btn danger disabled={!canClose} onClick={control.close}>
+                關閉手機連線
+              </Btn>
+            )}
           </div>
-          {!studentUrl && (
+          {state === "on" && studentUrl && (
+            <span className="muted">新網址約 1 分鐘後才連得上；手機用 4G 也能連。</span>
+          )}
+          {state === "on" && !canClose && <span className="muted">搶答開始後不能關閉手機連線（重置活動後才能關）。</span>}
+          {!studentUrl && state !== "starting" && (
             <Alert
               type="info"
               showIcon
-              message="目前只在本機可連；要讓手機掃碼請用 start-tunnel.cmd 或 make dev-tunnel 啟動"
+              message={
+                control
+                  ? "目前只在本機可連；要讓手機掃碼，按上方「開啟手機連線」"
+                  : "目前只在本機可連；要讓手機掃碼請在老師頁開啟手機連線"
+              }
+            />
+          )}
+          {control?.missing && (
+            <Alert
+              type="warning"
+              showIcon
+              message="找不到 cloudflared"
+              description={
+                <div className="stack" style={{ gap: 4 }}>
+                  <span>在 PowerShell 執行下面這行安裝，裝好後再按「開啟手機連線」（不用重新啟動）：</span>
+                  <div className="row">
+                    <code className="qz-url">{INSTALL_CLOUDFLARED}</code>
+                    <Btn
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={() => void navigator.clipboard?.writeText(INSTALL_CLOUDFLARED).then(() => setCmdCopied(true))}
+                    >
+                      {cmdCopied ? "已複製" : "複製指令"}
+                    </Btn>
+                  </div>
+                </div>
+              }
             />
           )}
         </div>
@@ -290,6 +360,8 @@ export function TeacherPanel({
   exporting,
   google,
   sheetUrl,
+  tunnelControl,
+  onJump,
 }: {
   view: TeacherView;
   act: Act;
@@ -297,8 +369,18 @@ export function TeacherPanel({
   download?: () => void;
   exportSheet?: () => void;
   exporting?: boolean;
-  google?: { status: GoogleStatus | null; waiting: boolean; login: () => void; logout: () => void };
+  google?: {
+    status: GoogleStatus | null;
+    waiting: boolean;
+    login: () => void;
+    logout: () => void;
+    saveConfig?: (clientId: string, clientSecret: string) => void;
+    clearConfig?: () => void;
+    saving?: boolean;
+  };
   sheetUrl?: string | null;
+  tunnelControl?: TunnelControl;
+  onJump?: (section: string) => void;
 }) {
   const judge: Judge = (question, team, correct) => act("judge", { question, team, correct });
   const review: Judge = (question, team, correct) => act("review", { question, team, correct });
@@ -307,6 +389,7 @@ export function TeacherPanel({
   const reviewing = view.phase === "ended" && (view.mode?.key ?? "classic") === "classic";
   return (
     <>
+      {onJump && <SetupChecklist view={view} google={google?.status ?? null} onJump={onJump} />}
       <PhaseControls view={view} act={act} download={download} exportSheet={exportSheet} exporting={exporting} />
       <ModeSelector view={view} act={act} />
       <Section id="board" title="作答狀況與結果">
@@ -323,9 +406,22 @@ export function TeacherPanel({
           onReviewReset={reviewing ? reviewReset : undefined}
         />
       </Section>
-      <StudentLink studentUrl={view.student_url} />
+      <StudentLink
+        studentUrl={view.student_url}
+        tunnel={view.tunnel}
+        control={tunnelControl}
+        canClose={view.phase === "preparing"}
+      />
       {google && (
-        <GooglePanel status={google.status} waiting={google.waiting} onLogin={google.login} onLogout={google.logout} />
+        <GooglePanel
+          status={google.status}
+          waiting={google.waiting}
+          onLogin={google.login}
+          onLogout={google.logout}
+          onSaveConfig={google.saveConfig}
+          onClearConfig={google.clearConfig}
+          saving={google.saving}
+        />
       )}
       <ImportPanel
         view={view}
@@ -421,9 +517,42 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     }, 2000);
     return () => window.clearInterval(timer);
   }, [waiting, refreshGoogle]);
+  const [saving, setSaving] = useState(false);
+  const [tunnelMissing, setTunnelMissing] = useState(false);
+  const tunnelControl: TunnelControl = {
+    missing: tunnelMissing,
+    open: () => {
+      setError("");
+      teacherPost("tunnel", teacherKey)
+        .then(() => setTunnelMissing(false))
+        .catch((e: Error) => {
+          if (e instanceof ApiError && e.status === 503) setTunnelMissing(true);
+          else setError(e);
+        });
+    },
+    close: () => {
+      setError("");
+      teacherDelete("tunnel", teacherKey).catch((e: Error) => setError(e));
+    },
+  };
   const google = {
     status: gStatus,
     waiting,
+    saving,
+    saveConfig: (client_id: string, client_secret: string) => {
+      setError("");
+      setSaving(true);
+      teacherPost("google/config", teacherKey, { client_id, client_secret })
+        .then((s) => setGStatus(s as GoogleStatus))
+        .catch((e: Error) => setError(e))
+        .finally(() => setSaving(false));
+    },
+    clearConfig: () => {
+      setError("");
+      teacherDelete("google/config", teacherKey)
+        .then((s) => setGStatus(s as GoogleStatus))
+        .catch((e: Error) => setError(e));
+    },
     login: () => {
       setError("");
       // 先同步開分頁（避免被擋彈出視窗），拿到授權網址後再導過去
@@ -469,6 +598,10 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
       })
       .finally(() => setExporting(false));
   };
+  const jump = (key: string) => {
+    setActive(key);
+    document.getElementById(key)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   if (closedCode === 4403 || notLocal) return <NotLocalNotice />;
   if (closedCode === 4401 || badKey) return <BadKeyNotice />;
   const teacherView = view?.role === "teacher" ? view : null;
@@ -489,10 +622,7 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
             mode="inline"
             selectedKeys={[active]}
             items={NAV}
-            onClick={({ key }) => {
-              setActive(key);
-              document.getElementById(key)?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
+            onClick={({ key }) => jump(key)}
           />
         </nav>
         <main className="qz-content">
@@ -507,6 +637,8 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
               exporting={exporting}
               google={google}
               sheetUrl={sheetUrl}
+              tunnelControl={tunnelControl}
+              onJump={jump}
             />
           ) : (
             <Section>
