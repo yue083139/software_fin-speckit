@@ -63,6 +63,8 @@ body { -webkit-font-smoothing: antialiased; }
 /* ---------- 共用小元件（沿用既有 class 名，測試與文案不變） ---------- */
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .stack { display: flex; flex-direction: column; gap: 10px; }
+/* 學生作答卡之間的間距（原本外層 div 無間距，卡片貼在一起，手機上尤其擠） */
+.qz-question-list { display: flex; flex-direction: column; gap: 18px; }
 .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
 .team-grid .ant-btn { height: 52px; font-size: 16px; }
 .team-list { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
@@ -90,4 +92,5 @@ code { background: var(--qz-accent-soft); color: var(--qz-accent); padding: 1px 
 @media (max-width: 600px) {
   .qz-header { margin: 8px 8px 0; padding: 0 12px; }
   .qz-narrow { padding: 10px; }
+  .qz-question-list { gap: 20px; }
 }
