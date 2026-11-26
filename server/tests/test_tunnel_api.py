@@ -86,8 +86,10 @@ def test_open_pushes_to_teacher_websocket(activity):
 
         poster = threading.Thread(target=post)
         poster.start()
-        assert ws.receive_json()["view"]["tunnel"] == "starting"
-        t.gate.set()
+        try:
+            assert ws.receive_json()["view"]["tunnel"] == "starting"
+        finally:
+            t.gate.set()  # 斷言失敗也要放行，否則 TestClient 收尾卡到逾時、蓋掉斷言原文
         assert ws.receive_json()["view"]["tunnel"] == "on"
         poster.join(5)
         assert result == [200]
@@ -134,13 +136,15 @@ def test_starting_second_open_409_and_close_cancels(activity):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
             first = asyncio.create_task(c.post("/api/teacher/tunnel", headers=H))
-            assert await asyncio.to_thread(t.started.wait, 5)
-            assert activity.tunnel_state == "starting"
-            second = await c.post("/api/teacher/tunnel", headers=H)
-            assert second.status_code == 409 and second.json()["detail"] == "手機連線建立中"
-            closing = asyncio.create_task(c.delete("/api/teacher/tunnel", headers=H))
-            await asyncio.sleep(0.05)
-            t.gate.set()
+            try:
+                assert await asyncio.to_thread(t.started.wait, 5)
+                assert activity.tunnel_state == "starting"
+                second = await c.post("/api/teacher/tunnel", headers=H)
+                assert second.status_code == 409 and second.json()["detail"] == "手機連線建立中"
+                closing = asyncio.create_task(c.delete("/api/teacher/tunnel", headers=H))
+                await asyncio.sleep(0.05)
+            finally:
+                t.gate.set()  # 同上：斷言失敗時立刻放行，讓失敗訊息是斷言而非逾時
             r1, rd = await first, await closing
             return r1, rd
 
