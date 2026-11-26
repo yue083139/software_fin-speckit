@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { parseRoute } from "./route";
+import { useEffect, useMemo, useState } from "react";
+import { parseRoute, takeTeacherKey } from "./route";
 import Home from "./pages/Home";
 import Teacher from "./pages/Teacher";
 import Student from "./pages/Student";
@@ -13,7 +13,9 @@ export default function App() {
     return () => window.removeEventListener("hashchange", on);
   }, []);
   const route = parseRoute(hash);
-  if (route.page === "teacher") return <Teacher teacherKey={route.params.get("key") ?? ""} />;
+  // 網址帶 key 時取出並自網址移除；之後（含重新整理）從本分頁 sessionStorage 取
+  const teacherKey = useMemo(() => (route.page === "teacher" ? takeTeacherKey() : ""), [hash]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (route.page === "teacher") return <Teacher teacherKey={teacherKey} />;
   if (route.page === "student") return <Student token={loadToken()} />;
   return <Home />;
 }

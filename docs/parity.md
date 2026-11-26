@@ -53,6 +53,7 @@
 | `answer-review` | R-05、X-03、X-04 | 經典搶答結束後，老師在作答狀況與結果表逐題從第 1 順位檢查：「答錯」換下一順位、「答對」鎖定；未檢查的題維持最快者得主；得主與各組得分跟著鎖定結果變，全部答錯該題無得主、匯出留空；老師表、學生結果、匯出（Google 試算表與 xlsx）一致；雲端副本改名「<原標題>_作答情況」、xlsx 下載檔名同步改 | 已合入 | 已合入 |
 | `web-workbench` | R-01、R-04 | 前端改用 antd 重寫，參考 resolve 工作檯版型（左側導覽＋內容區、玻璃頂欄、內容卡、狀態膠囊）；行為與文案不變 | 已合入 | 已合入 |
 | `student-qr` | R-01、X-04 | 學生連結可用手機掃 QR code：以 `--tunnel`（`make dev-tunnel`、`start-tunnel.cmd`）啟動時伺服器以子行程起 Cloudflare 快速通道（cloudflared），取得 `https://<隨機>.trycloudflare.com/` 公開網址放進老師 view `student_url`（學生 view 不帶），失敗照常只開本機；老師 REST、老師 WebSocket（4403）、Google 回呼只接受本機 Host（127.0.0.1／localhost／[::1]）且不帶 Cloudflare 轉送標頭，先於金鑰檢查回 403「老師頁只能在本機開啟」；OAuth 維持 127.0.0.1；前端 QR（antd `QRCode`，`student_url ?? origin`）與 4403 提示併入 `web-workbench` 之後接上 | 已合入 | 已合入 |
+| `teacher-key-hidden` | R-01、X-04 | 老師金鑰只經網址首次帶入，老師頁載入後以 `history.replaceState` 自網址移除（網址列只剩 `#/teacher`），存本分頁 sessionStorage，重新整理仍可用、關分頁即失效；網址帶新金鑰以網址為準；401／4401 清除並提示回首頁重新輸入；伺服器與終端機輸出不變 | 已實作（待合入） | 已實作（待合入） |
 
 狀態值：未開／提案中／實作中／已實作（待合入）／已合入。
 
@@ -82,3 +83,4 @@
 | 2026-11-26 | `answer-review` | 提案輪評審（v1.1：紅隊 0B/2M/3m、架構 0B/1M/3m 藥方入稿）；負責人裁未決照傾向、批准契約；兩組實作完成、server／web／contracts 逐字相同；實作輪紅隊 CLEARED 0B/0M/2m、架構 CLEARED；`guided-notes-export`、`guided-notes-sheets-sync` 兩列副本與下載檔名改「_作答情況」 | 兩組 | 同一會話兩組同批實作 |
 | 2026-11-26 | `student-qr` | 負責人裁：學生連結要能手機掃 QR code，走 Cloudflare 快速通道（非區網模式），老師端點與老師 WebSocket 只接受本機 Host，OAuth 維持 127.0.0.1；探針實測經通道 Host＝公開網域且帶 `cf-connecting-ip`、偽造 Host 被邊緣 403、`client.host` 會被 `X-Forwarded-For` 改寫故不採用；提案輪架構全卡掃＋實作輪對抗 diff（壓縮版一輪，架構 0B/3M/1m、對抗 0B/0M/1m，皆 CLEARED）後檔位由 B 改 S（動到 contracts、OAuth 回呼與安全邊界）；兩組伺服器程式逐字相同 | 兩組（負責人裁定） | 同一會話兩組同批（SpecKit `specs/014-student-qr/`） |
 | 2026-11-26 | `question-text`、`answer-review`、`web-workbench`、`student-qr` | 四卡皆經雙通道評審並合入 `dev`（OpenSpec #22–#25；SpecKit #21–#24），兩組 server、web、contracts 逐字相同；OpenSpec 組歸檔四卡；人工驗證待負責人整合後於本地執行 | 兩組（負責人指示合入） | 已確認 |
+| 2026-11-26 | `teacher-key-hidden` | 負責人整合驗證時要求「金鑰不要顯示在網址列」；開卡 B 檔，兩組同批實作（web 逐字相同） | 兩組（負責人指示） | 同一會話兩組同批 |

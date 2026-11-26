@@ -11,6 +11,7 @@ import {
 import { Alert, Checkbox, Input, Menu, QRCode, Radio, Result, Tag } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, type GoogleStatus, googleStatus, teacherDownload, teacherPost, teacherUpload } from "../api";
+import { clearTeacherKey } from "../route";
 import { GooglePanel } from "./GooglePanel";
 import { ImportPanel } from "./ImportPanel";
 import { Board, type Judge, type ReviewReset } from "./Results";
@@ -340,8 +341,17 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
   const [notLocal, setNotLocal] = useState(false);
   const [active, setActive] = useState("control");
   // REST 403「老師頁只能在本機開啟」改顯示整頁提示，其餘錯誤照常列在上方
+  const [badKey, setBadKey] = useState(false);
+  useEffect(() => {
+    if (closedCode === 4401) clearTeacherKey();
+  }, [closedCode]);
   const setError = (e: string | Error) => {
     if (e instanceof ApiError && e.status === 403 && e.message === NOT_LOCAL) setNotLocal(true);
+    else if (e instanceof ApiError && e.status === 401) {
+      // teacher-key-hidden：金鑰錯誤就清掉本分頁存的金鑰，回首頁重新輸入
+      clearTeacherKey();
+      setBadKey(true);
+    }
     else setErrorText(typeof e === "string" ? e : e.message);
   };
   const act: Act = (path, body) => {
@@ -372,8 +382,12 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
           if (s.signed_in) setWaiting(false);
         })
         .catch((e: unknown) => {
-          // 開頁就會查 Google 狀態：經公開網址時這裡最先收到 403
+          // 開頁就會查 Google 狀態：經公開網址時這裡最先收到 403；金鑰錯誤（401）也在這裡最先發現
           if (e instanceof ApiError && e.status === 403 && e.message === NOT_LOCAL) setNotLocal(true);
+          else if (e instanceof ApiError && e.status === 401) {
+            clearTeacherKey();
+            setBadKey(true);
+          }
         }),
     [teacherKey],
   );
@@ -438,7 +452,7 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
       .finally(() => setExporting(false));
   };
   if (closedCode === 4403 || notLocal) return <NotLocalNotice />;
-  if (closedCode === 4401)
+  if (closedCode === 4401 || badKey)
     return (
       <Shell>
         <GlassHeader title="課堂搶答・老師工作檯" />

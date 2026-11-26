@@ -1,0 +1,27 @@
+@startuml 015-teacher-key-hidden-class
+title 015 teacher-key-hidden：類別圖
+
+class route <<module>> {
+  +TEACHER_KEY_STORE : string = "qz_teacher_key"
+  +parseRoute(hash) : Route
+  +takeTeacherKey() : string
+  +clearTeacherKey() : void
+}
+class App <<component>> {
+  -hash : string
+  -teacherKey : string（useMemo 依 hash）
+}
+class Teacher <<component>> {
+  +teacherKey : string
+  -badKey : boolean
+  -setError(e)
+  -refreshGoogle()
+}
+class ApiError {
+  +status : number
+  +message : string
+}
+App ..> route : takeTeacherKey
+Teacher ..> route : clearTeacherKey
+Teacher ..> ApiError : status 401 時清除
+@enduml
