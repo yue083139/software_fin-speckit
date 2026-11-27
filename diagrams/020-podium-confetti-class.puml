@@ -8,7 +8,7 @@ class "Podium" as Podium {
 class "Confetti" as Confetti {
   +CONFETTI_COUNT = 36
   -CONFETTI_COLORS : --qz-* 六色
-  -piece(i) : left、color、delay、duration、drift、spin
+  -map(i) 內以索引算 left、color、delay、duration、drift、spin
 }
 Podium *-- Confetti : 有名次時渲染（key＝i，重繪不重播）
 @enduml

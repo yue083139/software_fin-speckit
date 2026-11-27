@@ -11,7 +11,7 @@ T -> W : 結束搶答（phase 轉 ended）
 W -> P : 掛上 Podium(team_scores)
 P -> P : podiumPlaces 有名次
 P -> C : 掛上 Confetti（36 片，key＝i）
-C -> B : qz-confetti-fall 播一次（2.2–3.4 秒）
+C -> B : qz-confetti-fall 播一次（每片 2.2–3.4 秒，含延遲最晚約 4.2 秒全部淡出）
 B --> T : 彩帶落下淡出（不擋點擊）
 T -> W : 檢查「答錯」⇒ 新 team_scores
 W -> P : 重繪（同一個 Podium）
