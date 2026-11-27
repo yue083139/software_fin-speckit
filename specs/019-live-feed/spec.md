@@ -2,7 +2,7 @@
 
 **Feature Branch**: `019-live-feed`
 **Created**: 2026-11-27
-**Status**: Draft（v1.1，評審後；與 OpenSpec 組 `openspec/changes/live-feed/` 同批）
+**Status**: Approved（v1.1，評審 CLEARED、已合入 `dev` SpecKit #42；與 OpenSpec 組 `openspec/changes/archive/2026-11-27-live-feed/` 同批）
 **Input**: 負責人 2026-11-27 授權成員自行開卡、兩組同步；成員提議「搶答中老師頁右上角跳出『第2組 搶下第 3 題！』」。
 **需求編號**：R-04、X-04｜**parity**：`docs/parity.md` §4 `live-feed`｜**檔位**：B（只改 web 老師頁）
 **圖表**：`diagrams/019-live-feed-{component,class,sequence}.puml`
