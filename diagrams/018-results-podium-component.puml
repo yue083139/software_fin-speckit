@@ -1,0 +1,19 @@
+@startuml 018-results-podium-component
+title 018 results-podium：組件圖
+
+package "web" {
+  component "Teacher.tsx（TeacherPanel）" as Teacher
+  component "Results.tsx（StudentResults）" as Student
+  component "Podium.tsx（Podium／podiumPlaces）" as Podium
+  component "live.ts（useLiveView）" as Live
+}
+package "server（不改）" {
+  component "views（teacher_view／student_view）" as Views
+}
+
+Teacher --> Podium : phase 為 ended 時掛載（team_scores、score_label）
+Student --> Podium : 掛載並傳本組（team）
+Teacher --> Live : 老師 view
+Student --> Live : 學生 view（ended 才有 team_scores）
+Live --> Views : WebSocket 推播
+@enduml
