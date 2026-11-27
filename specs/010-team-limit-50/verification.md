@@ -190,3 +190,47 @@ gate-parity: 0 處不一致
 ```
 
 唯一 warning 是既有 Starlette `httpx` deprecation。T033、T034 已補齊，故 T035 完成。
+
+## 實作輪評審與藥方回驗
+
+| 通道 | 首驗 | 藥方與回驗 | 最終結論 |
+|---|---|---|---|
+| 紅隊 | 發現 `TeamsBody.count` 使用非嚴格整數，`"50"` 與 `50.0` 可能被自動轉型，造成格式錯誤驗收假綠 | 改用 `StrictInt`，補兩種格式皆回 422 且活動狀態完全不變的負例；定點測試 `35 passed, 1 warning`；同通道回驗 | `CLEARED` |
+| 架構 | 發現類別圖與時序圖把 `Activity.configure_teams` 誤寫為不存在的 `set_teams`，且類別圖誤畫學生端完整組別清單 | 訂正兩張 PlantUML 與 PNG，學生畫面限縮為自身 `team`、`team_valid`，同步訂正圖碼核對表；`gate-diagrams: 31 個圖檔，0 處問題`；同通道回驗 | `CLEARED` |
+
+架構通道另列非阻塞 followup：`diagrams/010-team-limit-50-component.puml` 可更精確畫出前端經 API／WebSocket 到 `app.py`，再由 `view_for` 產生畫面的實際資料路徑。此項不改產品行為，不在末輪追加修稿；主人為 @yue083139，另立卡處理，且本卡開 PR 時須寫入首屏 followup。
+
+## 最終門禁重跑
+
+兩項藥方落地後重新執行完整 `make gate`：
+
+```text
+All checks passed!
+248 passed, 1 warning in 27.68s
+51 passed in 16.60s
+Test Files  8 passed (8)
+Tests       36 passed (36)
+gate-zh-hant: 0 處簡體字
+gate-secrets: 0 findings
+gate-speckit: 憲章 v1.0.0，0 處問題
+gate-diagrams: 31 個圖檔，0 處問題
+gate-agents: 0 處漂移
+gate-diagrams-syntax: 31 個圖檔語法通過
+gate-parity: 0 處不一致
+```
+
+## 都綠否
+
+| S 檔必要項目 | 狀態 | 證據 |
+|---|---|---|
+| 提案輪紅隊 | 綠 | `proposal-red.dispatch.review-red.md`：`CLEARED` |
+| 提案輪架構 | 綠 | `proposal-arch.dispatch.review-arch.md`：`CLEARED` |
+| 實作輪紅隊 | 綠 | 首驗藥方已落地，同通道回驗 `implementation-red.dispatch.review-red.md`：`CLEARED` |
+| 實作輪架構 | 綠 | 首驗藥方已落地，同通道回驗 `implementation-arch.dispatch.review-arch.md`：`CLEARED` |
+| 先寫驗收再實作 | 綠 | 邊界、狀態不變、容量、隔離、公平及 UI 紅燈／綠燈證據已記錄 |
+| 人工驗證 | 綠 | 第 50 組加入、釋放、作答、結果與 768 px 操作各步均低於 30 秒 |
+| 完整 `make gate` | 綠 | server 248、ops 51、web 36；其餘門禁全部 0 問題 |
+| parity | 綠 | `gate-parity: 0 處不一致` |
+| 圖碼一致性 | 綠 | 藥方訂正後架構回驗 `CLEARED`，31 張圖語法與配對門禁通過 |
+
+都綠

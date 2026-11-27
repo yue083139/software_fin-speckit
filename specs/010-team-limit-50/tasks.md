@@ -122,7 +122,7 @@ description: "010-team-limit-50 的相依排序實作任務"
 - [x] T034 將 M-020、M-021、M-022 的實際驗收落點與狀態由 `uncovered` 更新為 `covered` 於 `eval/acceptance/matrix.yaml`
 - [x] T035 執行 `make gate-diagrams`、`make gate-parity SIBLING=../software_fin-openspec`、`make gate`，把原樣輸出與任何有意不改項目記錄於 `specs/010-team-limit-50/verification.md`
 - [x] T036 匯出本卡 AI 對話紀錄並登記於 `docs/ai-logs/010-team-limit-50.md`
-- [ ] T037 依 S 檔流程完成實作輪紅隊與架構評審，將兩通道結論、藥方回驗及「都綠否」逐項狀態寫入 `specs/010-team-limit-50/verification.md`
+- [x] T037 依 S 檔流程完成實作輪紅隊與架構評審，將兩通道結論、藥方回驗及「都綠否」逐項狀態寫入 `specs/010-team-limit-50/verification.md`
 
 ---
 
