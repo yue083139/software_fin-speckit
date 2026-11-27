@@ -13,7 +13,9 @@ gate-zh-hant: 0 處簡體字
 gate-secrets: 0 findings
 gate-speckit: 憲章 v1.0.0，0 處問題
 gate-agents: 0 處漂移
-gate-diagrams: 55 個圖檔，3 處問題（018 三張圖缺 PNG：本機無 Java／Docker，待 make diagrams）
+diagrams（PlantUML 1.2026.9，Microsoft OpenJDK 21）→ 018 三張圖轉 PNG
+gate-diagrams-syntax: 55 個圖檔語法通過
+gate-diagrams: 55 個圖檔，0 處問題
 ```
 
 web 第二次 `npm --prefix web test`：`Tests  90 passed (90)`。web 與 OpenSpec 組 `feat/results-podium` 逐字相同（`git diff --no-index` 兩邊 `web/src` 無差異）。

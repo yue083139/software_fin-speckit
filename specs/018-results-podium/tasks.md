@@ -3,7 +3,7 @@
 **Input**: `specs/018-results-podium/` 與 `diagrams/018-results-podium-*.puml`
 
 ## Phase 0: 前置
-- [ ] T000 三張圖 `make diagrams`、`make gate-diagrams` 綠（本機無 Java／Docker，待補 PNG）
+- [x] T000 三張圖 `make diagrams`、`make gate-diagrams` 綠
 - [x] T001 `docs/parity.md` §4 登記、§5 記變更（與 OpenSpec 組同批）
 
 ## Phase 1: User Story 1 (P1) 🎯
@@ -18,6 +18,6 @@
 ## Phase 3: 驗證
 - [x] T030 `eval/acceptance/matrix.yaml` 新增 M-028；`docs/manual-verification.md` 新增場次 I
 - [x] T031 web 測試連跑兩次、`lint`、`typecheck` 綠；變異實錄
-- [ ] T032 圖表一致性核對（`verification.md`）
+- [x] T032 圖表一致性核對（`verification.md`）
 - [ ] T033 評審（架構全卡掃＋對抗 diff）
 - [ ] T034 人工驗證（`docs/manual-verification.md` 場次 I）
