@@ -12,7 +12,8 @@ for (const [k, v] of Object.entries(cssVars())) document.documentElement.style.s
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ConfigProvider locale={zhTW} theme={quizTheme} button={{ autoInsertSpace: false }}>
-      <AntApp>
+      {/* live-feed：快訊最多同時疊 4 則，舊的先收 */}
+      <AntApp notification={{ maxCount: 4 }}>
         <App />
       </AntApp>
     </ConfigProvider>

@@ -171,3 +171,9 @@ rows:
     守門: web/src/pages/podium.test.tsx
     狀態: covered
     卡: results-podium
+  - id: M-029
+    需求: R-04、X-04
+    聲明: 搶答中老師頁即時跳出新送出的快訊（經典第 1 順位「搶下」、其餘「送出」）；開頁／重連第一個 view 不出通知；非搶答中不出；文案不含答案；學生端無快訊
+    守門: web/src/pages/livefeed.test.tsx
+    狀態: covered
+    卡: live-feed
