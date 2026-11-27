@@ -1,8 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import { Podium, podiumPlaces } from "./Podium";
 import { StudentResults } from "./Results";
+import { StudentPanel } from "./Student";
 import { TeacherPanel } from "./Teacher";
-import type { TeacherView } from "../types";
+import type { StudentView, TeacherView } from "../types";
 
 describe("領獎台名次（podiumPlaces）", () => {
   it("依分數取前三名，0 分不上台", () => {
@@ -84,5 +85,31 @@ describe("老師頁領獎台只在結束後出現", () => {
     render(<TeacherPanel view={{ ...view, phase: "ended" }} act={() => {}} upload={() => {}} />);
     expect(screen.getByText("領獎台")).toBeInTheDocument();
     expect(within(screen.getByRole("listitem", { name: "第 1 名" })).getByText("第1組")).toBeInTheDocument();
+  });
+
+  it("分數欄名讀伺服器的 score_label", () => {
+    render(<TeacherPanel view={{ ...view, phase: "ended", score_label: "得分" }} act={() => {}} upload={() => {}} />);
+    expect(within(screen.getByRole("listitem", { name: "第 1 名" })).getByText("得分 1")).toBeInTheDocument();
+  });
+});
+
+describe("學生頁領獎台只在結束後出現", () => {
+  const base: StudentView = {
+    role: "student",
+    phase: "answering",
+    team: "第1組",
+    team_valid: true,
+    questions: [{ number: 1, labels: [""] }],
+    my_submissions: [],
+  };
+
+  it("搶答中即使 view 帶了分數也不顯示", () => {
+    render(<StudentPanel view={{ ...base, results: [], team_scores: { 第1組: 2 } }} />);
+    expect(screen.queryByText("領獎台")).not.toBeInTheDocument();
+  });
+
+  it("結束後顯示並標出本組", () => {
+    render(<StudentPanel view={{ ...base, phase: "ended", results: [], team_scores: { 第1組: 2, 第2組: 1 } }} />);
+    expect(within(screen.getByRole("listitem", { name: "第 1 名" })).getByText("本組")).toBeInTheDocument();
   });
 });
