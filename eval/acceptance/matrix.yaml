@@ -177,3 +177,9 @@ rows:
     守門: web/src/pages/livefeed.test.tsx
     狀態: covered
     卡: live-feed
+  - id: M-030
+    需求: R-04、R-08、X-04
+    聲明: 領獎台出現時灑一次彩帶（對讀屏軟體隱藏、不擋點擊）；沒有領獎台就沒有彩帶；分數更新重繪不重播；顏色只用 --qz-* 變量；減少動態效果時不顯示
+    守門: web/src/pages/podium.test.tsx（領獎台彩帶）
+    狀態: covered
+    卡: podium-confetti
