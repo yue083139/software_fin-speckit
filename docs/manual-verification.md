@@ -203,6 +203,6 @@
 | H | `easy-setup` | 待執行 | |
 | I | `results-podium` | ✅ | 2026-11-27 jinny（Windows 11，本機瀏覽器）依 `4e4eaf4`（`018-results-podium`）第 1～4 步全部符合；第 1 步首次第2組誤送第 2 題（第1組較快得分），第2組 0 分不上台，正好驗證「0 分不上台」，重置後依步驟重做符合。第 5 步（選做）未執行。 |
 | J | `live-feed` | ✅ | 2026-11-27 jinny（Windows 11，本機瀏覽器）依 `5e180ab`（`020-podium-confetti`，含本卡）第 1～5 步全部符合：開始搶答不跳、第2組「搶下第 3 題！」約 3 秒消失且不含答案、第1組「送出第 3 題」、F5 不重跳、學生頁無快訊。 |
-| K | `podium-confetti` | 待執行 | |
+| K | `podium-confetti` | ✅ | 2026-11-27 jinny（Windows 11，本機瀏覽器）依 `5e180ab`（`020-podium-confetti`）第 1～4 步全部符合：揭曉時彩帶約 4 秒內落完、名次文字可讀；學生頁亦灑一次；判答錯更新名次不重播；F5 再灑一次。第 5 步（選做，減少動態效果）未執行。 |
 
 各卡原始步驟：OpenSpec 組 `openspec/changes/archive/<日期>-<卡名>/verification.md`；SpecKit 組 `specs/<NNN>-<卡名>/verification.md`。

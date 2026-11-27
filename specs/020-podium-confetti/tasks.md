@@ -16,4 +16,4 @@
 - [x] T021 web 測試連跑兩次、`lint`、`typecheck` 綠；變異實錄
 - [x] T022 圖表一致性核對（`verification.md`）
 - [x] T023 評審（架構全卡掃＋對抗 diff，皆 CLEARED；次要訂正已落，見 `verification.md`）
-- [ ] T024 人工驗證（`docs/manual-verification.md` 場次 K）
+- [x] T024 人工驗證（`docs/manual-verification.md` 場次 K；2026-11-27 jinny 執行，兩組第 1～4 步全部符合）
