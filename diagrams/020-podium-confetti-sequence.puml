@@ -1,0 +1,20 @@
+@startuml 020-podium-confetti-sequence
+title 020 podium-confetti：時序圖
+
+actor "老師" as T
+participant "老師頁（TeacherPanel）" as W
+participant "Podium" as P
+participant "Confetti" as C
+participant "瀏覽器 CSS 動畫" as B
+
+T -> W : 結束搶答（phase 轉 ended）
+W -> P : 掛上 Podium(team_scores)
+P -> P : podiumPlaces 有名次
+P -> C : 掛上 Confetti（36 片，key＝i）
+C -> B : qz-confetti-fall 播一次（每片 2.2–3.4 秒，含延遲最晚約 4.2 秒全部淡出）
+B --> T : 彩帶落下淡出（不擋點擊）
+T -> W : 檢查「答錯」⇒ 新 team_scores
+W -> P : 重繪（同一個 Podium）
+P -> C : 同一批元素（key 不變）
+C -> B : 動畫不重播
+@enduml

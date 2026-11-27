@@ -96,6 +96,16 @@ label.inline { display: inline-flex; gap: 6px; align-items: center; font-weight:
 .qz-podium-2 .qz-podium-stand { height: 96px; }
 .qz-podium-3 .qz-podium-stand { height: 72px; }
 .qz-podium-medal { font-size: 32px; line-height: 1; }
+/* 彩帶（podium-confetti）：疊在領獎台卡片上、不擋點擊，只播一次後停在透明 */
+#podium { position: relative; overflow: hidden; }
+.qz-confetti { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.qz-confetti span { position: absolute; top: -16px; width: 8px; height: 14px; border-radius: 2px; opacity: 0; animation-name: qz-confetti-fall; animation-timing-function: cubic-bezier(.25, .6, .5, 1); animation-iteration-count: 1; animation-fill-mode: forwards; }
+@keyframes qz-confetti-fall {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--qz-confetti-drift), 320px) rotate(var(--qz-confetti-spin)); }
+}
+@media (prefers-reduced-motion: reduce) { .qz-confetti { display: none; } }
 code { background: var(--qz-accent-soft); color: var(--qz-accent); padding: 1px 6px; border-radius: 6px; font-size: 0.95em; }
 .qz-qr { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
 .qz-url { font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
