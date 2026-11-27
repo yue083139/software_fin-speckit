@@ -12,7 +12,7 @@
 - 證偽：「搶答中不顯示」；拿掉 `phase === "ended"` 判斷即紅。
 
 ## R2 名次口徑同伺服器 `results.leaderboard`
-- Decision：`rank = 1 + 分數嚴格大於自己的組數`；同名次依 `team_scores` 鍵序（＝伺服器 `a.teams` 順序）；只取 `rank ≤ 3`。
+- Decision：`rank = 1 + 分數嚴格大於自己的組數`；同名次依 `team_scores` 鍵序（＝伺服器 `a.teams` 順序）；只取 `rank ≤ 3`。分數來源差異：`leaderboard` 用已揭曉題分數，領獎台用 `team_scores`（全部題）；兩者在 `ended` 時相等，前提是 `activity.end` 要求先揭曉目前題（`server/quiz_server/activity.py`「請先揭曉目前這一題，再結束活動」），日後若放寬須回頭改本決策。
 - Rationale：與時間計分名次表同一口徑，老師不會看到兩套名次。`web/CLAUDE.md`「不在前端判定順位」指搶答先後，不受影響。
 - 證偽：`podiumPlaces` 四例（基本、1-1-3 跳號、第三名並列全上台、三組並列第 1 不再有第三名）。
 

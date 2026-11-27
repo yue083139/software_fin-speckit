@@ -52,5 +52,5 @@
 
 ## Success Criteria *(mandatory)*
 
-- **SC-001**: `web/src/pages/podium.test.tsx` 10 例全綠，web 連跑兩次；拿掉「結束後才顯示」判斷時紅。
+- **SC-001**: `web/src/pages/podium.test.tsx` 13 例全綠，web 連跑兩次；拿掉「結束後才顯示」判斷時紅。
 - **SC-002**: 伺服器、`contracts/` 無變更（`git diff origin/dev -- server contracts` 為空）。

@@ -6,7 +6,7 @@
 
 ```
 uv run --project server pytest -q server/tests → 367 passed, 1 warning
-npm --prefix web test                          → Tests  90 passed (90)
+npm --prefix web test                          → Tests  93 passed (93)
 npm --prefix web run lint                      → 無輸出（exit 0）
 npm --prefix web run typecheck                 → 無輸出（exit 0）
 gate-zh-hant: 0 處簡體字
@@ -18,7 +18,7 @@ gate-diagrams-syntax: 55 個圖檔語法通過
 gate-diagrams: 55 個圖檔，0 處問題
 ```
 
-web 第二次 `npm --prefix web test`：`Tests  90 passed (90)`。web 與 OpenSpec 組 `feat/results-podium` 逐字相同（`git diff --no-index` 兩邊 `web/src` 無差異）。
+web 第二次 `npm --prefix web test`：`Tests  93 passed (93)`。web 與 OpenSpec 組 `feat/results-podium` 逐字相同（`git diff --no-index` 兩邊 `web/src` 無差異）。
 
 ## 變異實錄（錯時會紅）
 
@@ -44,8 +44,9 @@ web 第二次 `npm --prefix web test`：`Tests  90 passed (90)`。web 與 OpenSp
 
 ## 評審紀錄
 
-- 架構通道（全卡掃）：待派。
-- 對抗通道（diff）：待派。
+- 架構通道（全卡掃，2026-11-27，獨立子代理）：**CLEARED**，0 阻斷 0 重要。followup：D2／R2「口徑同 leaderboard」未寫分數來源差異（leaderboard 用已揭曉題、領獎台用全部題，ended 時因 `activity.end` 須先揭曉而相等）⇒ 已補進 design D2／research R2；人工第 5 步「由單元測試涵蓋」原只測 `Podium` 直接傳 `scoreLabel` ⇒ 已補 `TeacherPanel` 讀 `view.score_label` 一例。
+- 對抗通道（diff，2026-11-27，獨立子代理）：**CLEARED**，五條斷言皆證偽不成（伺服器分數恆為非負整數；學生結果頁原已列各組分數，領獎台不多帶資料；時間計分 `end` 須先揭曉，ended 時無未揭曉分數）。followup：①學生端「只在 ended 渲染」無本卡測試 ⇒ 已補「搶答中即使 view 帶分數也不顯示」「結束後顯示並標本組」兩例；②同名次依 `Object.entries` 鍵序，純數字組名會被 JS 重排 ⇒ 不改：組名固定「第N組」（`activity.py`），列為 followup（主人 @jinny950103）。
+- 評審輪次：B 檔兩輪各單通道已用滿；以上 followup 皆為補測試與文件，未改產品行為。
 
 ## 人工驗證（需求 P-05）
 
