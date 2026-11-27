@@ -2,7 +2,7 @@
 
 **Feature Branch**: `019-live-feed`
 **Created**: 2026-11-27
-**Status**: Draft（v1.0；與 OpenSpec 組 `openspec/changes/live-feed/` 同批）
+**Status**: Draft（v1.1，評審後；與 OpenSpec 組 `openspec/changes/live-feed/` 同批）
 **Input**: 負責人 2026-11-27 授權成員自行開卡、兩組同步；成員提議「搶答中老師頁右上角跳出『第2組 搶下第 3 題！』」。
 **需求編號**：R-04、X-04｜**parity**：`docs/parity.md` §4 `live-feed`｜**檔位**：B（只改 web 老師頁）
 **圖表**：`diagrams/019-live-feed-{component,class,sequence}.puml`
@@ -23,6 +23,7 @@
 2. **Given** 第2組已送出第 3 題，**When** 第1組也送出第 3 題，**Then** 跳出「第1組 送出第 3 題」。
 3. **Given** 只計對錯模式，**When** 第1組第一個送出第 2 題，**Then** 跳出「第1組 送出第 2 題」（不說搶下）。
 4. **Given** 搶答中已有送出，**When** 老師重新整理老師頁，**Then** 已有的送出不再跳出快訊。
+5. **Given** 老師頁斷線期間有組別送出，**When** 重新連上，**Then** 斷線期間的送出不補跳，之後的新送出照常跳出。
 
 ### Edge Cases
 
@@ -33,11 +34,11 @@
 ## Requirements *(mandatory)*
 
 - **FR-001**: 搶答中有新送出時，老師畫面 MUST 跳出快訊；經典搶答第 1 順位 MUST 說「搶下」，其餘 MUST 說「送出」。
-- **FR-002**: 老師頁開啟或重新整理後的第一個畫面 MUST NOT 跳出快訊；非搶答中 MUST NOT 跳出快訊。
+- **FR-002**: 老師頁開啟、重新整理或斷線重連後收到的第一個新畫面 MUST NOT 跳出快訊，斷線期間的送出 MUST NOT 補跳；非搶答中 MUST NOT 跳出快訊。
 - **FR-003**: 快訊 MUST NOT 含答案內容。
 - **FR-004**: 學生畫面 MUST NOT 有快訊；MUST NOT 新增伺服器欄位或改變送往學生端的資料。
 
 ## Success Criteria *(mandatory)*
 
-- **SC-001**: `web/src/pages/livefeed.test.tsx` 6 例全綠，web 連跑兩次；拿掉基準判斷、階段判斷、經典判斷時各自轉紅。
+- **SC-001**: `web/src/pages/livefeed.test.tsx` 9 例全綠，web 連跑兩次；拿掉基準判斷、階段判斷、經典判斷、斷線清基準、`stale` 判斷時各自轉紅。
 - **SC-002**: 伺服器、`contracts/` 無變更（`git diff origin/dev -- server contracts` 為空）。
