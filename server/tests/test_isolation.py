@@ -2,6 +2,7 @@
 
 斷言的是**傳輸內容**（WebSocket 原始文字、REST 回應原文、日誌），不是畫面。
 """
+import asyncio
 import json
 import logging
 
@@ -12,6 +13,28 @@ from quiz_server.views import student_view
 
 SECRET_A = "甲組祕密答案"
 SECRET_A2 = "甲組子題祕密"
+
+
+def test_50_team_student_views_exclude_other_49_answers(fixture_bytes):
+    async def scenario():
+        from quiz_server.activity import Activity
+
+        act = Activity(team_count=50)
+        await act.load_questions(fixture_bytes("group.xlsx"), "group.xlsx")
+        await act.start()
+        secrets = {team: f"{team}專屬答案" for team in act.teams}
+        for team, answer in secrets.items():
+            await act.submit(team, 3, [answer])
+
+        for team, own_answer in secrets.items():
+            raw = json.dumps(student_view(act, team), ensure_ascii=False)
+            assert own_answer in raw
+            assert all(answer not in raw for other, answer in secrets.items() if other != team)
+
+        invalid = json.dumps(student_view(act, None), ensure_ascii=False)
+        assert all(answer not in invalid for answer in secrets.values())
+
+    asyncio.run(scenario())
 
 
 def join(client, team: str) -> str:

@@ -22,8 +22,8 @@ description: "010-team-limit-50 的相依排序實作任務"
 
 - [x] T001 將 `team-limit-50` 卡與共用需求口徑同步到姊妹 repo，並更新 `docs/parity.md` 的同步狀態與證據
 - [x] T002 依 S 檔流程完成提案輪紅隊與架構評審，將兩通道結論、藥方回驗及輪次記錄於 `specs/010-team-limit-50/verification.md`
-- [ ] T003 取得負責人對「`POST /api/teacher/teams` 合法範圍由 2–12 改為 2–50」的明確批准，將批准原文與日期補入 `specs/010-team-limit-50/contracts/api-change.md`
-- [ ] T004 依 `specs/010-team-limit-50/quickstart.md` 保存實作前 2–12 組既有回歸基線到 `specs/010-team-limit-50/verification.md`
+- [x] T003 取得負責人對「`POST /api/teacher/teams` 合法範圍由 2–12 改為 2–50」的明確批准，將批准原文與日期補入 `specs/010-team-limit-50/contracts/api-change.md`
+- [x] T004 依 `specs/010-team-limit-50/quickstart.md` 保存實作前 2–12 組既有回歸基線到 `specs/010-team-limit-50/verification.md`
 
 **Checkpoint**: 必須依序完成 parity 同步、提案雙通道評審與負責人批准，才可進入紅燈驗收與實作。
 
@@ -33,9 +33,9 @@ description: "010-team-limit-50 的相依排序實作任務"
 
 **Purpose**: 先建立所有故事共用的單一上限來源與凍結契約口徑。
 
-- [ ] T005 將已批准的組數契約由 2–12 更新為 2–50，且保持端點、回應形狀、每組六台與錯誤語意不變於 `contracts/api.md`
-- [ ] T006 [P] 將產品說明中的組數合法範圍與大型班級行為更新為 2–50 於 `docs/product-trd.md`
-- [ ] T007 唯讀確認實作前 `server/quiz_server/activity.py` 仍為 `MIN_TEAMS=2`、`MAX_TEAMS=12`、`DEFAULT_TEAMS=4`、`MAX_DEVICES=6`，並把基線記錄於 `specs/010-team-limit-50/verification.md`，此任務不得修改產品程式
+- [x] T005 將已批准的組數契約由 2–12 更新為 2–50，且保持端點、回應形狀、每組六台與錯誤語意不變於 `contracts/api.md`
+- [x] T006 [P] 將產品說明中的組數合法範圍與大型班級行為更新為 2–50 於 `docs/product-trd.md`
+- [x] T007 唯讀確認實作前 `server/quiz_server/activity.py` 仍為 `MIN_TEAMS=2`、`MAX_TEAMS=12`、`DEFAULT_TEAMS=4`、`MAX_DEVICES=6`，並把基線記錄於 `specs/010-team-limit-50/verification.md`，此任務不得修改產品程式
 
 **Checkpoint**: 契約已批准並更新，產品常數仍保持實作前基線；後續由 US1 在紅燈後修改唯一的組數上限來源。
 
@@ -49,16 +49,16 @@ description: "010-team-limit-50 的相依排序實作任務"
 
 ### Tests for User Story 1（先寫並確認紅燈）
 
-- [ ] T008 [P] [US1] 新增 `team_names(50)` 產生 50 個唯一且依數字升序名稱，以及 `configure_teams(2/12/13/50)` 成功的單元驗收於 `server/tests/test_phases.py`
-- [ ] T009 [P] [US1] 新增 `POST /api/teacher/teams` 對 2、12、13、50 回傳相同數量組名並廣播完整清單的契約驗收於 `server/tests/test_api_skeleton.py`
-- [ ] T010 [P] [US1] 新增第 13 組與第 50 組可取得有效身分並完成加入的整合驗收於 `server/tests/test_team_mode.py`
-- [ ] T011 [US1] 執行 US1 新增測試並把預期紅燈輸出記錄於 `specs/010-team-limit-50/verification.md`
+- [x] T008 [P] [US1] 新增 `team_names(50)` 產生 50 個唯一且依數字升序名稱，以及 `configure_teams(2/12/13/50)` 成功的單元驗收於 `server/tests/test_phases.py`
+- [x] T009 [P] [US1] 新增 `POST /api/teacher/teams` 對 2、12、13、50 回傳相同數量組名並廣播完整清單的契約驗收於 `server/tests/test_api_skeleton.py`
+- [x] T010 [P] [US1] 新增第 13 組與第 50 組可取得有效身分並完成加入的整合驗收於 `server/tests/test_team_mode.py`
+- [x] T011 [US1] 執行 US1 新增測試並把預期紅燈輸出記錄於 `specs/010-team-limit-50/verification.md`
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] 依共用 `MAX_TEAMS=50` 讓 `Activity.configure_teams` 與 `team_names` 支援第 1 組至第 50 組，保持名稱唯一且依數字升序於 `server/quiz_server/activity.py`
-- [ ] T013 [US1] 執行 `server/tests/test_api_skeleton.py` 驗證 `TeamsBody` 與設定組數端點正確回傳、廣播 50 組清單；若已通過則在 `specs/010-team-limit-50/verification.md` 記錄 `server/quiz_server/app.py` 無須修改，若失敗則修正該檔並重跑至通過
-- [ ] T014 [US1] 執行 `server/tests/test_phases.py`、`server/tests/test_api_skeleton.py`、`server/tests/test_team_mode.py` 並將 US1 綠燈證據記錄於 `specs/010-team-limit-50/verification.md`
+- [x] T012 [US1] 依共用 `MAX_TEAMS=50` 讓 `Activity.configure_teams` 與 `team_names` 支援第 1 組至第 50 組，保持名稱唯一且依數字升序於 `server/quiz_server/activity.py`
+- [x] T013 [US1] 執行 `server/tests/test_api_skeleton.py` 驗證 `TeamsBody` 與設定組數端點正確回傳、廣播 50 組清單；若已通過則在 `specs/010-team-limit-50/verification.md` 記錄 `server/quiz_server/app.py` 無須修改，若失敗則修正該檔並重跑至通過
+- [x] T014 [US1] 執行 `server/tests/test_phases.py`、`server/tests/test_api_skeleton.py`、`server/tests/test_team_mode.py` 並將 US1 綠燈證據記錄於 `specs/010-team-limit-50/verification.md`
 
 **Checkpoint**: 13 與 50 組可獨立設定、顯示與加入，US1 可作為 MVP 單獨驗收。
 
@@ -72,19 +72,19 @@ description: "010-team-limit-50 的相依排序實作任務"
 
 ### Tests for User Story 2（先寫並確認紅燈）
 
-- [ ] T015 [P] [US2] 新增 1、51、非整數、格式無效皆回 422 且活動狀態不變，以及非 preparing 回 409 且狀態不變的契約驗收於 `server/tests/test_api_skeleton.py`
-- [ ] T016 [US2] 新增合法改為 50 組時全部 `_tokens`、`_codes`、`drafts` 清除且舊 token 以最少資訊失效的驗收於 `server/tests/test_team_mode.py`
-- [ ] T017 [US2] 新增 50 組各六台共 300 台可保持有效身分、第 301 台加入已滿組別回 409、第 50 組釋放後可重入的驗收於 `server/tests/test_team_mode.py`
-- [ ] T018 [P] [US2] 新增 50 組活動中逐組檢查學生 payload 不含其他 49 組答案、無效身分 fail-closed 的負例驗收於 `server/tests/test_isolation.py`
-- [ ] T019 [P] [US2] 新增 50 組同題並發重複 20 次皆順位無重號且恰一組成功、只採伺服器接收序的驗收於 `server/tests/test_submit.py`
-- [ ] T020 [US2] 執行 US2 新增測試並把預期紅燈或既有保護已綠的逐項結果記錄於 `specs/010-team-limit-50/verification.md`
+- [x] T015 [P] [US2] 新增 1、51、非整數、格式無效皆回 422 且活動狀態不變，以及非 preparing 回 409 且狀態不變的契約驗收於 `server/tests/test_api_skeleton.py`
+- [x] T016 [US2] 新增合法改為 50 組時全部 `_tokens`、`_codes`、`drafts` 清除且舊 token 以最少資訊失效的驗收於 `server/tests/test_team_mode.py`
+- [x] T017 [US2] 新增 50 組各六台共 300 台可保持有效身分、第 301 台加入已滿組別回 409、第 50 組釋放後可重入的驗收於 `server/tests/test_team_mode.py`
+- [x] T018 [P] [US2] 新增 50 組活動中逐組檢查學生 payload 不含其他 49 組答案、無效身分 fail-closed 的負例驗收於 `server/tests/test_isolation.py`
+- [x] T019 [P] [US2] 新增 50 組同題並發重複 20 次皆順位無重號且恰一組成功、只採伺服器接收序的驗收於 `server/tests/test_submit.py`
+- [x] T020 [US2] 執行 US2 新增測試並把預期紅燈或既有保護已綠的逐項結果記錄於 `specs/010-team-limit-50/verification.md`
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] 修正設定組數的邊界、階段拒絕與原子清除行為，使「整數且 `2 <= count <= 50`；合法改組清除全部 tokens、codes、drafts；拒絕時狀態不變」完整落於 `server/quiz_server/activity.py`
-- [ ] T022 [US2] 檢查並僅在測試揭露缺陷時修正 50 組下的學生 view fail-closed 裁切，禁止任何學生 payload 含其他組答案於 `server/quiz_server/views.py`
-- [ ] T023 [US2] 執行容量探針，記錄環境、300/300 最終一致、p95 與最慢送達時間，將實作後證據另存於 `probes/results/2026-11-27-team-limit-50-capacity-implementation.txt`，不得覆寫 Phase 0 原始結果
-- [ ] T024 [US2] 執行 US2 五個測試檔、三種遊戲模式既有回歸與容量探針，將 SC-002、SC-003、SC-004、SC-006、SC-007 證據記錄於 `specs/010-team-limit-50/verification.md`
+- [x] T021 [US2] 修正設定組數的邊界、階段拒絕與原子清除行為，使「整數且 `2 <= count <= 50`；合法改組清除全部 tokens、codes、drafts；拒絕時狀態不變」完整落於 `server/quiz_server/activity.py`
+- [x] T022 [US2] 檢查並僅在測試揭露缺陷時修正 50 組下的學生 view fail-closed 裁切，禁止任何學生 payload 含其他組答案於 `server/quiz_server/views.py`
+- [x] T023 [US2] 執行容量探針，記錄環境、300/300 最終一致、p95 與最慢送達時間，將實作後證據另存於 `probes/results/2026-11-27-team-limit-50-capacity-implementation.txt`，不得覆寫 Phase 0 原始結果
+- [x] T024 [US2] 執行 US2 五個測試檔、三種遊戲模式既有回歸與容量探針，將 SC-002、SC-003、SC-004、SC-006、SC-007 證據記錄於 `specs/010-team-limit-50/verification.md`
 
 **Checkpoint**: 50 組容量不改變每組六台上限，隔離、公平、狀態原子性及既有模式全部通過。
 
@@ -98,16 +98,16 @@ description: "010-team-limit-50 的相依排序實作任務"
 
 ### Tests for User Story 3（先寫並確認紅燈）
 
-- [ ] T025 [US3] 新增 50 組選組、老師管理、結果清單皆完整呈現且第 50 組可操作的元件驗收於 `web/src/pages/team-limit.test.tsx`
-- [ ] T026 [US3] 執行 `web/src/pages/team-limit.test.tsx` 並把預期紅燈輸出記錄於 `specs/010-team-limit-50/verification.md`
+- [x] T025 [US3] 新增 50 組選組、老師管理、結果清單皆完整呈現且第 50 組可操作的元件驗收於 `web/src/pages/team-limit.test.tsx`
+- [x] T026 [US3] 執行 `web/src/pages/team-limit.test.tsx` 並把預期紅燈輸出記錄於 `specs/010-team-limit-50/verification.md`
 
 ### Implementation for User Story 3
 
-- [ ] T027 [P] [US3] 調整學生選組清單保留並可捲動至第 50 組於 `web/src/pages/Home.tsx`
-- [ ] T028 [P] [US3] 調整老師組數輸入、範圍提示與 50 組管理清單於 `web/src/pages/Teacher.tsx`
-- [ ] T029 [P] [US3] 調整結果檢視完整保留並可定位第 50 組於 `web/src/pages/Results.tsx`
-- [ ] T030 [US3] 補足選組、管理與結果容器在桌面及 768 px 寬度的捲動與可操作樣式於 `web/src/styles.css`
-- [ ] T031 [US3] 執行 `web/src/pages/team-limit.test.tsx`、既有 web 測試與 build，將 US3 綠燈結果記錄於 `specs/010-team-limit-50/verification.md`
+- [x] T027 [P] [US3] 調整學生選組清單保留並可捲動至第 50 組於 `web/src/pages/Home.tsx`
+- [x] T028 [P] [US3] 調整老師組數輸入、範圍提示與 50 組管理清單於 `web/src/pages/Teacher.tsx`
+- [x] T029 [P] [US3] 調整結果檢視完整保留並可定位第 50 組於 `web/src/pages/Results.tsx`
+- [x] T030 [US3] 補足選組、管理與結果容器在桌面及 768 px 寬度的捲動與可操作樣式於 `web/src/styles.css`
+- [x] T031 [US3] 執行 `web/src/pages/team-limit.test.tsx`、既有 web 測試與 build，將 US3 綠燈結果記錄於 `specs/010-team-limit-50/verification.md`
 
 **Checkpoint**: 50 組的三個主要 UI 流程可獨立驗收，且第 50 組沒有被截斷或靜默省略。
 
@@ -117,11 +117,11 @@ description: "010-team-limit-50 的相依排序實作任務"
 
 **Purpose**: 完成驗收矩陣、人工驗證、圖碼一致性與 S 檔門禁證據。
 
-- [ ] T032 [P] 對照 component、class、sequence 三圖逐項核對實作元件、類別約束與訊息序，將含 `path:line` 錨點的結論寫入 `specs/010-team-limit-50/verification.md`
-- [ ] T033 [P] 依 `specs/010-team-limit-50/quickstart.md` 在一般桌面與 768 px 視窗人工完成第 50 組加入、釋放、作答與結果定位，將驗證者、日期、測試環境、逐步操作、實際觀察、每項耗時及截圖證據記錄於 `specs/010-team-limit-50/verification.md`
-- [ ] T034 將 M-020、M-021、M-022 的實際驗收落點與狀態由 `uncovered` 更新為 `covered` 於 `eval/acceptance/matrix.yaml`
-- [ ] T035 執行 `make gate-diagrams`、`make gate-parity SIBLING=../software_fin-openspec`、`make gate`，把原樣輸出與任何有意不改項目記錄於 `specs/010-team-limit-50/verification.md`
-- [ ] T036 匯出本卡 AI 對話紀錄並登記於 `docs/ai-logs/010-team-limit-50.md`
+- [x] T032 [P] 對照 component、class、sequence 三圖逐項核對實作元件、類別約束與訊息序，將含 `path:line` 錨點的結論寫入 `specs/010-team-limit-50/verification.md`
+- [x] T033 [P] 依 `specs/010-team-limit-50/quickstart.md` 在一般桌面與 768 px 視窗人工完成第 50 組加入、釋放、作答與結果定位，將驗證者、日期、測試環境、逐步操作、實際觀察、每項耗時及截圖證據記錄於 `specs/010-team-limit-50/verification.md`
+- [x] T034 將 M-020、M-021、M-022 的實際驗收落點與狀態由 `uncovered` 更新為 `covered` 於 `eval/acceptance/matrix.yaml`
+- [x] T035 執行 `make gate-diagrams`、`make gate-parity SIBLING=../software_fin-openspec`、`make gate`，把原樣輸出與任何有意不改項目記錄於 `specs/010-team-limit-50/verification.md`
+- [x] T036 匯出本卡 AI 對話紀錄並登記於 `docs/ai-logs/010-team-limit-50.md`
 - [ ] T037 依 S 檔流程完成實作輪紅隊與架構評審，將兩通道結論、藥方回驗及「都綠否」逐項狀態寫入 `specs/010-team-limit-50/verification.md`
 
 ---

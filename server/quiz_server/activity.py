@@ -17,7 +17,7 @@ from .modes import DEFAULT_MODE, MODES, Mode, ModeError
 from .phases import Phase, PhaseError, check_transition
 from .scoring import QuestionAttrs, ScoringRule, Submission
 
-MIN_TEAMS, MAX_TEAMS, DEFAULT_TEAMS = 2, 12, 4
+MIN_TEAMS, MAX_TEAMS, DEFAULT_TEAMS = 2, 50, 4
 MAX_ANSWER_CHARS = 200
 
 

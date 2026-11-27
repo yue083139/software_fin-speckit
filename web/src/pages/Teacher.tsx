@@ -162,11 +162,11 @@ export function TeamSettings({ view, act }: { view: TeacherView; act: Act }) {
         ))}
       </ul>
       <label>
-        組數（2–12）
+        組數（2–50）
         <input
           type="number"
           min={2}
-          max={12}
+          max={50}
           value={count}
           onChange={(e) => setCount(Number(e.target.value))}
           aria-label="組數"

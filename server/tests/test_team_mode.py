@@ -85,6 +85,55 @@ def test_configure_teams_clears_codes(loaded_client, teacher_headers):
     assert s["invite_codes"] == {} and s["devices"] == {t: 0 for t in s["teams"]}
 
 
+def test_configure_50_teams_revokes_all_identity_and_team_state(loaded_client, teacher_headers):
+    c = loaded_client
+    team_on(c, teacher_headers)
+    token = join(c, "第1組").json()["token"]
+    act = c.app.state.activity
+    act.drafts = {"第1組": {1: ("尚未送出的草稿", "")}}
+
+    changed = c.post("/api/teacher/teams", json={"count": 50}, headers=teacher_headers)
+
+    assert changed.status_code == 200
+    assert act.team_of(token) is None
+    assert act._tokens == {}
+    assert act._codes == {}
+    assert act.drafts == {}
+
+
+def test_50_teams_support_300_devices_and_reject_301st():
+    async def scenario():
+        act = Activity(team_count=50)
+        await act.set_team_play(True)
+        for team in act.teams:
+            await act.join(team)
+            code = act.invite_code(team)
+            for _ in range(MAX_DEVICES - 1):
+                await act.join(team, code)
+
+        assert len(act._tokens) == 300
+        assert all(act.devices(team) == MAX_DEVICES for team in act.teams)
+        with pytest.raises(TeamTakenError):
+            await act.join("第1組", act.invite_code("第1組"))
+
+        await act.release("第50組")
+        assert act.devices("第50組") == 0
+        token = await act.join("第50組", act.invite_code("第50組"))
+        assert act.team_of(token) == "第50組"
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("count,team", [(13, "第13組"), (50, "第50組")])
+def test_join_new_late_numbered_teams(client, teacher_headers, count, team):
+    configured = client.post("/api/teacher/teams", json={"count": count}, headers=teacher_headers)
+    assert configured.status_code == 200, configured.text
+    joined = join(client, team)
+    assert joined.status_code == 200, joined.text
+    token = joined.json()["token"]
+    assert client.app.state.activity.team_of(token) == team
+
+
 @pytest.mark.parametrize("key", ["classic", "accuracy", "timed"])
 def test_team_play_does_not_change_scoring(fixture_bytes, key):
     async def play(team_play: bool):

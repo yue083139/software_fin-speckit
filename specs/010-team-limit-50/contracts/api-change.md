@@ -1,6 +1,6 @@
 # Contract Change Proposal: 010 team-limit-50
 
-**狀態**：待提案輪評審與負責人批准；批准前不得修改凍結件 `contracts/api.md`。
+**狀態**：已批准。負責人於 2026-11-27 在對話中針對「將 `POST /api/teacher/teams` 的 `{count}` 合法範圍由 2–12 改為 2–50，其餘端點、回應形狀、錯誤語意與每組六台上限不變」明確回覆：「是」。
 
 ## 唯一契約變更
 
