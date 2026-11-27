@@ -1,4 +1,5 @@
 import { Tag } from "antd";
+import type React from "react";
 import { Section } from "../ui";
 
 export interface PodiumPlace {
@@ -29,6 +30,36 @@ export function podiumPlaces(scores: Record<string, number>): PodiumPlace[] {
   return places.sort((a, b) => a.rank - b.rank);
 }
 
+export const CONFETTI_COUNT = 36;
+const CONFETTI_COLORS = ["--qz-accent", "--qz-accent-bright", "--qz-danger", "--qz-ok-text", "--qz-glow-3", "--qz-glow-4"];
+
+/**
+ * 揭曉時灑一次彩帶（podium-confetti）。位置與時間用索引算出固定值，不在 render 內取亂數：
+ * 同一份 view 重繪時 DOM 不變，動畫不會重播；只有領獎台重新掛上（揭曉、重新整理）才再灑一次。
+ * 減少動態效果的使用者由 CSS 直接隱藏。
+ */
+function Confetti() {
+  return (
+    <div className="qz-confetti" aria-hidden="true" data-testid="confetti">
+      {Array.from({ length: CONFETTI_COUNT }, (_, i) => (
+        <span
+          key={i}
+          style={
+            {
+              left: `${(i * 37) % 100}%`,
+              background: `var(${CONFETTI_COLORS[i % CONFETTI_COLORS.length]})`,
+              animationDelay: `${(i % 9) * 0.12}s`,
+              animationDuration: `${2.2 + (i % 5) * 0.3}s`,
+              "--qz-confetti-drift": `${((i * 53) % 61) - 30}px`,
+              "--qz-confetti-spin": `${((i * 97) % 720) - 360}deg`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
 // 活動結束後的前三名領獎台（results-podium）；沒有組別得分就不顯示
 export function Podium({
   scores,
@@ -43,6 +74,7 @@ export function Podium({
   if (places.length === 0) return null;
   return (
     <Section id="podium" title="領獎台">
+      <Confetti />
       <div className="qz-podium" role="list" aria-label="前三名">
         {STAND_ORDER.map((rank) => {
           const place = places.find((p) => p.rank === rank);
