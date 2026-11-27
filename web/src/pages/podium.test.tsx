@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { Podium, podiumPlaces } from "./Podium";
+import { CONFETTI_COUNT, Podium, podiumPlaces } from "./Podium";
 import { StudentResults } from "./Results";
 import { StudentPanel } from "./Student";
 import { TeacherPanel } from "./Teacher";
@@ -61,6 +61,34 @@ describe("領獎台畫面", () => {
     expect(within(first).getByText("第2組")).toBeInTheDocument();
     expect(within(first).getByText("本組")).toBeInTheDocument();
     expect(within(screen.getByRole("listitem", { name: "第 2 名" })).queryByText("本組")).not.toBeInTheDocument();
+  });
+});
+
+describe("領獎台彩帶（podium-confetti）", () => {
+  it("領獎台出現時灑彩帶，且對讀屏軟體隱藏", () => {
+    render(<Podium scores={{ 第1組: 2, 第2組: 1 }} />);
+    const confetti = screen.getByTestId("confetti");
+    expect(confetti).toHaveAttribute("aria-hidden", "true");
+    expect(confetti.querySelectorAll("span")).toHaveLength(CONFETTI_COUNT);
+  });
+
+  it("沒有領獎台就沒有彩帶", () => {
+    render(<Podium scores={{ 第1組: 0 }} />);
+    expect(screen.queryByTestId("confetti")).not.toBeInTheDocument();
+  });
+
+  it("分數更新重繪時彩帶不重播（同一批元素）", () => {
+    const { rerender } = render(<Podium scores={{ 第1組: 2, 第2組: 1 }} />);
+    const first = screen.getByTestId("confetti").querySelector("span");
+    rerender(<Podium scores={{ 第1組: 1, 第2組: 1 }} />);
+    expect(screen.getByTestId("confetti").querySelector("span")).toBe(first);
+  });
+
+  it("每片彩帶位置與顏色固定，只用 --qz-* 變量", () => {
+    render(<Podium scores={{ 第1組: 1 }} />);
+    const pieces = [...screen.getByTestId("confetti").querySelectorAll("span")];
+    expect(pieces.every((p) => p.style.background.startsWith("var(--qz-"))).toBe(true);
+    expect(new Set(pieces.map((p) => p.style.left)).size).toBeGreaterThan(10);
   });
 });
 
