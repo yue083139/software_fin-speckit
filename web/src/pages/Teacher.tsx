@@ -25,6 +25,7 @@ import { GooglePanel } from "./GooglePanel";
 import { ImportPanel } from "./ImportPanel";
 import { SetupChecklist } from "./SetupChecklist";
 import { Board, type Judge, type ReviewReset } from "./Results";
+import { useLiveFeed } from "./LiveFeed";
 import { Podium } from "./Podium";
 import { Leaderboard, RoundStatus } from "./Round";
 import { useLiveView } from "../live";
@@ -453,6 +454,7 @@ const NAV = [
 
 export default function Teacher({ teacherKey }: { teacherKey: string }) {
   const { view, closedCode } = useLiveView(`role=teacher&key=${encodeURIComponent(teacherKey)}`);
+  useLiveFeed(view?.role === "teacher" ? view : null);
   const [error, setErrorText] = useState("");
   const [notLocal, setNotLocal] = useState(false);
   const [active, setActive] = useState("control");
