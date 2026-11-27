@@ -49,4 +49,6 @@ web 第二次 `npm --prefix web test`：`Tests  90 passed (90)`。web 與 OpenSp
 
 ## 人工驗證（需求 P-05）
 
-狀態：**待執行**（`docs/manual-verification.md` 場次 I）。
+狀態：**已執行**（`docs/manual-verification.md` 場次 I）。
+
+結果：✅ 第 1～4 步全部符合（jinny／2026-11-27／`018-results-podium` `4e4eaf4`，Windows 11 本機瀏覽器）。第 1 步首次操作時第2組誤送第 2 題（第1組較快得該題），第2組 0 分未上台，符合 FR-002「0 分不上台」；重置後依步驟重做，亞軍、冠軍位置正確。學生頁「本組」標籤、判錯後同分並列、重置後消失、全部 0 分不顯示皆符合。第 5 步（選做）未執行。

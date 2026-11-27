@@ -181,6 +181,6 @@
 | F | `student-qr` | 待執行 | |
 | G | `teacher-key-hidden` | 待執行 | |
 | H | `easy-setup` | 待執行 | |
-| I | `results-podium` | 待執行 | |
+| I | `results-podium` | ✅ | 2026-11-27 jinny（Windows 11，本機瀏覽器）依 `4e4eaf4`（`018-results-podium`）第 1～4 步全部符合；第 1 步首次第2組誤送第 2 題（第1組較快得分），第2組 0 分不上台，正好驗證「0 分不上台」，重置後依步驟重做符合。第 5 步（選做）未執行。 |
 
 各卡原始步驟：OpenSpec 組 `openspec/changes/archive/<日期>-<卡名>/verification.md`；SpecKit 組 `specs/<NNN>-<卡名>/verification.md`。

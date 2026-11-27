@@ -20,4 +20,4 @@
 - [x] T031 web 測試連跑兩次、`lint`、`typecheck` 綠；變異實錄
 - [x] T032 圖表一致性核對（`verification.md`）
 - [ ] T033 評審（架構全卡掃＋對抗 diff）
-- [ ] T034 人工驗證（`docs/manual-verification.md` 場次 I）
+- [x] T034 人工驗證（`docs/manual-verification.md` 場次 I；2026-11-27 jinny 執行，第 1～4 步全部符合）
