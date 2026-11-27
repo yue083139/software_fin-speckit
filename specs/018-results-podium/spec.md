@@ -2,7 +2,7 @@
 
 **Feature Branch**: `018-results-podium`
 **Created**: 2026-11-27
-**Status**: Draft（v1.0；與 OpenSpec 組 `openspec/changes/results-podium/` 同批）
+**Status**: Approved（v1.0，評審 CLEARED、已合入 `dev` SpecKit #40；與 OpenSpec 組 `openspec/changes/archive/2026-11-27-results-podium/` 同批）
 **Input**: 負責人 2026-11-27 同意成員自行開卡（「你有想改的可以拉出去改」「兩個專案都一起改這樣才有同步」）；成員提議「揭曉後顯示前三名領獎台」。
 **需求編號**：R-04、R-08、X-04｜**parity**：`docs/parity.md` §4 `results-podium`｜**檔位**：B（只改 web 畫面）
 **圖表**：`diagrams/018-results-podium-{component,class,sequence}.puml`
