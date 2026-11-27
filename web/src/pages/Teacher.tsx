@@ -25,6 +25,7 @@ import { GooglePanel } from "./GooglePanel";
 import { ImportPanel } from "./ImportPanel";
 import { SetupChecklist } from "./SetupChecklist";
 import { Board, type Judge, type ReviewReset } from "./Results";
+import { Podium } from "./Podium";
 import { Leaderboard, RoundStatus } from "./Round";
 import { useLiveView } from "../live";
 import { PHASE_LABEL, type TeacherView } from "../types";
@@ -392,6 +393,7 @@ export function TeacherPanel({
       {onJump && <SetupChecklist view={view} google={google?.status ?? null} onJump={onJump} />}
       <PhaseControls view={view} act={act} download={download} exportSheet={exportSheet} exporting={exporting} />
       <ModeSelector view={view} act={act} />
+      {view.phase === "ended" && <Podium scores={view.team_scores} scoreLabel={view.score_label} />}
       <Section id="board" title="作答狀況與結果">
         <Board
           board={view.board}
