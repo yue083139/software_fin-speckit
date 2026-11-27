@@ -51,4 +51,4 @@ web 第二次 `npm --prefix web test`：`Tests  106 passed (106)`。伺服器、
 
 狀態：**已執行**（`docs/manual-verification.md` 場次 K）。
 
-結果：✅ 第 1～4 步全部符合（jinny／2026-11-27，Windows 11 本機瀏覽器；OpenSpec 依 `beeb8c6`、SpecKit 依 `5e180ab`，兩組皆執行）。揭曉時彩帶約 4 秒內落完、名次文字可讀；學生頁亦灑一次；判答錯使名次更新不重播；F5 重新整理再灑一次。執行中成員重置活動再跑一輪以湊出第 2 名，亦符合。第 5 步（選做，`prefers-reduced-motion`）未執行。
+結果：✅ 第 1～4 步全部符合（jinny／2026-11-27，Windows 11 本機瀏覽器；OpenSpec 依 `2f29eb0`、SpecKit 依 `387721a`，兩組皆執行）。揭曉時彩帶約 4 秒內落完、名次文字可讀；學生頁亦灑一次；判答錯使名次更新不重播；F5 重新整理再灑一次。執行中成員重置活動再跑一輪以湊出第 2 名，亦符合。第 5 步（選做，`prefers-reduced-motion`）未執行。
