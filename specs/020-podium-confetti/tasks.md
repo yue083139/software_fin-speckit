@@ -15,5 +15,5 @@
 - [x] T020 `eval/acceptance/matrix.yaml` 新增 M-030；`docs/manual-verification.md` 新增場次 K
 - [x] T021 web 測試連跑兩次、`lint`、`typecheck` 綠；變異實錄
 - [x] T022 圖表一致性核對（`verification.md`）
-- [ ] T023 評審（架構全卡掃＋對抗 diff）
+- [x] T023 評審（架構全卡掃＋對抗 diff，皆 CLEARED；次要訂正已落，見 `verification.md`）
 - [ ] T024 人工驗證（`docs/manual-verification.md` 場次 K）
