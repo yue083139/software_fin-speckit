@@ -453,8 +453,8 @@ const NAV = [
 ];
 
 export default function Teacher({ teacherKey }: { teacherKey: string }) {
-  const { view, closedCode } = useLiveView(`role=teacher&key=${encodeURIComponent(teacherKey)}`);
-  useLiveFeed(view?.role === "teacher" ? view : null);
+  const { view, connected, closedCode } = useLiveView(`role=teacher&key=${encodeURIComponent(teacherKey)}`);
+  useLiveFeed(view?.role === "teacher" ? view : null, connected);
   const [error, setErrorText] = useState("");
   const [notLocal, setNotLocal] = useState(false);
   const [active, setActive] = useState("control");

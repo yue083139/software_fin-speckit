@@ -9,7 +9,7 @@ export interface FeedEvent {
 
 /**
  * 比對前後兩次老師 view，列出新出現的送出（live-feed）。
- * 第一次收到 view（開頁、重連）只當基準不出通知，避免把已有的送出一次全跳出來；
+ * 開頁、重新整理或斷線重連後收到的第一個 view 只當基準不出通知，避免把已有的送出一次全跳出來；
  * 只在搶答中出通知。文案只含組別與題號、不含答案：老師頁常投影給全班看。
  */
 export function feedEvents(prev: TeacherView | null, next: TeacherView): FeedEvent[] {
@@ -30,14 +30,24 @@ export function feedEvents(prev: TeacherView | null, next: TeacherView): FeedEve
 }
 
 // 老師頁右上角跳出即時搶答快訊；不改畫面其他部分
-export function useLiveFeed(view: TeacherView | null) {
+export function useLiveFeed(view: TeacherView | null, connected = true) {
   const { notification } = App.useApp();
   const prev = useRef<TeacherView | null>(null);
+  // 斷線當下手上的 view：重連時 connected 先轉回 true、view 仍是這份舊的，不能拿它當新基準
+  const stale = useRef<TeacherView | null>(null);
   useEffect(() => {
-    if (view === null) return;
+    // 斷線即清基準：重連後收到的第一個新 view 重新當基準。斷線期間的送出不補跳（作答狀況表仍完整）；
+    // 伺服器重啟後新一輪的同組同題也不會被舊基準吞掉。
+    if (!connected) {
+      prev.current = null;
+      stale.current = view;
+      return;
+    }
+    if (view === null || view === stale.current) return;
+    stale.current = null;
     for (const e of feedEvents(prev.current, view)) {
       notification.open({ key: e.key, message: e.text, placement: "topRight", duration: 3 });
     }
     prev.current = view;
-  }, [view, notification]);
+  }, [view, connected, notification]);
 }
