@@ -165,3 +165,9 @@ rows:
     守門: server/tests/test_launch.py；web/src/pages/setup.test.tsx（開始前的設定清單）
     狀態: covered
     卡: easy-setup
+  - id: M-028
+    需求: R-04、R-08、X-04
+    聲明: 活動結束後老師頁與學生結果頁顯示前三名領獎台（同分同名次、下一名跳號、0 分不上台、沒有組別得分不顯示、學生標出本組）；結束前不顯示，只用結束後 view 既有的 team_scores
+    守門: web/src/pages/podium.test.tsx
+    狀態: covered
+    卡: results-podium

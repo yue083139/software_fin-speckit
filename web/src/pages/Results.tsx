@@ -1,5 +1,6 @@
 import { Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { Podium } from "./Podium";
 import { PromptSummary, promptsOf } from "./Prompts";
 import type { QuestionOutline, QuestionResult, RankedAnswer } from "../types";
 import { Btn, Section } from "../ui";
@@ -227,6 +228,7 @@ export function StudentResults({
             .join("、")}
         </p>
       </Section>
+      <Podium scores={scores} scoreLabel={scoreLabel} team={team} />
       {results.map((q) => {
         const mine = q.ranking.find((r) => r.team === team);
         return (
