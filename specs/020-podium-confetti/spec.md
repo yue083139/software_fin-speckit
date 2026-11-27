@@ -2,7 +2,7 @@
 
 **Feature Branch**: `020-podium-confetti`
 **Created**: 2026-11-27
-**Status**: Draft（v1.0；與 OpenSpec 組 `openspec/changes/podium-confetti/` 同批）
+**Status**: Approved（v1.0，評審 CLEARED、已合入 `dev` SpecKit #43；與 OpenSpec 組 `openspec/changes/archive/2026-11-27-podium-confetti/` 同批）
 **Input**: 負責人 2026-11-27 授權成員自行開卡、兩組同步；成員提議「揭曉領獎台時灑彩帶動畫」。
 **需求編號**：R-04、R-08、X-04｜**parity**：`docs/parity.md` §4 `podium-confetti`｜**檔位**：B（只改 web 畫面）
 **圖表**：`diagrams/020-podium-confetti-{component,class,sequence}.puml`
