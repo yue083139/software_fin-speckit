@@ -1,0 +1,24 @@
+@startuml 019-live-feed-class
+title 019 live-feed：類別圖
+
+class "FeedEvent" as Event {
+  +key : string
+  +text : string
+}
+class "LiveFeed" as Feed {
+  +feedEvents(prev, next) : FeedEvent[]
+  +useLiveFeed(view)
+  -prev : useRef<TeacherView | null>
+}
+class "TeacherView" as View {
+  +phase : Phase
+  +mode? : ModeInfo
+  +board : QuestionResult[]
+}
+class "Teacher" as Teacher {
+  +useLiveView(query)
+}
+Feed ..> View : 比對前後兩次
+Feed "1" o-- "0..*" Event : 產生
+Teacher ..> Feed : useLiveView 後呼叫
+@enduml
