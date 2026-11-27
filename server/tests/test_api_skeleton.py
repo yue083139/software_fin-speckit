@@ -133,7 +133,10 @@ def test_configure_teams_rejected_while_answering(loaded_client, teacher_headers
     assert after == before
 
 
-@pytest.mark.parametrize("body", [{"count": 1}, {"count": 51}, {"count": 2.5}, {"count": "x"}, {}])
+@pytest.mark.parametrize(
+    "body",
+    [{"count": 1}, {"count": 51}, {"count": 2.5}, {"count": 50.0}, {"count": "50"}, {"count": "x"}, {}],
+)
 def test_configure_teams_invalid_input_keeps_activity(client, teacher_headers, body):
     before = client.get("/api/teacher/state", headers=teacher_headers).json()
     assert client.post("/api/teacher/teams", json=body, headers=teacher_headers).status_code == 422
