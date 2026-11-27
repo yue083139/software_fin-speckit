@@ -144,10 +144,10 @@ Tests       36 passed (36)
 | 圖表 | 圖中約束 | 程式錨點與結論 |
 |---|---|---|
 | component | Teacher、Home、Results 經 API 與 server 活動模型協作 | `web/src/pages/Teacher.tsx:142`「team-list」、`web/src/pages/Home.tsx:5`「TeamPicker」、`web/src/pages/Results.tsx:58`「table-wrap」、`server/quiz_server/app.py:188`「/api/teacher/teams」均存在，組件及依賴方向一致。 |
-| class | `MIN_TEAMS=2`、`MAX_TEAMS=50`；設定組數委派 Activity；改組數撤銷狀態 | `server/quiz_server/activity.py:20`「MIN_TEAMS, MAX_TEAMS, DEFAULT_TEAMS = 2, 50, 4」、`server/quiz_server/activity.py:231`「configure_teams」、`server/quiz_server/app.py:39`「TeamsBody」一致；每組裝置上限既有邏輯未改。 |
+| class | `MIN_TEAMS=2`、`MAX_TEAMS=50`；設定組數委派 `Activity.configure_teams`；學生畫面只帶自身 `team` 與 `team_valid`；改組數撤銷狀態 | `server/quiz_server/activity.py:20`「MIN_TEAMS, MAX_TEAMS, DEFAULT_TEAMS = 2, 50, 4」、`server/quiz_server/activity.py:231`「configure_teams」、`server/quiz_server/views.py:73`「student_view」、`server/quiz_server/app.py:39`「TeamsBody」一致；每組裝置上限既有邏輯未改。 |
 | sequence | 準備階段設定 50、建立第 1–50 組、加入第 50 組；51 拒絕且狀態不變 | `server/quiz_server/activity.py:103`「team_names」、`server/quiz_server/activity.py:184`「join」、`server/quiz_server/activity.py:232`「MIN_TEAMS <= count <= MAX_TEAMS」及 API 測試的狀態不變斷言一致。 |
 
-結論：三張圖的元件、類別約束與訊息順序均與實作一致，未發現需回改圖或程式的偏離。
+架構末輪首驗發現類別圖與時序圖曾把 Activity 方法誤寫成 `set_teams`，且類別圖多畫學生端完整組別清單；已訂正為 `configure_teams`，並把學生畫面限縮為自身 `team` 與 `team_valid`。結論：訂正後三張圖的元件、類別約束與訊息順序均與實作一致。
 
 ## 人工瀏覽器驗證
 

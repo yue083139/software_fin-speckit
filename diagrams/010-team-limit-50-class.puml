@@ -9,7 +9,7 @@ class Activity {
   - _tokens : dict[str, str]
   - _codes : dict[str, str]
   + drafts : dict[str, dict]
-  + set_teams(count)  ' 只在 preparing；2 <= count <= 50
+  + configure_teams(count)  ' 只在 preparing；2 <= count <= 50
   + join(team) : str
   + release(team)
 }
@@ -24,11 +24,11 @@ class TeacherView {
 }
 
 class StudentView {
-  + teams : list[str]
   + team : str | None
+  + team_valid : bool
 }
 
-TeacherTeamsRequest --> Activity : set_teams(count)
+TeacherTeamsRequest --> Activity : configure_teams(count)
 TeacherView ..> Activity : 讀完整 1–50 組
 StudentView ..> Activity : 依身分裁切
 note right of Activity

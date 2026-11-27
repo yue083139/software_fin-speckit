@@ -10,7 +10,7 @@ participant "views" as Views
 
 T -> Web : 在準備階段輸入 50
 Web -> App : 設定組數 {count: 50}
-App -> Act : set_teams(50)
+App -> Act : configure_teams(50)
 Act -> Act : 驗證 2 <= 50 <= 50
 Act -> Act : 建立第1組至第50組\n撤銷舊身分、邀請碼與草稿
 Act --> App : 50 組
@@ -24,7 +24,7 @@ App --> S50 : 進入第50組學生畫面
 
 T -> Web : 輸入 51
 Web -> App : 設定組數 {count: 51}
-App -> Act : set_teams(51)
+App -> Act : configure_teams(51)
 Act --> App : 拒絕超出範圍
 App --> Web : 顯示 2–50 範圍錯誤
 note right of Act : 原 50 組與既有狀態不變

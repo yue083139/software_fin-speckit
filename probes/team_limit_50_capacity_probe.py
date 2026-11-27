@@ -19,8 +19,8 @@ TEACHER_KEY = "probe-teacher-key-" + "0" * 16
 
 async def main() -> None:
     activity = Activity()
-    # 現行產品上限仍為 12；探針只繞過 configure_teams 的範圍檢查，
-    # 其餘 join、token 反查、view 裁切、changed 通知與真 WebSocket 路徑皆走產品碼。
+    # 直接建立 50 組以隔離量測廣播容量；join、token 反查、view 裁切、changed 通知與
+    # 真 WebSocket 路徑皆走產品碼，組數範圍另由 API 與 Activity 邊界測試驗證。
     activity.teams = team_names(50)
     await activity.set_team_play(True)
 
