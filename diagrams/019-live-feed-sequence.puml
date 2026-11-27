@@ -1,0 +1,23 @@
+@startuml 019-live-feed-sequence
+title 019 live-feed：時序圖
+
+actor "學生（第2組）" as S
+participant "server views（不改）" as V
+participant "useLiveView（live.ts）" as L
+participant "Teacher" as T
+participant "useLiveFeed" as F
+participant "antd notification" as N
+actor "老師" as Teacher
+
+L --> T : 第一個老師 view（開頁／重整）
+T -> F : useLiveFeed(view)
+F -> F : prev 為 null，只記為基準（不出通知）
+S -> V : 送出第 3 題
+V --> L : 新老師 view（phase=answering、board 多一筆）
+L --> T : view
+T -> F : useLiveFeed(view)
+F -> F : feedEvents(prev, next)：第3題新增第2組、rank 1、經典
+F -> N : open「第2組 搶下第 3 題！」（不含答案）
+N --> Teacher : 右上角快訊，3 秒後消失
+F -> F : prev = view
+@enduml
