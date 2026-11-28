@@ -1,0 +1,26 @@
+@startuml 018-results-podium-sequence
+title 018 results-podium：時序圖
+
+actor "老師" as T
+participant "老師頁（TeacherPanel）" as W
+participant "Podium" as P
+participant "useLiveView（live.ts）" as L
+participant "server views（不改）" as S
+actor "學生" as U
+participant "學生結果（StudentResults）" as R
+
+T -> S : 結束搶答（phase 轉 ended）
+S --> L : 老師 view（phase=ended、team_scores）
+L --> W : view
+W -> P : Podium(team_scores, score_label)
+P -> P : podiumPlaces：0 分剔除、同分同名次、取前三
+P --> T : 亞軍、冠軍、季軍領獎台
+S --> L : 學生 view（ended 才帶 results、team_scores）
+L --> R : view
+R -> P : Podium(team_scores, score_label, team)
+P --> U : 同一領獎台，本組旁顯示「本組」
+T -> S : 經典搶答檢查「答錯」
+S --> L : 新的 team_scores
+L --> W : view
+W -> P : 重新計算名次（即時更新）
+@enduml

@@ -113,6 +113,22 @@ def test_concurrent_same_question(fixture_bytes):
         assert sum(r.is_winner for r in ranked) == 1
 
 
+def test_50_teams_concurrent_same_question_20_times(fixture_bytes):
+    teams = [f"第{i}組" for i in range(1, 51)]
+    for _ in range(20):
+        a = Activity(team_count=50)
+        asyncio.run(a.load_questions(fixture_bytes("group.xlsx"), "group.xlsx"))
+        asyncio.run(a.start())
+
+        async def go(act=a):
+            return await asyncio.gather(*(act.submit(team, 3, [team]) for team in teams))
+
+        submissions = asyncio.run(go())
+        assert sorted(item.seq for item in submissions) == list(range(1, 51))
+        ranked = a.rule.rank(a.submissions[3])
+        assert sum(item.is_winner for item in ranked) == 1
+
+
 def test_concurrent_same_team_same_question(fixture_bytes):
     a = _started(fixture_bytes)
 

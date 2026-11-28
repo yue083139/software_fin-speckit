@@ -1,0 +1,28 @@
+@startuml
+class TeacherView {
+  +phase: Phase
+  +teams: string[]
+  +board: QuestionResult[]
+  +team_scores: Record<string, number>
+}
+class QuestionResult {
+  +number: number
+  +labels: string[]
+  +ranking: RankedAnswer[]
+}
+class RankedAnswer {
+  +team: string
+  +answers: string[]
+  +rank: number
+  +is_winner: boolean
+  +correct: boolean | null
+  +score: number
+}
+class ResultsCsv {
+  +buildResultsCsv(view): string
+  +downloadResultsCsv(view): void
+}
+TeacherView "1" o-- "*" QuestionResult
+QuestionResult "1" o-- "*" RankedAnswer
+ResultsCsv ..> TeacherView : formats server values
+@enduml

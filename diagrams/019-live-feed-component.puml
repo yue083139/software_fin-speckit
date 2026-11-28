@@ -1,0 +1,20 @@
+@startuml 019-live-feed-component
+title 019 live-feed：組件圖
+
+package "web" {
+  component "main.tsx（AntApp notification maxCount 4）" as Main
+  component "Teacher.tsx（Teacher）" as Teacher
+  component "LiveFeed.tsx（useLiveFeed／feedEvents）" as Feed
+  component "live.ts（useLiveView）" as Live
+  component "antd notification" as Notice
+}
+package "server（不改）" {
+  component "views（teacher_view：board、phase、mode）" as Views
+}
+
+Main --> Teacher : 提供 App 環境
+Teacher --> Live : 老師 view
+Teacher --> Feed : 每次新 view
+Feed --> Notice : 右上角快訊（3 秒）
+Live --> Views : WebSocket 推播
+@enduml

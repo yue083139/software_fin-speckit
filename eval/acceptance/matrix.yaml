@@ -165,3 +165,45 @@ rows:
     守門: server/tests/test_launch.py；web/src/pages/setup.test.tsx（開始前的設定清單）
     狀態: covered
     卡: easy-setup
+  - id: M-028
+    需求: R-04、R-08、X-04
+    聲明: 活動結束後老師頁與學生結果頁顯示前三名領獎台（同分同名次、下一名跳號、0 分不上台、沒有組別得分不顯示、學生標出本組）；結束前不顯示，只用結束後 view 既有的 team_scores
+    守門: web/src/pages/podium.test.tsx
+    狀態: covered
+    卡: results-podium
+  - id: M-029
+    需求: R-04、X-04
+    聲明: 搶答中老師頁即時跳出新送出的快訊（經典第 1 順位「搶下」、其餘「送出」）；開頁／重連第一個 view 不出通知；非搶答中不出；文案不含答案；學生端無快訊
+    守門: web/src/pages/livefeed.test.tsx
+    狀態: covered
+    卡: live-feed
+  - id: M-030
+    需求: R-04、R-08、X-04
+    聲明: 領獎台出現時灑一次彩帶（對讀屏軟體隱藏、不擋點擊）；沒有領獎台就沒有彩帶；分數更新重繪不重播；顏色只用 --qz-* 變量；減少動態效果時不顯示
+    守門: web/src/pages/podium.test.tsx（領獎台彩帶）
+    狀態: covered
+    卡: podium-confetti
+  - id: M-031
+    需求: R-01、R-11
+    聲明: 老師只在準備階段可把組數設為 2–50；1、51 與格式錯誤不改狀態；合法改組數撤銷所有組別身分、邀請碼與草稿
+    守門: server/tests/test_api_skeleton.py；server/tests/test_phases.py
+    狀態: covered
+    卡: team-limit-50
+  - id: M-032
+    需求: R-01、R-09、R-10、X-04
+    聲明: 50 組開啟組隊時最多 300 台可同時連線且最終狀態一致；每組仍最多 6 台；搶答中不洩漏其他 49 組答案，50 組並發順位無重號且恰一得主
+    守門: server/tests/test_team_mode.py；server/tests/test_isolation.py；server/tests/test_submit.py；probes/results/2026-11-28-team-limit-50-capacity-implementation.txt
+    狀態: covered
+    卡: team-limit-50
+  - id: M-033
+    需求: R-01、R-04、R-08
+    聲明: 50 組下學生選組、老師管理與結果表保留全部組別，使用者在 768 px 視窗可捲動並於 30 秒內操作第 50 組
+    守門: web/src/pages/team-limit.test.tsx；docs/manual-verification.md
+    狀態: covered
+    卡: team-limit-50
+  - id: M-034
+    需求: X-02
+    聲明: 活動結束後可下載完整結果 CSV，每題每組一列，含答案、順位、得主、判定、本題得分與活動總分；未作答列保留，CSV 正確跳脫並保護公式前綴答案
+    守門: web/src/resultsCsv.test.ts；docs/manual-verification.md
+    狀態: covered
+    卡: csv-export

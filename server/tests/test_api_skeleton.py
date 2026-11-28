@@ -115,14 +115,33 @@ def test_configure_teams_broadcasts_and_revokes_tokens(client, teacher_headers):
         assert ws.receive_json()["view"]["team_valid"] is False
 
 
+@pytest.mark.parametrize("count", [2, 12, 13, 50])
+def test_configure_teams_accepts_2_through_50(client, teacher_headers, count):
+    response = client.post("/api/teacher/teams", json={"count": count}, headers=teacher_headers)
+    assert response.status_code == 200, response.text
+    expected = [f"第{i}組" for i in range(1, count + 1)]
+    assert response.json() == {"teams": expected}
+    assert client.get("/api/public/info").json()["teams"] == expected
+
+
 def test_configure_teams_rejected_while_answering(loaded_client, teacher_headers):
     client = loaded_client
     client.post("/api/teacher/start", headers=teacher_headers)
-    assert client.post("/api/teacher/teams", json={"count": 5}, headers=teacher_headers).status_code == 409
+    before = client.get("/api/teacher/state", headers=teacher_headers).json()
+    assert client.post("/api/teacher/teams", json={"count": 50}, headers=teacher_headers).status_code == 409
+    after = client.get("/api/teacher/state", headers=teacher_headers).json()
+    assert after == before
 
 
-def test_configure_teams_out_of_range(client, teacher_headers):
-    assert client.post("/api/teacher/teams", json={"count": 20}, headers=teacher_headers).status_code == 422
+@pytest.mark.parametrize(
+    "body",
+    [{"count": 1}, {"count": 51}, {"count": 2.5}, {"count": 50.0}, {"count": "50"}, {"count": "x"}, {}],
+)
+def test_configure_teams_invalid_input_keeps_activity(client, teacher_headers, body):
+    before = client.get("/api/teacher/state", headers=teacher_headers).json()
+    assert client.post("/api/teacher/teams", json=body, headers=teacher_headers).status_code == 422
+    after = client.get("/api/teacher/state", headers=teacher_headers).json()
+    assert after == before
 
 
 def test_binary_frame_is_ignored(loaded_client, teacher_headers):

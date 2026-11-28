@@ -1,4 +1,4 @@
-import {
+﻿import {
   CopyOutlined,
   AppstoreOutlined,
   FileTextOutlined,
@@ -25,11 +25,14 @@ import { GooglePanel } from "./GooglePanel";
 import { ImportPanel } from "./ImportPanel";
 import { SetupChecklist } from "./SetupChecklist";
 import { Board, type Judge, type ReviewReset } from "./Results";
+import { useLiveFeed } from "./LiveFeed";
+import { Podium } from "./Podium";
 import { Leaderboard, RoundStatus } from "./Round";
 import { useLiveView } from "../live";
 import { PHASE_LABEL, type TeacherView } from "../types";
 import { Btn, GlassHeader, PhaseTag, Section } from "../ui";
 import { Shell } from "../Shell";
+import { downloadResultsCsv } from "../resultsCsv";
 
 type Act = (path: string, body?: unknown) => void;
 
@@ -37,12 +40,14 @@ export function PhaseControls({
   view,
   act,
   download,
+  downloadCsv,
   exportSheet,
   exporting = false,
 }: {
   view: TeacherView;
   act: Act;
   download: () => void;
+  downloadCsv?: () => void;
   exportSheet?: () => void;
   exporting?: boolean; // 匯出或寫回進行中：兩顆匯出鈕都停用（answer-review D5）
 }) {
@@ -105,6 +110,11 @@ export function PhaseControls({
           <Btn disabled={view.phase !== "ended" || !view.source || exporting} onClick={download}>
             下載 xlsx（備援）
           </Btn>
+          {downloadCsv && (
+            <Btn disabled={view.phase !== "ended" || exporting} onClick={downloadCsv}>
+              下載完整結果 CSV
+            </Btn>
+          )}
         </div>
         {view.mode?.sequential && view.phase === "answering" && (
           <>
@@ -124,8 +134,8 @@ export function PhaseControls({
         )}
         {view.phase === "ended" && (
           <p className="muted" style={{ margin: 0 }}>
-            「匯出到 Google 試算表」把每題搶答成功的答案寫進匯入時建立的副本（原試算表不動）；下載的 xlsx
-            為備援，從 Google 匯入時只含值與合併、不含格式。
+            「匯出到 Google 試算表」把每題搶答成功的答案寫進匯入時建立的副本（原試算表不動）；xlsx
+            為備援，CSV 則包含每題每組的答案與活動結果。
           </p>
         )}
       </div>
@@ -204,11 +214,11 @@ export function TeamSettings({ view, act }: { view: TeacherView; act: Act }) {
       </ul>
       <div className="row" style={{ alignItems: "flex-end" }}>
         <label className="field">
-          <span className="field-label">組數（2–12）</span>
+          <span className="field-label">組數（2–50）</span>
           <Input
             type="number"
             min={2}
-            max={12}
+            max={50}
             value={count}
             onChange={(e) => setCount(Number(e.target.value))}
             aria-label="組數"
@@ -356,6 +366,7 @@ export function TeacherPanel({
   act,
   upload,
   download = () => {},
+  downloadCsv,
   exportSheet,
   exporting,
   google,
@@ -367,6 +378,7 @@ export function TeacherPanel({
   act: Act;
   upload: Upload;
   download?: () => void;
+  downloadCsv?: () => void;
   exportSheet?: () => void;
   exporting?: boolean;
   google?: {
@@ -390,8 +402,16 @@ export function TeacherPanel({
   return (
     <>
       {onJump && <SetupChecklist view={view} google={google?.status ?? null} onJump={onJump} />}
-      <PhaseControls view={view} act={act} download={download} exportSheet={exportSheet} exporting={exporting} />
+      <PhaseControls
+        view={view}
+        act={act}
+        download={download}
+        downloadCsv={downloadCsv}
+        exportSheet={exportSheet}
+        exporting={exporting}
+      />
       <ModeSelector view={view} act={act} />
+      {view.phase === "ended" && <Podium scores={view.team_scores} scoreLabel={view.score_label} />}
       <Section id="board" title="作答狀況與結果">
         <Board
           board={view.board}
@@ -450,7 +470,8 @@ const NAV = [
 ];
 
 export default function Teacher({ teacherKey }: { teacherKey: string }) {
-  const { view, closedCode } = useLiveView(`role=teacher&key=${encodeURIComponent(teacherKey)}`);
+  const { view, connected, closedCode } = useLiveView(`role=teacher&key=${encodeURIComponent(teacherKey)}`);
+  useLiveFeed(view?.role === "teacher" ? view : null, connected);
   const [error, setErrorText] = useState("");
   const [notLocal, setNotLocal] = useState(false);
   const [active, setActive] = useState("control");
@@ -633,6 +654,7 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
               act={actWithGoogle}
               upload={upload}
               download={download}
+              downloadCsv={() => downloadResultsCsv(teacherView)}
               exportSheet={exportSheet}
               exporting={exporting}
               google={google}
@@ -650,3 +672,4 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     </Shell>
   );
 }
+

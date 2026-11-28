@@ -24,7 +24,7 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictInt
 
 from . import google_sheets, results
 from .activity import Activity, AlreadySubmittedError, InviteCodeError, TeamTakenError
@@ -67,7 +67,7 @@ TUNNEL_START_TIMEOUT = 30
 
 
 class TeamsBody(BaseModel):
-    count: int
+    count: StrictInt
 
 
 class TeamBody(BaseModel):
