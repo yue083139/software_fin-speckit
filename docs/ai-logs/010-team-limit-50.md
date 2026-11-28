@@ -34,3 +34,5 @@
 
 - 合流補記（2026-11-28）：dev 已占用 M-020 至 M-030，本卡矩陣落點統一調整為 M-031 至 M-033；兩組 PR #45、#39 均已建立，待修正 OpenSpec base 並互連說明。Edge 人工驗證完成紀錄以 OpenSpec verification.md 為準。
 
+
+- 合流收尾（2026-11-28）：OpenSpec PR #45 與 SpecKit PR #39 已合入各自的 dev；兩組 parity 清單標為已合入 dev，驗收列為 M-031–M-033。OpenSpec change 的主規格同步與歸檔交由後續收尾 PR。
