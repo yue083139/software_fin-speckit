@@ -31,7 +31,7 @@
 | `POST /api/student/draft` | 學生（`X-Team-Token`） | `{question, answers: [每個子題一個字串，可空白]}` | `{question}`（不回顯內容） | 403 憑證無效；404 題號不存在；409 非組隊（「只有組隊模式可以共用草稿」）、非 answering、本組已送出此題、時間計分非開放中題；422 子題數不符、超過 200 字、含控制字元、格式錯誤（team-mode） |
 | `POST /api/student/submit` | 學生（`X-Team-Token`） | `{question, answers: [每個子題一個字串]}` | `{question, answers}`（只回本組這筆，不含順位） | 403 憑證無效；404 題號不存在；409 非 answering 或本組已送出此題，時間計分另有「這一題目前沒有開放作答」「本題作答時間已到」；422 子題數不符、空白、超過 200 字、含控制字元、格式錯誤 |
 | `GET /api/teacher/state` | 老師 | — | 老師 view（同 WebSocket） | 401 |
-| `POST /api/teacher/teams` | 老師 | `{count}`（2–12） | `{teams}`；撤銷所有組別憑證，組隊時另清除邀請碼與草稿 | 401；409 非 preparing；422 超出範圍 |
+| `POST /api/teacher/teams` | 老師 | `{count}`（2–50） | `{teams}`；撤銷所有組別憑證，組隊時另清除邀請碼與草稿 | 401；409 非 preparing；422 超出範圍 |
 | `POST /api/teacher/release` | 老師 | `{team}` | `{released}`；撤銷該組憑證（組隊時撤銷該組全部裝置、清草稿，並換新邀請碼——新碼只在老師 view；team-mode 語意補充） | 401；404 |
 | `POST /api/teacher/team-play` | 老師 | `{enabled}` | `{team_play}`；值改變時撤銷所有組別憑證、邀請碼與草稿，值不變不動；重置保留（team-mode） | 401；409 非 preparing；422 格式錯誤 |
 | `POST /api/teacher/import` | 老師 | `multipart/form-data`，欄位 `file`（.xlsx，≤5 MB） | `{source, count}`；取代題目並清空作答 | 400 檔案或格式不符；401；409 非 preparing |

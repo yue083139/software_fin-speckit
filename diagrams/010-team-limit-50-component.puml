@@ -1,0 +1,27 @@
+@startuml 010-team-limit-50-component
+title 010 team-limit-50：組件圖
+
+package "web" {
+  [Teacher\n組數 2–50・50 組管理] as Teacher
+  [Home\n第 1–50 組選擇] as Home
+  [Results\n50 組可捲動結果] as Results
+  [api.ts\n組數設定・加入・釋放] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\n老師組數端點・學生加入端點] as App
+  [activity.Activity\nMIN_TEAMS=2・MAX_TEAMS=50\n改組數撤銷身分與組隊狀態] as Activity
+  [views\n老師／學生身分裁切] as Views
+  [results\n50 組順位與結果] as ResultModel
+}
+
+Teacher --> Api
+Home --> Api
+Api --> App
+App --> Activity
+Views --> Activity
+ResultModel --> Activity
+Teacher ..> Views : 完整組別與裝置狀態
+Home ..> Views : 公開組別清單
+Results ..> ResultModel : 50 組結果可捲動
+@enduml

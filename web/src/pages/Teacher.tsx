@@ -1,4 +1,4 @@
-import {
+﻿import {
   CopyOutlined,
   AppstoreOutlined,
   FileTextOutlined,
@@ -206,11 +206,11 @@ export function TeamSettings({ view, act }: { view: TeacherView; act: Act }) {
       </ul>
       <div className="row" style={{ alignItems: "flex-end" }}>
         <label className="field">
-          <span className="field-label">組數（2–12）</span>
+          <span className="field-label">組數（2–50）</span>
           <Input
             type="number"
             min={2}
-            max={12}
+            max={50}
             value={count}
             onChange={(e) => setCount(Number(e.target.value))}
             aria-label="組數"
@@ -654,3 +654,4 @@ export default function Teacher({ teacherKey }: { teacherKey: string }) {
     </Shell>
   );
 }
+

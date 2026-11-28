@@ -1,0 +1,8 @@
+指令：uv run --project server python probes/team_limit_50_capacity_probe.py
+知識時點：2026-11-27
+
+環境：Windows-11-10.0.22631-SP0；Python 3.12.12
+連線：300（50 組 × 6 台）
+95% 收到更新：51.7 ms
+最慢收到更新：51.9 ms
+最終狀態一致：是（300/300）
