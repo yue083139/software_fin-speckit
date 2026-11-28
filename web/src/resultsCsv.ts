@@ -55,5 +55,5 @@ export function downloadResultsCsv(view: TeacherView): void {
   link.href = url;
   link.download = resultsCsvFilename(view.source);
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }

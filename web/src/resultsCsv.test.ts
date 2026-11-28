@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TeacherView } from "./types";
-import { buildResultsCsv, resultsCsvFilename } from "./resultsCsv";
+import { buildResultsCsv, downloadResultsCsv, resultsCsvFilename } from "./resultsCsv";
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 const view: TeacherView = {
   role: "teacher",
@@ -63,5 +69,23 @@ describe("活動結果 CSV", () => {
     expect(resultsCsvFilename("group.xlsx")).toBe("group_活動結果.csv");
     expect(resultsCsvFilename("Q&A:/活動.xlsx")).toBe("Q&A__活動_活動結果.csv");
     expect(resultsCsvFilename(null)).toBe("活動結果.csv");
+  });
+
+  it("延後回收下載 URL，讓瀏覽器有時間讀取 Blob", () => {
+    vi.useFakeTimers();
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn(() => "blob:results"),
+      revokeObjectURL,
+    });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    downloadResultsCsv(view);
+
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1_000);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:results");
+    expect(revokeObjectURL).toHaveBeenCalledTimes(1);
   });
 });
