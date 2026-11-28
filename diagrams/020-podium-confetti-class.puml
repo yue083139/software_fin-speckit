@@ -1,0 +1,14 @@
+@startuml 020-podium-confetti-class
+title 020 podium-confetti：類別圖
+
+class "Podium" as Podium {
+  +Podium(scores, scoreLabel, team?)
+  +podiumPlaces(scores) : PodiumPlace[]
+}
+class "Confetti" as Confetti {
+  +CONFETTI_COUNT = 36
+  -CONFETTI_COLORS : --qz-* 六色
+  -map(i) 內以索引算 left、color、delay、duration、drift、spin
+}
+Podium *-- Confetti : 有名次時渲染（key＝i，重繪不重播）
+@enduml

@@ -26,7 +26,7 @@
 
 | 事項 | 我傾向 | 阻塞否 |
 |---|---|---|
-| Guided Notes 匯入／匯出管道 | **xlsx 檔往返為主**：老師在 Google Sheets「檔案→下載→xlsx」匯入；系統輸出填好答案的 xlsx，老師以「檔案→匯入→取代試算表」放回 Google Sheets。另支援貼上「知道連結者可檢視」的 Sheets 網址直接匯入（`/export?format=xlsx`，免憑證，已實測可下載範本）。**直接寫回 Google Sheets** 需 OAuth／服務帳戶，列為選做卡，憑證只走環境變數 | 阻塞匯入卡的 design，不阻塞骨架 |
+| Guided Notes 匯入／匯出管道 | **xlsx 檔往返為主**：老師在 Google Sheets「檔案→下載→xlsx」匯入；系統輸出填好答案的 xlsx，老師以「檔案→匯入→取代試算表」放回 Google Sheets。另支援貼上「知道連結者可檢視」的 Sheets 網址直接匯入（`/export?format=xlsx`，免憑證，已實測可下載範本）。**直接寫回 Google Sheets** 需 OAuth／服務帳戶，列為選做卡，憑證只走環境變數。**（2026-11-17 課程補充說明後改為直接串接 Google Sheets，負責人裁 OAuth，見 §4 `guided-notes-sheets-sync`）** | 阻塞匯入卡的 design，不阻塞骨架 |
 | 搶答成功的判定單位 | 以**題**為單位：每題最先送出的組別得該題；題組（X-01）以整組為單位同時送出、同時判定 | 阻塞作答卡 |
 | 「最快」的時間基準 | **伺服器接收順序**（單一事件迴圈內遞增序號），不採信客戶端時間戳 | 阻塞作答卡 |
 | 核心卡是否預留遊戲模式擴充點（`docs/trd-game-modes.md` §2） | **是**：`app-skeleton` 的階段狀態機可插入「判定中」階段、`buzz-answering` 的判定寫成 `ScoringRule` 策略；只留介面不做模式 | 阻塞 `app-skeleton`、`buzz-answering` 的設計 |
@@ -37,18 +37,29 @@
 | 卡名 | 涵蓋需求 | 摘要 | OpenSpec 狀態 | SpecKit 狀態 |
 |---|---|---|---|---|
 | `app-skeleton` | R-01、R-11 | 前後端骨架；老師（啟動時產生的老師金鑰）／學生（選組取得組別憑證，一組一台裝置，老師可釋放）進場；預設 4 組、可設 2–12 組；階段狀態機（準備→搶答中→已結束，預留判定中）；WebSocket 只在該連線的畫面內容改變時推送 | 已合入 | 已合入 |
-| `team-limit-50` | R-01、R-11 | 將單一活動可設定的組別範圍由 2–12 提高為 2–50；預設仍為 4；不改每組裝置上限、階段、身分撤銷、作答隔離與順位規則；50 組下選組、管理與結果須可操作 | 已實作（待合入）[#45](https://github.com/yue083139/software_fin-openspec/pull/45) | 已實作（待合入）[#39](https://github.com/yue083139/software_fin-speckit/pull/39) |
-| `guided-notes-import` | R-02、X-01 | 匯入 xlsx（≤5 MB）或「知道連結者可檢視」的 Sheets 連結；表頭別名（題號／編號／題次／No、作答／答案／回答／Answer）定位欄，題號格縱向合併範圍定位題組；只在準備階段；學生只看到題號與子題標籤 | 已合入 | 已合入 |
+| `team-limit-50` | R-01、R-04、R-08、R-09、R-10、R-11、X-04 | 老師可於準備階段設定 2–50 組；每組仍最多 6 台，保留既有身分、階段、作答隔離與伺服器順位語意 | 已實作（待合入）[#45](https://github.com/yue083139/software_fin-openspec/pull/45) | 已實作（待合入）[#39](https://github.com/yue083139/software_fin-speckit/pull/39) |
+| `guided-notes-import` | R-02、X-01 | 匯入 xlsx（≤5 MB）或「知道連結者可檢視」的 Sheets 連結（連結匯入已由 `guided-notes-sheets-sync` 改為登入後以 Sheets API 讀取副本）；表頭別名（題號／編號／題次／No、作答／答案／回答／Answer）定位欄，題號格縱向合併範圍定位題組；只在準備階段；學生只看到題號與子題標籤 | 已合入 | 已合入 |
 | `buzz-answering` | R-03、R-06、R-07、R-09、R-10 | 須先匯入題目才能開始；全部題目同時開放；每組每題只能送出一次（不可修改）；題組一次送出全部子題；答案 ≤200 字、不可空白或含控制字元；順位依伺服器接收序；搶答中學生看不到他組是否送出與順位 | 已合入 | 已合入 |
 | `results-view` | R-04、R-08 | 老師即時看「題號 × 組別」表（答案、順位、得主、各組得題數）；學生只在結束後看到每題得主、得主答案、全部組別答案與順位、各組得題數 | 已合入 | 已合入 |
-| `guided-notes-export` | R-05 | 只在結束後可匯出；每題得主答案寫回原檔作答格（佔位符取代、否則接在標籤後，一律存為文字）；無人搶答題不變；檔名 `<原檔名>-搶答結果.xlsx` | 已合入 | 已合入 |
+| `guided-notes-export` | R-05 | 只在結束後可匯出；每題得主答案寫回原檔作答格（佔位符取代、否則接在標籤後，一律存為文字）；無人搶答題不變；檔名 `<原檔名>_作答情況.xlsx` | 已合入 | 已合入 |
+| `guided-notes-sheets-sync` | R-02、R-05 | 依 2026-11-17 課程補充說明，Guided Notes 直接串接雲端 Google Sheets 讀寫：老師以 Google 帳號 OAuth 登入（權杖只存伺服器記憶體）；匯入時先以 Drive 複製一份「<原標題>_作答情況」副本，以 Sheets API 讀取副本的值與合併範圍沿用現行解析，結束後寫回同一份副本、原檔不動；OAuth `state` 以 cookie 綁定瀏覽器；保留上傳／下載 xlsx 當備援，移除公開連結下載；題組子題答案寫入標籤格右側、仍在作答表頭欄寬內的空白格 | 已合入 | 已合入 |
 | `csv-export` | X-02 | 題號、組別、答案、搶答順位匯出 CSV | 未開 | 未開 |
 | `fair-ranking` | X-03 | 公平順位機制：已搶答成功的組別下一題延遲計入順位（併入模式框架，見 `docs/trd-game-modes.md`） | 未開 | 未開 |
 | `game-mode-framework` | X-04 | 老師在準備階段選模式（經典搶答／只計對錯）；只計對錯：全部題目同時開放、每組每題可送出一次，結束後進入**判定中**，老師逐筆標正確／錯誤（匯入檔若有參考答案欄則預填建議，老師可「採用全部建議」），全部判定完才能揭曉；正確得 1 分，得主＝最早送出的正確答案（匯出寫回它）；判定中學生只看到自己組的送出；參考答案與判定建議永不送往學生端；經典搶答行為不變（TRD T-01～T-04、T-06、M3） | 已合入 | 已合入 |
 | `question-settings` | X-04 | 準備階段老師可把任一題設為**雙倍分數**（倍率 1 或 2），任何模式下該題得分 ×2；重新匯入即清除、重置活動保留；學生看得到哪些題是雙倍；分數欄名在全部倍率為 1 的經典搶答顯示「得題數」，其餘顯示「得分」（TRD T-05 倍率） | 已合入 | 已合入 |
-| `mode-buzz-fallback` | X-03、X-04 | 搶答＋錯誤遞補：最先送出者判錯則依順位遞補（TRD M1） | 未開 | 未開 |
+| `mode-buzz-fallback` | X-03、X-04 | **作廢**（負責人 2026-11-26 裁：改由 `answer-review` 在經典搶答結束後依順位檢查，不另做模式） | 作廢 | 作廢 |
 | `mode-timed-scoring` | X-04 | **時間計分**模式：老師逐題開放，每題時限 5–120 秒（預設 20，準備階段設定），到時伺服器關閉該題、老師也可提早結束；只收開放中那一題；老師判定該題後揭曉；正確得 `floor(1000 × (1 − t ÷ T ÷ 2) + 0.5) × 倍率`（以整數運算 `(2001 × T − 作答毫秒) // (2 × T)` 實作，避免浮點誤差）（t ≤ 0.5 秒得滿分，t 為伺服器量得的作答秒數）；揭曉後學生看到本組該題對錯與得分、本組累積分數，以及全部組別的累積**名次**（不含他組分數，以免反推作答秒數）；他組答案、分數仍只在活動結束後才看得到（TRD M2、T-04、T-05 時限） | 已合入 | 已合入 |
 | `team-mode` | X-04 | **組隊**（活動設定，可與任一模式搭配，只在準備階段切換）：一組最多 6 台裝置，同組有邀請碼後加入須帶碼（6 碼，不分大小寫與全半形；學生只在準備階段看得到本組碼，開始搶答與老師釋放某組時換新，搶答中向老師索取）；組內任一人送出即代表全組，每組每題仍只送出一次；搶答中組員看得到本組草稿（不計分、不匯出，老師與他組看不到）；切換組隊、改組數、釋放某組都撤銷相關裝置（TRD M4，§6 裁定）；第三期 | 已合入 | 已合入 |
+| `question-text` | X-04 | 匯入時以表頭別名（題目／題目敘述／問題／題幹／question）讀取可選的題目欄，逐子題取所在列的敘述（縱向合併只取錨點列），無題目欄照常匯入；學生只在搶答開始後收到敘述（準備階段不送、逐題模式只送已開放題、結束後全送），老師任何階段都有；敘述不參與寫回 | 已合入 | 已合入 |
+| `answer-review` | R-05、X-03、X-04 | 經典搶答結束後，老師在作答狀況與結果表逐題從第 1 順位檢查：「答錯」換下一順位、「答對」鎖定；未檢查的題維持最快者得主；得主與各組得分跟著鎖定結果變，全部答錯該題無得主、匯出留空；老師表、學生結果、匯出（Google 試算表與 xlsx）一致；雲端副本改名「<原標題>_作答情況」、xlsx 下載檔名同步改 | 已合入 | 已合入 |
+| `web-workbench` | R-01、R-04 | 前端改用 antd 重寫，參考 resolve 工作檯版型（左側導覽＋內容區、玻璃頂欄、內容卡、狀態膠囊）；行為與文案不變 | 已合入 | 已合入 |
+| `student-qr` | R-01、X-04 | 學生連結可用手機掃 QR code：以 `--tunnel`（`make dev-tunnel`、`start-tunnel.cmd`）啟動時伺服器以子行程起 Cloudflare 快速通道（cloudflared），取得 `https://<隨機>.trycloudflare.com/` 公開網址放進老師 view `student_url`（學生 view 不帶），失敗照常只開本機；老師 REST、老師 WebSocket（4403）、Google 回呼只接受本機 Host（127.0.0.1／localhost／[::1]）且不帶 Cloudflare 轉送標頭，先於金鑰檢查回 403「老師頁只能在本機開啟」；OAuth 維持 127.0.0.1；前端 QR（antd `QRCode`，`student_url ?? origin`）與 4403 提示併入 `web-workbench` 之後接上 | 已合入 | 已合入 |
+| `teacher-key-hidden` | R-01、X-04 | 老師金鑰只經網址首次帶入，老師頁載入後以 `history.replaceState` 自網址移除（網址列只剩 `#/teacher`），存本分頁 sessionStorage，重新整理仍可用、關分頁即失效；網址帶新金鑰以網址為準；401／4401 清除並提示回首頁重新輸入；伺服器與終端機輸出不變 | 已合入 | 已合入 |
+| `teacher-key-error` | R-01 | 老師 WebSocket 金鑰錯誤時先完成交握、不送任何訊息再以 4401 關閉，老師頁顯示「老師金鑰錯誤」與重開方式（整頁提示、不重連）；公開 Host 仍先以 4403 關閉 | 已合入 | 已合入 |
+| `easy-setup` | R-01、X-04 | 任一方式啟動就緒後自動以預設瀏覽器開老師頁一次（`--no-browser`／`QUIZ_NO_BROWSER=1`／`CI` 可關）；老師頁 Google 設定精靈（Cloud Console 直達連結、複製重新導向 URI、貼上用戶端 ID／密鑰後伺服器以白名單驗證寫入 repo 根目錄 `.env` 並立即生效，密鑰不回傳不入日誌，限本機＋金鑰，已登入時不可變更）；老師頁一鍵開關手機連線（執行期起停 cloudflared，老師 view 加 `tunnel` 狀態，找不到回 503 顯示安裝指令；移除 `start-tunnel.cmd`）；準備階段頂部「開始前的設定」清單；`start.ps1` 缺 uv／Node.js 時詢問以 winget 代裝 | 已合入 | 已合入 |
+| `results-podium` | R-04、R-08、X-04 | 活動結束後老師頁與學生結果頁顯示前三名領獎台（亞軍、冠軍、季軍由左到右）：只用結束後 view 既有的 `team_scores`，名次口徑同伺服器 `leaderboard`（同分同名次、下一名跳號，同名次依組別順序）；0 分不上台、沒有組別得分不顯示；學生端標出本組；不改伺服器與 view | 已合入 | 已合入 |
+| `live-feed` | R-04、X-04 | 搶答中老師頁右上角即時跳出搶答快訊（antd notification，3 秒、最多疊 4 則）：比對前後兩次老師 view 的 `board`，新出現的送出在經典搶答第 1 順位顯示「<組> 搶下第 N 題！」、其餘「<組> 送出第 N 題」；開頁與重連的第一個 view 只當基準不出通知；只在搶答中；文案不含答案（老師頁常投影）；學生端不變、不改伺服器與 view | 已合入 | 已合入 |
+| `podium-confetti` | R-04、R-08、X-04 | 領獎台（`results-podium`）出現時灑一次彩帶動畫（36 片，CSS 動畫最晚約 4.2 秒全部淡出）：位置與顏色以索引算出固定值、顏色只用 `--qz-*` 變量；同一份 view 重繪不重播，只有領獎台重新掛上（揭曉、重新整理）才再灑；不擋點擊、對讀屏軟體隱藏；`prefers-reduced-motion` 時不顯示；老師頁與學生結果頁皆有；不改伺服器與 view | 已合入 | 已合入 |
 
 狀態值：未開／提案中／實作中／已實作（待合入）／已合入。
 
@@ -70,5 +81,23 @@
 | 2026-11-14 | `team-mode` | 負責人指示第三期做組隊；開卡 v1.0：組隊做成與模式正交的活動設定（非第四種模式），同組第二台起憑邀請碼加入，組內草稿只給本組 | 兩組（負責人指示） | 同一會話兩組同批起稿 |
 | 2026-11-14 | `team-mode` | 提案輪評審（v1.1）：邀請碼只在準備階段給學生、開始搶答與釋放即換新碼；全形輸入正規化；契約四處語意補充（身分表、join、release、改組數）呈負責人批准；兩組實作完成、程式碼一致 | 兩組 | 同一會話兩組同批修訂 |
 | 2026-11-14 | `team-mode` | 負責人批准契約四處語意補充（「批，合」，記於 OpenSpec #14、SpecKit #13 留言）；兩組皆合入 `dev`（OpenSpec #12–#14；SpecKit #11–#13），`dev` 上 server、web/src、contracts 逐字相同；人工驗證交組員（`docs/manual-verification.md` 場次 E） | 兩組（負責人裁定） | 已確認 |
-| 2026-11-27 | `team-limit-50` | 負責人指示將組別上限提高至 50 組；SpecKit 開 Issue #38 與 010 規格，範圍不改每組 6 台上限及既有隔離、公平與階段規則 | SpecKit 組 | 已同步至 OpenSpec `feat/team-limit-50` |
-| 2026-11-28 | `team-limit-50` | 兩組均完成實作、評審與驗證，建立 OpenSpec PR #45、SpecKit PR #39；待修正 OpenSpec PR base、解決兩邊分支衝突並互連 PR 描述 | 兩組 | 待修訂同步合入兩組 PR |
+| 2026-11-17 | `guided-notes-sheets-sync` | 課程公告補充：Guided Notes 須直接串接雲端 Google Sheets 讀寫。負責人裁：OAuth 老師登入、保留 xlsx 上傳備援、先複製再寫、題組子題 G／H 欄寫入口徑併入本卡；開卡 v1.0 草稿（探針待 OAuth 用戶端建立後執行） | OpenSpec 組（負責人裁定） | SpecKit 組同日同批起稿（`specs/010-guided-notes-sheets-sync/`） |
+| 2026-11-17 | `guided-notes-sheets-sync` | 提案輪評審（v1.2，紅隊＋架構皆 CLEARED 0 阻斷）；負責人裁：匯入時就複製（解析與寫回同一份副本，免原檔被改後座標錯位）、OAuth `state` 以 cookie 綁定瀏覽器、批准 `contracts/api.md` 改動、副本名稱與題組子題規則照傾向；`docs/requirements.md` §4 記課程補充說明與 R-05 解讀 | 兩組（負責人裁定） | 同一會話兩組同批修訂 |
+| 2026-11-17 | `guided-notes-sheets-sync` | 兩組實作完成、程式碼逐字相同（server、web/src、contracts）；`make gate` 兩組皆綠；真棧以負責人 Google 帳號走完登入、匯入（複製後讀副本）、寫回副本，原檔未被寫入（`probes/results/2026-11-17-sheets-sync-real-stack.txt`）；人工驗證場次 A2、A5 待組員重驗 | 兩組 | 同一會話兩組同批實作 |
+| 2026-11-26 | `guided-notes-sheets-sync` | 組員重驗 A2 第 6 步、A5 第 16～18 步全數通過（A5 第 16 步 2026-11-23 依修正後 A3 重跑）；兩組皆合入 `dev`（OpenSpec #19、#20；SpecKit #18、#19）；OpenSpec 組歸檔為 `2026-11-26-guided-notes-sheets-sync`，增量規格併入 `openspec/specs/`（新增 `google-account`） | 兩組（負責人指示合入） | 已確認 |
+| 2026-11-26 | `question-text`、`answer-review`、`web-workbench` | 負責人驗證全流程後指示：學生頁要看得到題目（S 檔壓縮版）；經典搶答結束後逐題「答對／答錯」依順位檢查並改寫匯出（S 檔壓縮版，取代 `mode-buzz-fallback`：只在結束後、得主與得分跟著變、只套經典搶答）；雲端副本改名「_作答情況」；前端引入 antd 仿 resolve 工作檯（B 檔） | 兩組（負責人裁定） | 同一會話兩組同批起稿 |
+| 2026-11-26 | `answer-review` | 提案輪評審（v1.1：紅隊 0B/2M/3m、架構 0B/1M/3m 藥方入稿）；負責人裁未決照傾向、批准契約；兩組實作完成、server／web／contracts 逐字相同；實作輪紅隊 CLEARED 0B/0M/2m、架構 CLEARED；`guided-notes-export`、`guided-notes-sheets-sync` 兩列副本與下載檔名改「_作答情況」 | 兩組 | 同一會話兩組同批實作 |
+| 2026-11-26 | `student-qr` | 負責人裁：學生連結要能手機掃 QR code，走 Cloudflare 快速通道（非區網模式），老師端點與老師 WebSocket 只接受本機 Host，OAuth 維持 127.0.0.1；探針實測經通道 Host＝公開網域且帶 `cf-connecting-ip`、偽造 Host 被邊緣 403、`client.host` 會被 `X-Forwarded-For` 改寫故不採用；提案輪架構全卡掃＋實作輪對抗 diff（壓縮版一輪，架構 0B/3M/1m、對抗 0B/0M/1m，皆 CLEARED）後檔位由 B 改 S（動到 contracts、OAuth 回呼與安全邊界）；兩組伺服器程式逐字相同 | 兩組（負責人裁定） | 同一會話兩組同批（SpecKit `specs/014-student-qr/`） |
+| 2026-11-26 | `question-text`、`answer-review`、`web-workbench`、`student-qr` | 四卡皆經雙通道評審並合入 `dev`（OpenSpec #22–#25；SpecKit #21–#24），兩組 server、web、contracts 逐字相同；OpenSpec 組歸檔四卡；人工驗證待負責人整合後於本地執行 | 兩組（負責人指示合入） | 已確認 |
+| 2026-11-26 | `teacher-key-hidden` | 負責人整合驗證時要求「金鑰不要顯示在網址列」；開卡 B 檔，兩組同批實作（web 逐字相同） | 兩組（負責人指示） | 同一會話兩組同批 |
+| 2026-11-26 | `teacher-key-error` | 負責人指示開小卡處理 student-qr followup：金鑰錯誤時瀏覽器拿不到 4401、提示顯示不出來；改為先 accept 再以 4401 關閉 | 兩組（負責人指示） | 同一會話兩組同批 |
+| 2026-11-26 | `teacher-key-hidden`、`teacher-key-error` | 兩卡皆合入 `dev`（OpenSpec #29、#28；SpecKit #28、#27），兩組 server、web、contracts 逐字相同；OpenSpec 組歸檔兩卡；人工驗證待負責人整合後執行 | 兩組（負責人指示合入） | 已確認 |
+| 2026-11-26 | `easy-setup` | 負責人指示簡化啟動（要手動編 .env、從終端機複製網址、啟動前選腳本、缺工具只報錯），四項全做並補充「make dev 之類啟動後就能直接進後台做」；S 檔壓縮版；合入順序在 `teacher-key-hidden`、`teacher-key-error` 之後 | 兩組（負責人裁定） | 同一會話兩組同批起稿 |
+| 2026-11-26 | `easy-setup` | 提案輪、實作輪雙通道評審皆 0 阻斷；兩組皆合入 `dev`（OpenSpec #31；SpecKit #30），合入時 CI 紅在推播測試時序不穩，隨即以 OpenSpec #32／SpecKit #31 修正；OpenSpec 組歸檔；人工驗證（場次 H、F）待負責人 | 兩組（負責人授權合入） | 已確認 |
+| 2026-11-27 | `results-podium` | 負責人 2026-11-27 同意成員自行開卡（「你有想改的可以拉出去改，兩個專案都一起改」）；成員提議揭曉後顯示前三名領獎台；B 檔，只改 web，兩組同批實作（web 逐字相同） | 兩組（成員提議、負責人授權） | 同一會話兩組同批 |
+| 2026-11-27 | `results-podium` | 架構、對抗兩通道評審皆 CLEARED（0 阻斷 0 重要，followup 補 3 例測試與分數來源前提）；人工驗證場次 I 兩組皆符合；兩組皆以 merge commit 合入 `dev`（OpenSpec #40；SpecKit #40），web 逐字相同；OpenSpec 組歸檔 | 兩組（負責人授權 AI 評審後合入） | 已確認 |
+| 2026-11-27 | `live-feed` | 成員提議搶答中老師頁跳出「第2組 搶下第 3 題！」快訊（負責人 2026-11-27 授權成員自行開卡、兩組同步）；B 檔，只改 web，兩組同批實作（web 逐字相同） | 兩組（成員提議、負責人授權） | 同一會話兩組同批 |
+| 2026-11-27 | `podium-confetti` | 成員提議揭曉領獎台時灑彩帶（負責人 2026-11-27 授權成員自行開卡、兩組同步）；B 檔，只改 web，兩組同批實作（web 逐字相同） | 兩組（成員提議、負責人授權） | 同一會話兩組同批 |
+| 2026-11-27 | `team-limit-50` | 負責人指示將組別上限提高至 50 組；SpecKit 建立 `010-team-limit-50`，OpenSpec 建立 `team-limit-50`，不改每組 6 台上限及既有隔離、公平與階段規則 | 兩組同批起稿 | PR #45、#39 待合入 |
+| 2026-11-28 | `team-limit-50` | 兩組實作、評審與人工驗證完成；PR #45、#39 已建立，待兩支分支合入最新 `dev`、修正 OpenSpec PR base 並互連 PR 描述；矩陣落點 M-031–M-033 | OpenSpec #45 | SpecKit #39 |
+| 2026-11-27 | `live-feed`、`podium-confetti` | live-feed 評審同指重連基準 ⇒ v1.1 改程式照規格，藥方經原評審回驗 CLEARED；podium-confetti 兩通道 CLEARED、文件訂正回驗 CLEARED；人工驗證場次 J、K 兩組皆符合；兩組皆以 merge commit 合入 `dev`（OpenSpec #42、#43；SpecKit #42、#43），web 逐字相同；OpenSpec 組歸檔兩卡 | 兩組（負責人授權 AI 評審後合入） | 已確認 |

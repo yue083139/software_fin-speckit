@@ -50,3 +50,13 @@ def client(activity):
 @pytest.fixture
 def teacher_headers():
     return {"X-Teacher-Key": TEACHER_KEY}
+
+
+@pytest.fixture(autouse=True)
+def _testclient_host_is_local(monkeypatch):
+    """student-qr D2：TestClient 預設 Host 是 `testserver`，測試內視為本機。
+
+    公開 Host 的負例見 test_api_host.py。
+    """
+    from quiz_server import app as app_module
+    monkeypatch.setattr(app_module, "LOCAL_HOSTNAMES", app_module.LOCAL_HOSTNAMES | {"testserver"})

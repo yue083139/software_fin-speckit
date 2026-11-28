@@ -1,3 +1,4 @@
+import { btn } from "../test-utils";
 import { render, screen } from "@testing-library/react";
 import { StudentPanel } from "./Student";
 import { TeacherPanel } from "./Teacher";
@@ -34,8 +35,8 @@ describe("老師頁", () => {
 
   it("準備中只可按開始", () => {
     render(<TeacherPanel view={view} act={() => {}} upload={() => {}} />);
-    expect(screen.getByText("開始搶答")).toBeEnabled();
-    expect(screen.getByText("結束搶答")).toBeDisabled();
+    expect(btn("開始搶答")).toBeEnabled();
+    expect(btn("結束搶答")).toBeDisabled();
   });
 
   it("已加入的組別可釋放", () => {
@@ -55,7 +56,7 @@ describe("匯入", () => {
 
   it("搶答中不能匯入", () => {
     render(<TeacherPanel view={{ ...view, phase: "answering" }} act={() => {}} upload={() => {}} />);
-    expect(screen.getByText("從連結匯入")).toBeDisabled();
+    expect(btn("從 Google 試算表匯入")).toBeDisabled();
   });
 
   it("學生準備中看到題號清單", () => {

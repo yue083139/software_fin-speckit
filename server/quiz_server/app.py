@@ -3,6 +3,8 @@ import asyncio
 import logging
 import os
 import secrets
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import quote
@@ -20,20 +22,48 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, StrictInt
 
-from . import results
+from . import google_sheets, results
 from .activity import Activity, AlreadySubmittedError, InviteCodeError, TeamTakenError
-from .guided_notes import GuidedNotesError, write_answers
+from .envfile import ENV_FILE, remove_keys, write_keys
+from .google_auth import (
+    COOKIE_NAME,
+    STATE_TTL,
+    GoogleApiError,
+    GoogleAuthError,
+    GoogleCallbackError,
+    GoogleConfigError,
+    GoogleConfigInvalid,
+    GoogleSession,
+    state_digest,
+    validate_client,
+)
+from .guided_notes import GuidedNotesError, grids_to_xlsx, parse_grids, rename_sheets, write_answers
 from .phases import Phase, PhaseError
-from .sources import MAX_BYTES, SourceError, check_upload, download_sheet
+from .sources import MAX_BYTES, SourceError, check_upload, parse_sheet_url
+from .tunnel import Tunnel
 from .views import view_for
 
 log = logging.getLogger("quiz_server")
 DEFAULT_STATIC = Path(__file__).resolve().parents[2] / "web" / "dist"
 WS_UNAUTHORIZED = 4401
+WS_NOT_LOCAL = 4403
+# student-qr D2：老師身分只在本機。以 Host 主機名判斷，且不得帶 Cloudflare 邊緣加上的轉送標頭——
+# 經通道的 Host 是公開網域、偽造 Host 會被邊緣 403；client.host 會被 uvicorn 依 X-Forwarded-For 改寫，不採用
+#（探針 probes/results/2026-11-26-cloudflared.txt ②③④）
+LOCAL_HOSTNAMES = frozenset({"127.0.0.1", "localhost", "[::1]"})
+TUNNEL_HEADERS = ("cf-connecting-ip", "cf-ray")
+NOT_LOCAL = "老師頁只能在本機開啟"
+# easy-setup D2、D3
+CONFIG_SIGNED_IN = "請先登出 Google 再變更設定"
+TUNNEL_STARTING = "手機連線建立中"
+TUNNEL_MISSING = "找不到 cloudflared，請先安裝：winget install --id Cloudflare.cloudflared -e"
+TUNNEL_TIMEOUT = "建立手機連線逾時，請再試一次"
+TUNNEL_IN_USE = "搶答進行中不能關閉手機連線"
+TUNNEL_START_TIMEOUT = 30
 
 
 class TeamsBody(BaseModel):
@@ -83,12 +113,35 @@ class JudgeBody(BaseModel):
     correct: bool
 
 
+class ReviewBody(BaseModel):
+    question: int
+    team: str
+    correct: bool
+
+
+class ReviewResetBody(BaseModel):
+    question: int
+
+
+class GoogleConfigBody(BaseModel):
+    client_id: str
+    client_secret: str
+
+
 XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+COOKIE_PATH = "/api/google"
+# 回呼頁只用固定文案，不回顯任何查詢參數（guided-notes-sheets-sync D1：避免反射型 XSS 偷老師金鑰）
+CALLBACK_OK = ("<!doctype html><meta charset=utf-8><title>登入完成</title>"
+               "<p>登入完成，可關閉此分頁，回到老師頁。</p>")
+CALLBACK_NOT_LOCAL = ("<!doctype html><meta charset=utf-8><title>登入失敗</title>"
+                      "<p>請在本機（127.0.0.1）開啟老師頁後重新登入。</p>")
+CALLBACK_FAIL = ("<!doctype html><meta charset=utf-8><title>登入失敗</title>"
+                 "<p>登入失敗，請回老師頁重新登入。</p>")
 
 
 def export_filename(source: str | None) -> str:
     stem = (source or "guided-notes").rsplit(".", 1)[0]
-    return f"{stem}-搶答結果.xlsx"
+    return f"{stem}_作答情況.xlsx"
 
 
 def resolve_teacher_key(explicit: str | None = None) -> str:
@@ -97,20 +150,65 @@ def resolve_teacher_key(explicit: str | None = None) -> str:
 
 def create_app(activity: Activity | None = None, teacher_key: str | None = None,
                static_dir: Path | None = DEFAULT_STATIC,
-               http_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
-    app = FastAPI(title="課堂搶答系統")
+               http_transport: httpx.AsyncBaseTransport | None = None,
+               google: GoogleSession | None = None, student_url: str | None = None,
+               tunnel: Tunnel | None = None, env_file: Path = ENV_FILE,
+               tunnel_watch_interval: float = 2.0) -> FastAPI:
     act = activity or Activity()
+    act.public_url = student_url
+    act.tunnel_state = "on" if student_url else "off"
+    # 手機連線（easy-setup D3）：鎖只包狀態轉換，不包約 4 秒的 tunnel.start
+    tunnel_lock = asyncio.Lock()
+    tunnel_flags = {"cancel": False}
+    start_done = asyncio.Event()
+    start_done.set()
+
+    async def watch_tunnel() -> None:
+        """子行程意外結束 ⇒ 轉 off（v1.1 藥方 6）；只記結果，不記網址。"""
+        while True:
+            await asyncio.sleep(tunnel_watch_interval)
+            if tunnel is None or act.tunnel_state != "on" or tunnel.alive():
+                continue
+            async with tunnel_lock:
+                if act.tunnel_state == "on" and not tunnel.alive():
+                    await act.set_tunnel("off", None)
+                    log.warning("手機連線的 cloudflared 已結束，改為只在本機")
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        watcher = asyncio.create_task(watch_tunnel())
+        try:
+            yield
+        finally:
+            watcher.cancel()
+            if tunnel is not None:
+                await asyncio.to_thread(tunnel.stop)
+
+    app = FastAPI(title="課堂搶答系統", lifespan=lifespan)
+    gs = google or GoogleSession(os.environ.get("GOOGLE_CLIENT_ID"), os.environ.get("GOOGLE_CLIENT_SECRET"),
+                                 transport=http_transport)
+    app.state.google = gs
     secret = resolve_teacher_key(teacher_key)
     app.state.activity = act
+
+    def is_local(headers: Any) -> bool:
+        host = headers.get("host", "").strip().lower()
+        hostname = host.split("]")[0] + "]" if host.startswith("[") else host.rsplit(":", 1)[0]
+        return hostname in LOCAL_HOSTNAMES and not any(h in headers for h in TUNNEL_HEADERS)
 
     def is_teacher(given: str | None) -> bool:
         return given is not None and secrets.compare_digest(given.encode(), secret.encode())
 
-    def require_teacher(x_teacher_key: Annotated[str | None, Header()] = None) -> None:
+    def require_teacher(request: Request, x_teacher_key: Annotated[str | None, Header()] = None) -> None:
+        if not is_local(request.headers):  # 先擋 Host，不讓公開網域探測金鑰對錯
+            raise HTTPException(403, NOT_LOCAL)
         if not is_teacher(x_teacher_key):
             raise HTTPException(401, "需要老師金鑰")
 
     teacher = [Depends(require_teacher)]
+    # 匯出與寫回序列化（answer-review D5 v1.1）：快照在鎖內取，兩次寫回不交錯，
+    # 「上次寫過的題號」才與副本實際內容一致
+    export_lock = asyncio.Lock()
 
     @app.exception_handler(PhaseError)
     async def _phase_error(_: Request, exc: PhaseError) -> JSONResponse:
@@ -134,6 +232,23 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
     @app.exception_handler(SourceError)
     async def _bad_source(_: Request, exc: ValueError) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=400)
+
+    @app.exception_handler(GoogleConfigError)
+    @app.exception_handler(google_sheets.SheetNotFoundError)
+    async def _google_bad_request(_: Request, exc: ValueError) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+    @app.exception_handler(GoogleConfigInvalid)
+    async def _google_config_invalid(_: Request, exc: GoogleConfigInvalid) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=422)
+
+    @app.exception_handler(GoogleAuthError)
+    async def _google_auth(_: Request, exc: GoogleAuthError) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=401)
+
+    @app.exception_handler(GoogleApiError)
+    async def _google_api(_: Request, exc: GoogleApiError) -> JSONResponse:
+        return JSONResponse({"detail": str(exc)}, status_code=502)
 
     @app.exception_handler(ValueError)
     async def _value_error(_: Request, exc: ValueError) -> JSONResponse:
@@ -205,19 +320,163 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
 
     @app.post("/api/teacher/import-url", dependencies=teacher)
     async def import_url(body: UrlBody) -> dict[str, Any]:
-        act.require_preparing()  # 先擋階段，避免搶答中還對外發請求
-        data = await download_sheet(body.url, transport=http_transport)
-        await act.load_questions(data, "Google 試算表.xlsx")
-        log.info("匯入 Google 試算表：%d 題", len(act.questions))
-        return {"source": act.source_name, "count": len(act.questions)}
+        # 錯誤先後：409 階段 → 400 連結 → 401 Google 登入 → 502（D7）；登入檢查前不發對外請求
+        act.require_preparing()
+        sheet_id, gid = parse_sheet_url(body.url)
+        title, copy_id, grids, notes = await google_sheets.import_copy(gs, sheet_id, gid, parse_grids)
+        try:
+            data, xlsx_sheets = grids_to_xlsx(grids)
+            await act.load_questions(data, title, notes=notes, sheet_id=copy_id, xlsx_sheets=xlsx_sheets)
+        except Exception:
+            # 副本已建立但沒採用（例：等 Google 回應時老師已開始搶答 ⇒ 409）：刪掉，不留孤兒副本
+            await google_sheets.delete_copy(gs, copy_id)
+            raise
+        log.info("匯入 Google 試算表副本：%d 題", len(act.questions))
+        return {"source": act.source_name, "count": len(act.questions),
+                "sheet_url": google_sheets.sheet_url(copy_id)}
+
+    @app.post("/api/teacher/export-sheet", dependencies=teacher)
+    async def export_sheet() -> dict[str, str]:
+        async with export_lock:
+            if act.phase is not Phase.ENDED:
+                raise PhaseError("搶答結束後才能匯出")
+            if act.notes is None:
+                raise PhaseError("尚未匯入題目")
+            if act.source_sheet_id is None:
+                raise PhaseError("題目不是從 Google 試算表匯入，請改用下載 xlsx")
+            sheet_id, notes, answers = act.source_sheet_id, act.notes, results.winning_answers(act)
+            url = await google_sheets.write_answers(gs, sheet_id, notes, answers, restore=act.sheet_written)
+            await act.mark_sheet_written(sheet_id, frozenset(answers))
+        log.info("寫回 Google 試算表副本：活動 v%s", act.version)
+        return {"url": url}
+
+    @app.get("/api/teacher/google", dependencies=teacher)
+    async def google_status() -> dict[str, Any]:
+        return gs.status()
+
+    @app.post("/api/teacher/google/login", dependencies=teacher)
+    async def google_login() -> JSONResponse:
+        url, state = gs.begin()
+        resp = JSONResponse({"url": url})
+        # cookie 綁定發起登入的瀏覽器：拿到授權網址的他人無法在自己的瀏覽器完成回呼（D1 v1.2）
+        resp.set_cookie(COOKIE_NAME, state_digest(state), max_age=STATE_TTL, path=COOKIE_PATH,
+                        httponly=True, samesite="lax")
+        return resp
+
+    @app.get("/api/google/callback")
+    async def google_callback(request: Request) -> HTMLResponse:
+        if not is_local(request.headers):
+            return HTMLResponse(CALLBACK_NOT_LOCAL, status_code=403)
+        q = request.query_params
+        try:
+            await gs.complete(q.get("state"), q.get("code"), request.cookies.get(COOKIE_NAME), q.get("error"))
+        except (GoogleCallbackError, GoogleApiError):
+            resp = HTMLResponse(CALLBACK_FAIL, status_code=400)
+        else:
+            log.info("老師已以 Google 帳號登入")
+            resp = HTMLResponse(CALLBACK_OK)
+        resp.delete_cookie(COOKIE_NAME, path=COOKIE_PATH)
+        return resp
+
+    # Google 設定精靈（easy-setup D2）：檢查已登入 → 寫 .env → 立即生效 → 設環境變數，整段在鎖內
+    config_lock = asyncio.Lock()
+    config_keys = ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET")
+
+    @app.post("/api/teacher/google/config", dependencies=teacher)
+    async def google_config(body: GoogleConfigBody) -> dict[str, Any]:
+        validate_client(body.client_id, body.client_secret)  # 不 strip：寫入的就是驗證過的原值
+        async with config_lock:
+            if gs.signed_in:
+                raise HTTPException(409, CONFIG_SIGNED_IN)
+            values = dict(zip(config_keys, (body.client_id, body.client_secret), strict=True))
+            await asyncio.to_thread(write_keys, values, env_file)
+            gs.reconfigure(body.client_id, body.client_secret)
+            os.environ.update(values)
+        log.info("已更新 Google OAuth 用戶端設定")  # 不記 ID 與密鑰
+        return gs.status()
+
+    @app.delete("/api/teacher/google/config", dependencies=teacher)
+    async def google_config_clear() -> dict[str, Any]:
+        async with config_lock:
+            if gs.signed_in:
+                raise HTTPException(409, CONFIG_SIGNED_IN)
+            await asyncio.to_thread(remove_keys, config_keys, env_file)
+            gs.reconfigure(None, None)
+            for k in config_keys:
+                os.environ.pop(k, None)
+        log.info("已清除 Google OAuth 用戶端設定")
+        return gs.status()
+
+    def tunnel_body() -> dict[str, Any]:
+        return {"tunnel": act.tunnel_state, "student_url": act.public_url}
+
+    @app.post("/api/teacher/tunnel", dependencies=teacher)
+    async def tunnel_open() -> dict[str, Any]:
+        async with tunnel_lock:
+            if act.tunnel_state == "on":
+                return tunnel_body()
+            if act.tunnel_state == "starting":
+                raise HTTPException(409, TUNNEL_STARTING)
+            if tunnel is None or not tunnel.available():
+                raise HTTPException(503, TUNNEL_MISSING)
+            tunnel_flags["cancel"] = False
+            start_done.clear()
+            await act.set_tunnel("starting", None)
+        url: str | None = None
+        cancelled = False
+        try:
+            url = await asyncio.to_thread(tunnel.start, TUNNEL_START_TIMEOUT)
+        finally:
+            async with tunnel_lock:
+                cancelled = tunnel_flags["cancel"]
+                try:
+                    if cancelled or url is None:
+                        if url is not None:
+                            await asyncio.to_thread(tunnel.stop)
+                        await act.set_tunnel("off", None)
+                    else:
+                        await act.set_tunnel("on", url)
+                finally:
+                    start_done.set()
+        if cancelled:
+            return {"tunnel": "off", "student_url": None}
+        if url is None:
+            raise HTTPException(504, TUNNEL_TIMEOUT)
+        log.info("手機連線已開啟")
+        return tunnel_body()
+
+    @app.delete("/api/teacher/tunnel", dependencies=teacher)
+    async def tunnel_close() -> dict[str, Any]:
+        if act.phase is not Phase.PREPARING:
+            raise HTTPException(409, TUNNEL_IN_USE)  # 關掉會讓手機上的組別全部斷線（v1.1 藥方 3）
+        wait = False
+        async with tunnel_lock:
+            if act.tunnel_state == "starting":
+                tunnel_flags["cancel"] = True  # 建立完成後由開啟那端停掉子行程（v1.1 藥方 2）
+                wait = True
+            elif act.tunnel_state == "on":
+                if tunnel is not None:
+                    await asyncio.to_thread(tunnel.stop)
+                await act.set_tunnel("off", None)
+        if wait:
+            await start_done.wait()
+        log.info("手機連線已關閉")
+        return tunnel_body()
+
+    @app.post("/api/teacher/google/logout", dependencies=teacher)
+    async def google_logout() -> dict[str, bool]:
+        await gs.logout()
+        return {"signed_in": False}
 
     @app.get("/api/teacher/export", dependencies=teacher)
     async def export() -> Response:
-        if act.phase is not Phase.ENDED:
-            raise PhaseError("搶答結束後才能匯出")
-        if act.notes is None or act.source_bytes is None:
-            raise PhaseError("尚未匯入題目")
-        data = write_answers(act.source_bytes, act.notes, results.winning_answers(act))
+        async with export_lock:
+            if act.phase is not Phase.ENDED:
+                raise PhaseError("搶答結束後才能匯出")
+            if act.notes is None or act.source_bytes is None:
+                raise PhaseError("尚未匯入題目")
+            notes = rename_sheets(act.notes, act.source_xlsx_sheets) if act.source_xlsx_sheets else act.notes
+            data = write_answers(act.source_bytes, notes, results.winning_answers(act))
         name = export_filename(act.source_name)
         disposition = f"attachment; filename=\"guided-notes-result.xlsx\"; filename*=UTF-8''{quote(name)}"
         return Response(data, media_type=XLSX_MEDIA, headers={"Content-Disposition": disposition})
@@ -266,6 +525,18 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
         log.info("判定：題 %s 組別 %s 結果 %s", body.question, body.team, body.correct)
         return {"question": body.question, "team": body.team, "correct": body.correct}
 
+    @app.post("/api/teacher/review", dependencies=teacher)
+    async def review(body: ReviewBody) -> dict[str, Any]:
+        await act.review(body.question, body.team, body.correct)
+        log.info("檢查：題 %s 組別 %s 結果 %s", body.question, body.team, body.correct)
+        return {"question": body.question, "team": body.team, "correct": body.correct}
+
+    @app.post("/api/teacher/review-reset", dependencies=teacher)
+    async def review_reset(body: ReviewResetBody) -> dict[str, int]:
+        await act.review_reset(body.question)
+        log.info("重設檢查：題 %s", body.question)
+        return {"question": body.question}
+
     @app.post("/api/teacher/accept-suggestions", dependencies=teacher)
     async def accept_suggestions() -> dict[str, int]:
         return {"applied": await act.accept_suggestions()}
@@ -287,7 +558,16 @@ def create_app(activity: Activity | None = None, teacher_key: str | None = None,
         if role not in ("teacher", "student"):
             await socket.close(code=1008)
             return
+        if role == "teacher" and not is_local(socket.headers):
+            # 先 accept 再關：交握前就關，瀏覽器只會收到 HTTP 403、關閉碼變 1006，前端無從分辨
+            #（student-qr 實作偏離回稿）；accept 後不送任何 view 就關閉
+            await socket.accept()
+            await socket.close(code=WS_NOT_LOCAL)
+            return
         if role == "teacher" and not is_teacher(key):
+            # 同上：先 accept 再以 4401 關，前端才顯示得出「金鑰錯誤」（teacher-key-error）
+            # 關閉前不送任何 view
+            await socket.accept()
             await socket.close(code=WS_UNAUTHORIZED)
             return
         await socket.accept()

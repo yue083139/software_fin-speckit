@@ -41,12 +41,25 @@ def test_round_trip_preserves_other_cells(fixture_bytes, name):
 
 
 def test_group_keeps_labels(fixture_bytes):
+    """guided-notes-sheets-sync D5：題組子題答案寫入標籤右側填空格，標籤格不動。"""
     original = fixture_bytes("group.xlsx")
     notes = parse_workbook(original)
     out = write_answers(original, notes, {1: ("CPU", "作業系統")})
     ws = _load(out)["學習單"]
     cells = [s.cell for s in notes.questions[0].slots]
-    assert [ws[c].value for c in cells] == ["（1）CPU", "（2）作業系統"]
+    assert cells == ["H5", "H6"]
+    assert [ws[c].value for c in cells] == ["CPU", "作業系統"]
+    assert [ws["G5"].value, ws["G6"].value] == ["（1）", "（2）"]
+
+
+def test_label_with_merged_answer_cell_keeps_append(fixture_bytes):
+    """作答格本身為合併範圍（variant 子題）⇒ D5 不適用，維持接在標籤後。"""
+    original = fixture_bytes("variant.xlsx")
+    notes = parse_workbook(original)
+    out = write_answers(original, notes, {2: ("前序", "中序", "後序")})
+    q = notes.questions[1]
+    ws = _load(out)[q.slots[0].sheet]
+    assert [ws[s.cell].value for s in q.slots] == ["(a)前序", "(b)中序", "(c)後序"]
 
 
 def test_placeholder_replaced(fixture_bytes):

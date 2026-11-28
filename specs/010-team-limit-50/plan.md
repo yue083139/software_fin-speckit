@@ -1,4 +1,4 @@
-# Implementation Plan: 組別上限提高至 50 組
+﻿# Implementation Plan: 組別上限提高至 50 組
 
 **Branch**: `010-team-limit-50` | **Date**: 2026-11-27 | **Spec**: [spec.md](spec.md)
 **Input**: `specs/010-team-limit-50/spec.md` v1.0
@@ -14,7 +14,7 @@
 
 **契約批准點**：`contracts/api.md` 的 `POST /api/teacher/teams` 本體範圍須由 2–12 改為 2–50，屬凍結契約語意變更；提案輪後須由負責人明確批准才可實作（research R6、[contracts/api-change.md](contracts/api-change.md)）。
 
-**矩陣落點**：`eval/acceptance/matrix.yaml` 新增 M-020～M-022（組數邊界與撤銷、300 台容量與隔離、50 組 UI 可操作性）。
+**矩陣落點**：`eval/acceptance/matrix.yaml` 新增 M-031～M-033（組數邊界與撤銷、300 台容量與隔離、50 組 UI 可操作性）。
 
 ## Technical Context
 
@@ -101,7 +101,7 @@ web/src/
 
 contracts/api.md              # 批准後把 teams count 2–12 改為 2–50
 docs/product-trd.md           # 使用者可設組數口徑 2–50
-eval/acceptance/matrix.yaml   # M-020～M-022
+eval/acceptance/matrix.yaml   # M-031～M-033
 probes/team_limit_50_capacity_probe.py
 probes/results/2026-11-27-team-limit-50-capacity.txt
 ```
@@ -111,3 +111,4 @@ probes/results/2026-11-27-team-limit-50-capacity.txt
 ## Complexity Tracking
 
 無架構複雜度違反。parity 尚未同步是流程阻塞，不以複雜設計合理化；送審前必須補齊姊妹 repo 同名卡與共用檔。
+

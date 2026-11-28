@@ -1,0 +1,92 @@
+@startuml 017-easy-setup-class
+title 017 easy-setup：類別圖（v1.1）
+
+class envfile <<module>> {
+  ENV_FILE : Path
+  ENV_LINE : Pattern
+  read_lines(path) : list
+  write_keys(values : dict, path) : None
+  remove_keys(keys, path) : None
+  load_env(path) : None
+}
+
+class launch <<module>> {
+  NO_BROWSER_HINT : str
+  should_open(no_browser : bool, env) : bool
+  open_when_ready(is_started, url, opener) : bool
+}
+
+class google_auth <<module>> {
+  CLIENT_ID_PATTERN : Pattern
+  CLIENT_SECRET_PATTERN : Pattern
+  MAX_LEN : int = 128
+  REDIRECT_URI : str
+  validate_client(client_id, client_secret) : None
+}
+
+class GoogleConfigInvalid <<422>>
+
+class GoogleSession {
+  - _client_id : str
+  - _client_secret : str
+  - _generation : int
+  + configured : bool
+  + signed_in : bool
+  + client_id_hint : str
+  + status() : dict
+  + reconfigure(client_id, client_secret) : None
+  + complete(state, code, cookie) : None
+}
+
+class Tunnel {
+  + port : int
+  + proc : Popen
+  + available() : bool
+  + alive() : bool
+  + start(timeout : float) : str
+  + stop() : None
+}
+
+class Activity {
+  + public_url : str
+  + tunnel_state : str
+  + set_tunnel(state : str, url : str) : None
+}
+
+class App <<create_app>> {
+  tunnel : Tunnel（注入實例）
+  env_file : Path
+  tunnel_watch_interval : float
+  - tunnel_lock : Lock
+  - config_lock : Lock
+  - cancel 旗標・建立完成事件
+  + google_config(body) : dict
+  + google_config_clear() : dict
+  + tunnel_open() : dict
+  + tunnel_close() : dict
+  - watch_tunnel()（lifespan 監看）
+}
+
+class Main <<main 模組>> {
+  + main(argv) : None
+  + start_browser(server, url) : None
+}
+
+class SetupChecklist <<web>> {
+  google : 未設定 或 未登入 或 已登入
+  tunnel : off 或 starting 或 on
+  questions : 題數
+}
+
+Main --> Tunnel : Tunnel(a.port)，--tunnel 共用
+Main --> App : create_app(tunnel=同一實例)
+Main ..> launch : should_open 與 open_when_ready
+App --> GoogleSession : reconfigure
+App --> envfile : write_keys 與 remove_keys
+App --> Tunnel : start 與 stop（to_thread）、alive
+App --> Activity : set_tunnel
+App ..> google_auth : validate_client
+google_auth ..> GoogleConfigInvalid
+GoogleSession ..> google_auth : 白名單與常數
+SetupChecklist ..> App : 讀老師 view 與 Google 狀態
+@enduml

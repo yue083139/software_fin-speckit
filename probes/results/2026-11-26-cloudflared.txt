@@ -1,0 +1,11 @@
+cloudflared：C:/Program Files (x86)/cloudflared/cloudflared.exe
+① 含網址的輸出行（3.3 秒）：2026-11-26T12:54:52Z INF |  https://penny-cheap-centered-fewer.trycloudflare.com                                      |
+② 經通道 GET /echo（第 31 次嘗試）：{'host': 'penny-cheap-centered-fewer.trycloudflare.com', 'client.host': '<公網 IP，已遮蔽>', 'x-forwarded-for 存在': True, 'cf-connecting-ip 存在': True, 'x-forwarded-host 存在': False, '標頭名稱': ['accept', 'accept-encoding', 'cdn-loop', 'cf-connecting-ip', 'cf-ew-via', 'cf-ipcountry', 'cf-ray', 'cf-visitor', 'cf-warp-tag-id', 'cf-worker', 'connection', 'host', 'user-agent', 'x-forwarded-for', 'x-forwarded-proto']}
+② 對照：本機直連、偽造 Host 與 X-Forwarded-For：{'host': 'evil.example', 'client.host': '1.2.3.4', 'x-forwarded-for 存在': True, 'cf-connecting-ip 存在': False, 'x-forwarded-host 存在': False, '標頭名稱': ['accept', 'accept-encoding', 'connection', 'host', 'user-agent', 'x-forwarded-for']}
+③ 經通道 WebSocket：{"host":"penny-cheap-centered-fewer.trycloudflare.com","client.host":"<公網 IP，已遮蔽>","x-forwarded-for 存在":true,"cf-connecting-ip 存在":true,"x-forwarded-host 存在":false,"標頭名稱":["accept-encoding","cdn-loop","cf-connecting-ip","cf-ew-via","cf-ipcountry","cf-ray","cf-visitor","cf-warp-tag-id","cf-worker","connection","host","sec-websocket-key","sec-websocket-version","upgrade","user-agent","x-forwarded-for","x-forwarded-proto"]}
+④ 經通道偽造 Host: 127.0.0.1:8020：HTTP 403；<html>
+<head><title>403 Forbidden</title></head>
+<body>
+<center><h1>403 Forbidden</h1></center>
+<hr><center>cloudfla
+通道已關閉（cloudflared 結束碼 1）

@@ -6,7 +6,7 @@ rows:
   - id: M-001
     需求: R-01
     聲明: 進場時可選擇老師或學生身分，學生須選定組別並以組別憑證辨識
-    守門: server/tests/test_api_skeleton.py；web/src/pages/pages.test.tsx
+    守門: server/tests/test_api_skeleton.py；web/src/pages/pages.test.tsx；server/tests/test_api_host.py::test_teacher_ws_bad_key_accepts_then_closes_4401、web/src/live.test.tsx、web/src/pages/qr.test.tsx（teacher-key-error：金鑰錯誤先交握後 4401、前端 4401 不重連；金鑰清除與錯誤頁見 M-024）
     狀態: covered
     卡: app-skeleton
   - id: M-002
@@ -18,7 +18,7 @@ rows:
   - id: M-003
     需求: R-02
     聲明: 匯入任一份合規 Guided Notes 後題數與原檔一致，不依賴固定座標（至少三份版面不同的夾具）
-    守門: server/tests/test_guided_notes_parse.py（single、group、variant 三份夾具）；server/tests/test_api_import.py
+    守門: server/tests/test_guided_notes_parse.py（single、group、variant 三份夾具）；server/tests/test_api_import.py；server/tests/test_google_sheets.py::test_sheets_grid_parses_same_as_xlsx（四份夾具，Google Sheets 格狀資料與 xlsx 解析等價）、test_number_column_uses_effective_value；server/tests/test_api_google.py::test_import_url_reads_copy（guided-notes-sheets-sync：直接讀雲端試算表副本）；server/tests/test_guided_notes_parse.py::test_prompts_*、test_no_question_column_still_imports（question-text：題目欄可選，不改題數）
     狀態: covered
     卡: guided-notes-import
   - id: M-004
@@ -29,14 +29,14 @@ rows:
     卡: buzz-answering
   - id: M-005
     需求: R-10
-    聲明: 同一題並發送出時恰一組成功，順位依伺服器接收序且無重號
-    守門: server/tests/test_submit.py::test_concurrent_same_question、test_concurrent_same_team_same_question（拿掉鎖必紅）
+    聲明: 同一題並發送出時恰一組成功，順位依伺服器接收序且無重號；經典搶答結束後老師判錯時依順位遞補、判對鎖定，未檢查＝順位 1（answer-review）
+    守門: server/tests/test_submit.py::test_concurrent_same_question、test_concurrent_same_team_same_question（拿掉鎖必紅）；server/tests/test_scoring.py::test_classic_without_judgments_unchanged、test_classic_rejected_falls_back_to_next_rank、test_classic_locked_candidate、test_classic_all_rejected_has_no_winner
     狀態: covered
     卡: buzz-answering
   - id: M-006
     需求: R-05
-    聲明: 匯出的 Guided Notes 中每題作答格填入搶答成功的答案，其餘格內容與格式不變
-    守門: server/tests/test_guided_notes_export.py（三份夾具往返、公式形式答案存為文字）；server/tests/test_api_export.py；probes/results/2026-11-11-e2e-flow.txt
+    聲明: 匯出的 Guided Notes 中每題作答格填入搶答成功的答案（經典搶答為老師檢查後鎖定或遞補的得主；重新寫回 Google 副本時，上次寫過、這次已無得主的格以原內容還原——answer-review）。xlsx 來源：其餘格內容與格式不變；Google 來源：答案以 Sheets API 寫入匯入時建立的副本、副本其餘格不被寫入、原試算表 0 次寫入；Google 來源的 xlsx 下載備援只保證值與合併（guided-notes-sheets-sync）
+    守門: server/tests/test_guided_notes_export.py（三份夾具往返、公式形式答案存為文字、題組子題寫入標籤右側填空格）；server/tests/test_api_export.py；probes/results/2026-11-11-e2e-flow.txt；server/tests/test_google_sheets.py::test_write_targets_only_the_copy_with_raw、test_sheet_name_quote_is_escaped；server/tests/test_api_google.py::test_export_sheet_writes_copy；probes/results/2026-11-17-google-sheets.txt；server/tests/test_review.py::test_export_writes_fallback_answer、test_all_rejected_has_no_winner_and_export_keeps_original；server/tests/test_api_google.py::test_reexport_restores_previously_written_cells、test_reset_keeps_written_and_restores_in_next_round、test_reimport_clears_written、test_written_not_recorded_when_copy_changed_during_write
     狀態: covered
     卡: guided-notes-export
   - id: M-007
@@ -48,7 +48,7 @@ rows:
   - id: M-008
     需求: R-08
     聲明: 學生只在搶答結束後看到每題得主、得主答案、全部組別答案與順位，且與老師畫面一致
-    守門: server/tests/test_results_view.py::test_student_results_only_when_ended、test_teacher_and_student_agree
+    守門: server/tests/test_results_view.py::test_student_results_only_when_ended、test_teacher_and_student_agree（經典含結束後判錯遞補）；server/tests/test_review.py::test_successful_review_pushes_once_and_failures_push_nothing
     狀態: covered
     卡: results-view
   - id: M-009
@@ -118,20 +118,86 @@ rows:
     狀態: covered
     卡: team-mode
   - id: M-020
+    需求: R-02、R-05、R-09、P-06
+    聲明: Google 權杖、授權碼與 client secret 只在伺服器記憶體，永不出現在學生或老師的 view、任何 API 回應與日誌；OAuth 回呼只接受伺服器發出、未過期、未用過且與發起瀏覽器 cookie 相符的 state，回呼頁不回顯查詢參數
+    守門: server/tests/test_isolation.py::test_google_tokens_never_reach_students_or_logs；server/tests/test_api_google.py::test_forged_state_rejected、test_state_replay_rejected、test_state_expires、test_other_browser_without_cookie_rejected、test_callback_does_not_echo_params、test_logout_revokes_with_token_in_body；ops/tests/test_gates.py::test_secrets_flags_real_shapes（GOCSPX-、ya29.、1// 形狀）
+    狀態: covered
+    卡: guided-notes-sheets-sync
+  - id: M-021
+    需求: X-04、R-09
+    聲明: 題目敘述只在搶答開始後送給學生（準備階段不送、逐題模式只送已開放過的題、結束後全送），老師任何階段都有；帶敘述的學生 payload 仍不含他組答案
+    守門: server/tests/test_isolation.py::test_prompts_hidden_until_open、test_prompts_payload_still_has_no_other_team_answers、test_prompts_sequential_only_opened、test_prompts_all_after_timed_end、test_invalid_token_has_no_prompts
+    狀態: covered
+    卡: question-text
+  - id: M-022
+    需求: R-04、R-10、X-03
+    聲明: 經典搶答結束後老師依順位檢查每題答案（答錯換下一順位、答對鎖定、可重設），只在經典搶答的 ended 允許；送出的組別必須是目前候選，否則 409 且不跳組；得主、分數、老師表、學生結果與匯出一致；檢查狀態只在老師 view
+    守門: server/tests/test_review.py::test_unreviewed_question_keeps_fastest、test_reject_falls_back_to_next_rank、test_correct_locks_and_blocks_further_review、test_double_click_does_not_skip_a_team、test_all_rejected_has_no_winner_and_export_keeps_original、test_export_writes_fallback_answer、test_reset_returns_to_rank_one、test_no_submission_and_unknown_question、test_only_classic_and_only_ended、test_error_order_401_then_422、test_successful_review_pushes_once_and_failures_push_nothing、test_reset_activity_clears_reviews；server/tests/test_results_view.py::test_teacher_and_student_agree
+    狀態: covered
+    卡: answer-review
+  - id: M-023
+    需求: X-04、P-06
+    聲明: 經公開網域（Cloudflare 快速通道）或非本機 Host 的請求拿不到老師身分：老師 REST 403、老師 WebSocket 4403、Google 回呼 403，且先於金鑰檢查；學生端點不受限；通道網址只在老師 view
+    守門: server/tests/test_api_host.py；server/tests/test_tunnel.py
+    狀態: covered
+    卡: student-qr
+  - id: M-024
+    需求: R-01、P-06
+    聲明: 老師金鑰只經網址首次帶入，載入後自網址移除（不新增瀏覽紀錄），只存本分頁 sessionStorage，不寫 localStorage 或 cookie；金鑰錯誤（401／4401）即清除並提示重新輸入
+    守門: web/src/route.test.ts；web/src/pages/teacherkey.test.tsx
+    狀態: covered
+    卡: teacher-key-hidden
+  - id: M-025
+    需求: P-06、X-04
+    聲明: Google 用戶端密鑰只寫入本機 .env，永不出現在任何回應、view 與日誌；設定端點限本機＋老師金鑰、白名單 fullmatch（含尾端換行負例）、只改兩鍵且同鍵多行只留一行、已登入不可變更；設定變更作廢進行中的登入
+    守門: server/tests/test_google_config.py（test_save_writes_two_keys_keeps_other_lines_and_takes_effect、test_spaced_and_duplicate_keys_collapse_to_one、test_invalid_rejected_and_file_unchanged、test_public_host_rejected_before_key、test_signed_in_cannot_change_or_clear、test_secret_never_logged、test_reconfigure_discards_inflight_login）；web/src/pages/setup.test.tsx（Google 設定精靈）
+    狀態: covered
+    卡: easy-setup
+  - id: M-026
+    需求: X-04、R-09
+    聲明: 手機連線由老師（本機）在執行期起停，建立中再開 409、建立中關閉即取消、搶答開始後不能關閉、子行程意外結束轉 off；狀態推播給老師，學生 view 不含 tunnel 與 student_url
+    守門: server/tests/test_tunnel_api.py（test_open_then_close、test_starting_second_open_409_and_close_cancels、test_close_rejected_after_start、test_unexpected_exit_turns_off、test_public_host_rejected、test_student_view_never_has_tunnel_fields）；web/src/pages/setup.test.tsx（一鍵手機連線）
+    狀態: covered
+    卡: easy-setup
+  - id: M-027
+    需求: R-01
+    聲明: 啟動就緒後自動開本機老師頁恰一次，--no-browser／QUIZ_NO_BROWSER=1／CI 不開；通道實例以伺服器埠建立並注入 app；準備階段顯示開始前的設定清單
+    守門: server/tests/test_launch.py；web/src/pages/setup.test.tsx（開始前的設定清單）
+    狀態: covered
+    卡: easy-setup
+  - id: M-028
+    需求: R-04、R-08、X-04
+    聲明: 活動結束後老師頁與學生結果頁顯示前三名領獎台（同分同名次、下一名跳號、0 分不上台、沒有組別得分不顯示、學生標出本組）；結束前不顯示，只用結束後 view 既有的 team_scores
+    守門: web/src/pages/podium.test.tsx
+    狀態: covered
+    卡: results-podium
+  - id: M-029
+    需求: R-04、X-04
+    聲明: 搶答中老師頁即時跳出新送出的快訊（經典第 1 順位「搶下」、其餘「送出」）；開頁／重連第一個 view 不出通知；非搶答中不出；文案不含答案；學生端無快訊
+    守門: web/src/pages/livefeed.test.tsx
+    狀態: covered
+    卡: live-feed
+  - id: M-030
+    需求: R-04、R-08、X-04
+    聲明: 領獎台出現時灑一次彩帶（對讀屏軟體隱藏、不擋點擊）；沒有領獎台就沒有彩帶；分數更新重繪不重播；顏色只用 --qz-* 變量；減少動態效果時不顯示
+    守門: web/src/pages/podium.test.tsx（領獎台彩帶）
+    狀態: covered
+    卡: podium-confetti
+  - id: M-031
     需求: R-01、R-11
     聲明: 老師只在準備階段可把組數設為 2–50；1、51 與格式錯誤不改狀態；合法改組數撤銷所有組別身分、邀請碼與草稿
     守門: server/tests/test_api_skeleton.py；server/tests/test_phases.py
     狀態: covered
     卡: team-limit-50
-  - id: M-021
+  - id: M-032
     需求: R-01、R-09、R-10、X-04
     聲明: 50 組開啟組隊時最多 300 台可同時連線且最終狀態一致；每組仍最多 6 台；搶答中不洩漏其他 49 組答案，50 組並發順位無重號且恰一得主
-    守門: server/tests/test_team_mode.py；server/tests/test_isolation.py；server/tests/test_submit.py；probes/results/2026-11-27-team-limit-50-capacity.txt
+    守門: server/tests/test_team_mode.py；server/tests/test_isolation.py；server/tests/test_submit.py；probes/results/2026-11-28-team-limit-50-capacity-implementation.txt
     狀態: covered
     卡: team-limit-50
-  - id: M-022
+  - id: M-033
     需求: R-01、R-04、R-08
     聲明: 50 組下學生選組、老師管理與結果表保留全部組別，使用者在 768 px 視窗可捲動並於 30 秒內操作第 50 組
-    守門: web/src/pages/team-limit.test.tsx；specs/010-team-limit-50/verification.md
+    守門: web/src/pages/team-limit.test.tsx；docs/manual-verification.md
     狀態: covered
     卡: team-limit-50

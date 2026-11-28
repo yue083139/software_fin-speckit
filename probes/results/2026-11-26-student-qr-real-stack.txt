@@ -1,0 +1,10 @@
+指令：QUIZ_TEACHER_KEY=<假金鑰> uv run --project server python -m quiz_server --port 8031 --tunnel（feat/student-qr，2026-11-26）
+正在建立 Cloudflare 快速通道（約 5 秒）…
+老師頁（只能在本機開啟）：http://127.0.0.1:8031/#/teacher?key=<已遮蔽>
+學生頁：http://127.0.0.1:8031/
+學生頁（手機掃老師頁的 QR code，或直接開）：https://maui-graphic-latino-logistics.trycloudflare.com/
+新通道網址約需 1 分鐘才連得上；每次啟動網址都會不同。
+curl 公開 /api/public/info：200
+curl 公開 /api/teacher/state（帶正確老師金鑰）：{"detail":"老師頁只能在本機開啟"} 403
+curl 本機 /api/teacher/state：200
+本機老師 view student_url：https://maui-graphic-latino-logistics.trycloudflare.com/

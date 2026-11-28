@@ -1,0 +1,43 @@
+@startuml 012-answer-review-component
+title 012 answer-review：組件圖（v1.1）
+
+package "web" {
+  [Results（老師）\n讀 board 的 review 欄位：候選列「答對」「答錯」\n已鎖定・重設本題・全部答錯\n（web-workbench 整合）] as RT
+  [Results（學生）\n得主・分數・對錯標記] as RS
+  [PhaseControls\n匯出到 Google 試算表・下載 xlsx] as PC
+  [api.ts\nreview・reviewReset] as Api
+}
+
+package "server/quiz_server" {
+  [app.py\n/api/teacher/review・review-reset\nexport-sheet・export（_作答情況.xlsx）\nexport_lock 序列化匯出與寫回] as App
+  [activity.Activity\nreview・review_reset・review_candidate\njudgments（共用）・sheet_written] as Act
+  [scoring.ClassicBuzzRule\n候選＝第一個未被判錯者] as Rule
+  [results\nbuild（老師另含 review 欄位）・team_scores・winning_answers] as Res
+  [views\nteacher_view・student_view] as Views
+  [google_sheets\nCOPY_SUFFIX「_作答情況」\nwrite_answers(restore)：有得主＋上次寫過] as GS
+  [guided_notes\nwrite_answers（xlsx 由原檔重產）] as Notes
+}
+
+cloud "Google" {
+  [Sheets API v4\nvalues:batchUpdate（RAW）] as G_Sheets
+  [Drive API v3\nfiles.copy] as G_Drive
+}
+
+RT --> Api
+PC --> Api
+Api --> App : X-Teacher-Key
+App --> Act : review／review_reset（鎖內）
+Act --> Rule : 經 rule 取候選
+Res --> Rule : rank(submissions, judgments, attrs)
+Views --> Res
+App --> Res : winning_answers
+App --> GS
+App --> Notes
+GS --> G_Sheets
+GS --> G_Drive : 匯入時「<原標題>_作答情況」
+Views --> RS : WebSocket（ended 才含 results）
+note bottom of Rule
+  無任何判定 → 與現行相同（順位 1 得主，R-10）
+  全部判錯 → 無得主、全 0 分
+end note
+@enduml

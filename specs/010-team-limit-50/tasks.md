@@ -1,4 +1,4 @@
----
+﻿---
 
 description: "010-team-limit-50 的相依排序實作任務"
 ---
@@ -119,7 +119,7 @@ description: "010-team-limit-50 的相依排序實作任務"
 
 - [x] T032 [P] 對照 component、class、sequence 三圖逐項核對實作元件、類別約束與訊息序，將含 `path:line` 錨點的結論寫入 `specs/010-team-limit-50/verification.md`
 - [x] T033 [P] 依 `specs/010-team-limit-50/quickstart.md` 在一般桌面與 768 px 視窗人工完成第 50 組加入、釋放、作答與結果定位，將驗證者、日期、測試環境、逐步操作、實際觀察、每項耗時及截圖證據記錄於 `specs/010-team-limit-50/verification.md`
-- [x] T034 將 M-020、M-021、M-022 的實際驗收落點與狀態由 `uncovered` 更新為 `covered` 於 `eval/acceptance/matrix.yaml`
+- [x] T034 將 M-031、M-032、M-033 的實際驗收落點與狀態由 `uncovered` 更新為 `covered` 於 `eval/acceptance/matrix.yaml`
 - [x] T035 執行 `make gate-diagrams`、`make gate-parity SIBLING=../software_fin-openspec`、`make gate`，把原樣輸出與任何有意不改項目記錄於 `specs/010-team-limit-50/verification.md`
 - [x] T036 匯出本卡 AI 對話紀錄並登記於 `docs/ai-logs/010-team-limit-50.md`
 - [x] T037 依 S 檔流程完成實作輪紅隊與架構評審，將兩通道結論、藥方回驗及「都綠否」逐項狀態寫入 `specs/010-team-limit-50/verification.md`
@@ -210,3 +210,4 @@ Task T029: web/src/pages/Results.tsx 的結果定位
 - 2 秒只作效能觀測目標；300/300 最終一致、隔離、每組六台與並發公平仍是阻塞驗收。
 - `contracts/api.md` 是凍結件，T003 未取得明確批准前不得執行 T005。
 - 不得把真實學生資料、作答或憑證放入測試、探針與 AI 紀錄。
+

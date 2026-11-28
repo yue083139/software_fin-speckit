@@ -1,3 +1,4 @@
+import { btn } from "../test-utils";
 import { render, screen } from "@testing-library/react";
 import { Board, StudentResults } from "./Results";
 import { TeacherPanel } from "./Teacher";
@@ -54,13 +55,24 @@ describe("匯出", () => {
 
   it("只有結束後可匯出", () => {
     const { unmount } = render(<TeacherPanel view={{ ...view, phase: "answering" }} act={() => {}} upload={() => {}} />);
-    expect(screen.getByText("匯出 Guided Notes")).toBeDisabled();
+    expect(btn("下載 xlsx（備援）")).toBeDisabled();
     unmount();
     let clicked = 0;
     render(
       <TeacherPanel view={{ ...view, phase: "ended" }} act={() => {}} upload={() => {}} download={() => clicked++} />,
     );
-    screen.getByText("匯出 Guided Notes").click();
+    screen.getByText("下載 xlsx（備援）").click();
     expect(clicked).toBe(1);
+  });
+});
+
+describe("結果表的題目敘述（question-text D5）", () => {
+  it("學生結果與老師作答表依題號顯示敘述", () => {
+    const questions = results.map((q) => ({ number: q.number, labels: q.labels, prompts: q.labels.map(() => `第${q.number}題敘述`) }));
+    const { unmount } = render(<StudentResults team="第1組" results={results} scores={scores} questions={questions} />);
+    expect(screen.getAllByText(/第\d+題敘述/).length).toBeGreaterThan(0);
+    unmount();
+    render(<Board board={results} teams={["第1組", "第2組"]} scores={scores} questions={questions} />);
+    expect(screen.getAllByText(/第\d+題敘述/).length).toBeGreaterThan(0);
   });
 });

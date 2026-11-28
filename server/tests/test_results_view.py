@@ -46,10 +46,11 @@ def test_student_results_only_when_ended(loaded_client, teacher_headers):
 
 
 def _without_teacher_only(board: list[dict]) -> list[dict]:
-    """老師版只多 `reference` 與 `ranking[].suggestion`（game-mode-framework D6）；拿掉後應與學生版相同。"""
+    """老師版只多 `reference`、`ranking[].suggestion`（game-mode-framework D6）與經典的 `review`
+    （answer-review v1.1）；拿掉後應與學生版相同。"""
     out = []
     for q in board:
-        q = {k: v for k, v in q.items() if k != "reference"}
+        q = {k: v for k, v in q.items() if k not in ("reference", "review")}
         q["ranking"] = [{k: v for k, v in r.items() if k != "suggestion"} for r in q["ranking"]]
         out.append(q)
     return out
@@ -69,6 +70,11 @@ def test_teacher_and_student_agree(loaded_client, teacher_headers, mode):
             loaded_client.post("/api/teacher/judge", json={"question": q, "team": team, "correct": ok},
                                headers=teacher_headers)
         assert loaded_client.post("/api/teacher/reveal", headers=teacher_headers).status_code == 200
+    else:
+        # answer-review D4：經典搶答結束後判錯順位 1 ⇒ 兩邊得主同步遞補為第2組
+        r = loaded_client.post("/api/teacher/review", json={"question": 3, "team": "第1組", "correct": False},
+                               headers=teacher_headers)
+        assert r.status_code == 200
     teacher = loaded_client.get("/api/teacher/state", headers=teacher_headers).json()
     with loaded_client.websocket_connect(f"/ws?role=student&token={t1}") as ws:
         student = ws.receive_json()["view"]
@@ -76,7 +82,7 @@ def test_teacher_and_student_agree(loaded_client, teacher_headers, mode):
         student["results"], sort_keys=True)
     assert teacher["team_scores"] == student["team_scores"]
     q3 = next(r for r in student["results"] if r["number"] == 3)
-    assert q3["winner"]["team"] == ("第1組" if mode == "classic" else "第2組")
+    assert q3["winner"]["team"] == "第2組"
 
 
 def test_teacher_board_empty_before_import(client, teacher_headers):

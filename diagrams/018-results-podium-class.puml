@@ -1,0 +1,24 @@
+@startuml 018-results-podium-class
+title 018 results-podium：類別圖
+
+class "PodiumPlace" as Place {
+  +rank : 1 | 2 | 3
+  +score : number
+  +teams : string[]
+}
+class "Podium" as Podium {
+  +podiumPlaces(scores) : PodiumPlace[]
+  +Podium(scores, scoreLabel, team?)
+  -STAND_ORDER = [2, 1, 3]
+}
+class "TeacherPanel" as Teacher {
+  +view : TeacherView
+}
+class "StudentResults" as Student {
+  +team : string
+  +scores : Record<string, number>
+}
+Podium "1" o-- "0..3" Place : 產生
+Teacher ..> Podium : ended 時掛載
+Student ..> Podium : 掛載並標本組
+@enduml

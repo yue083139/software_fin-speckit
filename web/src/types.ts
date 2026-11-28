@@ -28,6 +28,7 @@ export interface QuestionOutline {
   labels: string[];
   multiplier?: number; // question-settings：1 或 2
   time_limit?: number; // 秒，時間計分模式使用
+  prompts?: string[]; // question-text：每個子題的題目敘述；伺服器只在學生可看時才帶
 }
 
 export interface TeacherView {
@@ -36,6 +37,8 @@ export interface TeacherView {
   teams: string[];
   joined: string[];
   source: string | null;
+  student_url?: string | null; // student-qr：通道公開網址，給 QR code；null＝改用自身網址
+  tunnel?: "off" | "starting" | "on"; // easy-setup：手機連線狀態，只在老師 view
   questions: QuestionOutline[];
   board: QuestionResult[];
   team_scores: Record<string, number>;
@@ -81,7 +84,7 @@ export interface RankedAnswer {
   rank: number;
   is_winner: boolean;
   score: number;
-  correct?: boolean | null; // 經典為 null；判定模式為老師判定
+  correct?: boolean | null; // 經典：未檢查為 null、結束後老師檢查為 true／false（answer-review）；判定模式為老師判定
   suggestion?: boolean | null; // 只在老師 view
 }
 
@@ -92,6 +95,14 @@ export interface QuestionResult {
   winner: { team: string; answers: string[] } | null;
   multiplier?: number;
   reference?: (string | null)[]; // 只在老師 view
+  review?: ReviewState; // 只在老師 view、只在經典模式（answer-review）
+}
+
+// 經典搶答結束後的檢查狀態（answer-review）：候選＝目前得主；rejected 依順位；locked＝候選已判對
+export interface ReviewState {
+  candidate: string | null;
+  rejected: string[];
+  locked: boolean;
 }
 
 export type View = TeacherView | StudentView;

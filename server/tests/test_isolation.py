@@ -262,3 +262,129 @@ def test_invite_code_not_sent_to_students_while_answering(team_play, teacher_hea
     with c.websocket_connect(f"/ws?role=student&token={ta}") as wa:
         raw = wa.receive_text()
     assert code_now not in raw and "invite_code" not in json.loads(raw)["view"]
+
+
+def test_google_tokens_never_reach_students_or_logs(activity, fixture_bytes, caplog):
+    """guided-notes-sheets-sync D6：登入到登出（撤銷失敗）全程，學生端與日誌不含任何憑證。"""
+    from urllib.parse import parse_qs as _pq
+
+    from conftest import TEACHER_KEY
+    from fastapi.testclient import TestClient
+    from google_fake import ACCESS, ACCESS2, CLIENT_ID, CLIENT_SECRET, CODE, REFRESH, FakeGoogle, sign_in
+
+    from quiz_server.app import create_app
+    from quiz_server.google_auth import GoogleSession
+
+    clock = [1000.0]
+    fake = FakeGoogle(fixture_bytes("group.xlsx"))
+    fake.fail["revoke"] = 1
+    session = GoogleSession(CLIENT_ID, CLIENT_SECRET, transport=fake.transport(), clock=lambda: clock[0])
+    h = {"X-Teacher-Key": TEACHER_KEY}
+    url = "https://docs.google.com/spreadsheets/d/" + "1" + "A" * 43 + "/edit"
+    secrets_ = [ACCESS, ACCESS2, REFRESH, CLIENT_SECRET, CODE]
+    caplog.set_level(logging.DEBUG)
+    with TestClient(create_app(activity=activity, teacher_key=TEACHER_KEY, google=session)) as c:
+        sign_in(c, h)
+        assert c.post("/api/teacher/import-url", json={"url": url}, headers=h).status_code == 200
+        ta = join(c, "第1組")
+        tb = join(c, "第2組")
+        with c.websocket_connect(f"/ws?role=student&token={tb}") as wb:
+            raw = [wb.receive_text()]
+            c.post("/api/teacher/start", headers=h)
+            raw.append(wb.receive_text())
+            own_a = submit(c, ta, 3, [SECRET_A]).text  # A 組自己的回應，不屬 B 組通道
+            raw.append(submit(c, tb, 4, ["乙"]).text)
+            raw.append(c.get("/api/public/info").text)
+            clock[0] += 3600  # 觸發換新
+            c.post("/api/teacher/end", headers=h)
+            raw.append(wb.receive_text())
+        assert c.post("/api/teacher/export-sheet", headers=h).status_code == 200
+        c.post("/api/teacher/google/logout", headers=h)
+        teacher_view = c.get("/api/teacher/state", headers=h).text
+    blob = "\n".join(raw + [own_a])
+    logs = "\n".join(r.getMessage() for r in caplog.records)
+    assert SECRET_A not in "\n".join(raw[:4])  # 搶答中學生 B 的通道看不到 A 組答案
+    for s in secrets_:
+        assert s not in blob, s
+        assert s not in logs, s
+        assert s not in teacher_view, s
+    assert _pq(fake.calls[-1].content.decode()).get("token") == [REFRESH]  # 撤銷失敗也有送出
+
+
+# question-text D2：題目敘述只在開放作答後送給學生
+
+
+def test_prompts_hidden_until_open(loaded_client, teacher_headers):
+    token = join(loaded_client, "第1組")
+    with loaded_client.websocket_connect(f"/ws?role=student&token={token}") as ws:
+        first = ws.receive_json()["view"]
+        assert first["phase"] == "preparing"
+        assert all("prompts" not in q for q in first["questions"])
+        teacher = loaded_client.get("/api/teacher/state", headers=teacher_headers).json()
+        assert [len(q["prompts"]) for q in teacher["questions"]] == [2, 2, 1, 1]
+        loaded_client.post("/api/teacher/start", headers=teacher_headers)
+        view = ws.receive_json()["view"]
+        assert view["phase"] == "answering"
+        assert [len(q["prompts"]) for q in view["questions"]] == [2, 2, 1, 1]
+        assert view["questions"][0]["prompts"][0].startswith("根據文章第一段")
+
+
+def test_prompts_payload_still_has_no_other_team_answers(two_teams, activity):
+    client, ta, tb = two_teams
+    with client.websocket_connect(f"/ws?role=student&token={tb}") as ws:
+        raw_first = ws.receive_text()
+        assert submit(client, ta, 3, [SECRET_A]).status_code == 200
+        assert submit(client, ta, 1, [SECRET_A, SECRET_A2]).status_code == 200
+    assert "prompts" in raw_first and SECRET_A not in raw_first
+    raw = json.dumps(student_view(activity, "第2組"), ensure_ascii=False)
+    assert "prompts" in raw and SECRET_A not in raw and SECRET_A2 not in raw
+
+
+def test_prompts_sequential_only_opened(fixture_bytes):
+    import asyncio
+
+    from quiz_server.activity import Activity
+
+    async def go():
+        a = Activity()
+        await a.load_questions(fixture_bytes("group.xlsx"), "group.xlsx")
+        await a.set_mode("timed")
+        await a.start()
+        before = student_view(a, "第1組")
+        assert all("prompts" not in q for q in before["questions"])
+        await a.open_next()
+        after = student_view(a, "第1組")
+        assert ["prompts" in q for q in after["questions"]] == [True, False, False, False]
+        await a.close_question()
+        closed = student_view(a, "第1組")
+        assert ["prompts" in q for q in closed["questions"]] == [True, False, False, False]
+
+    asyncio.run(go())
+
+
+def test_invalid_token_has_no_prompts(ready_activity):
+    import asyncio
+    asyncio.run(ready_activity.start())
+    view = student_view(ready_activity, None)
+    assert "questions" not in view
+
+
+def test_prompts_all_after_timed_end(fixture_bytes):
+    import asyncio
+
+    from quiz_server.activity import Activity
+
+    async def go():
+        a = Activity()
+        await a.load_questions(fixture_bytes("group.xlsx"), "group.xlsx")
+        await a.set_mode("timed")
+        await a.start()
+        await a.open_next()
+        await a.close_question()
+        await a.reveal_question()
+        await a.end()
+        assert a.phase is Phase.ENDED
+        view = student_view(a, "第1組")
+        assert [len(q["prompts"]) for q in view["questions"]] == [2, 2, 1, 1]
+
+    asyncio.run(go())

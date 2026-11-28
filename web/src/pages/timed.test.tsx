@@ -1,3 +1,4 @@
+import { btn } from "../test-utils";
 import { render, screen } from "@testing-library/react";
 import { TeacherPanel } from "./Teacher";
 import { StudentPanel } from "./Student";
@@ -43,8 +44,8 @@ describe("時間計分：老師", () => {
   it("沒有進行中題目時只能開放下一題或結束活動", () => {
     const calls: string[] = [];
     render(<TeacherPanel view={teacher} act={(p) => calls.push(p)} upload={() => {}} />);
-    expect(screen.getByText("提早結束本題")).toBeDisabled();
-    expect(screen.getByText("揭曉本題")).toBeDisabled();
+    expect(btn("提早結束本題")).toBeDisabled();
+    expect(btn("揭曉本題")).toBeDisabled();
     screen.getByText("開放下一題").click();
     expect(calls).toEqual(["open-next"]);
     expect(screen.getByText("967")).toBeInTheDocument();
@@ -55,8 +56,8 @@ describe("時間計分：老師", () => {
     const { unmount } = render(<TeacherPanel view={closed} act={() => {}} upload={() => {}} />);
     expect(screen.getByLabelText("第 3 題 第1組 正確")).toBeInTheDocument();
     expect(screen.queryByLabelText("第 4 題 第1組 正確")).toBeNull();
-    expect(screen.getByText("揭曉本題")).toBeDisabled();
-    expect(screen.getByText("結束活動")).toBeDisabled();
+    expect(btn("揭曉本題")).toBeDisabled();
+    expect(btn("結束活動")).toBeDisabled();
     unmount();
     const calls: string[] = [];
     render(<TeacherPanel view={{ ...closed, pending_judgments: 0 }} act={(p) => calls.push(p)} upload={() => {}} />);
@@ -96,7 +97,8 @@ describe("時間計分：學生", () => {
   };
 
   it("只顯示進行中那一題與倒數", () => {
-    render(<StudentPanel view={base} />);
+    // 截止時刻以渲染當下起算：antd 首次渲染可能耗掉數秒，模組載入時算的截止會讓倒數提早變少
+    render(<StudentPanel view={{ ...base, round: { question: 3, state: "open", deadline_epoch_ms: Date.now() + 15_000 } }} />);
     expect(screen.getByText("第 3 題")).toBeInTheDocument();
     expect(screen.queryByText("第 4 題")).toBeNull();
     expect(screen.getByLabelText("剩餘秒數").textContent).toMatch(/1[45] 秒/);

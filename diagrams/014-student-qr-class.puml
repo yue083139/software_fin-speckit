@@ -1,0 +1,57 @@
+@startuml 014-student-qr-class
+title 014 student-qr：類別圖
+
+package "quiz_server.tunnel" {
+  class Tunnel {
+    +port : int
+    +proc : Popen 或 None
+    +start(timeout=30) : str 或 None
+    +stop() : None
+  }
+  class "模組函式" as TunFns <<module>> {
+    +find_cloudflared() : str 或 None
+    +parse_url(line) : str 或 None
+    +wait_for_url(stream, timeout) : str 或 None
+    URL : 表框列正規式
+    KNOWN_PATHS : 預設安裝路徑
+  }
+}
+
+package "quiz_server.app" {
+  class "create_app" as CreateApp <<function>> {
+    student_url : str 或 None
+    is_local(headers) : bool
+    require_teacher(request, x_teacher_key)
+    ws(socket, role, key, token)
+    google_callback(request)
+  }
+  class "常數" as AppConst <<module>> {
+    LOCAL_HOSTNAMES : 127.0.0.1、localhost、IPv6 ::1
+    TUNNEL_HEADERS : cf-connecting-ip、cf-ray
+    WS_NOT_LOCAL : 4403
+    NOT_LOCAL : 老師頁只能在本機開啟
+    CALLBACK_NOT_LOCAL : 固定 HTML
+  }
+}
+
+package "quiz_server.activity" {
+  class Activity {
+    +public_url : str 或 None
+  }
+}
+
+package "quiz_server.views" {
+  class "teacher_view" as TV <<function>> {
+    student_url : Activity.public_url
+  }
+  class "student_view" as SV <<function>> {
+    不含 student_url
+  }
+}
+
+Tunnel ..> TunFns
+CreateApp ..> AppConst
+CreateApp --> Activity : 設定 public_url
+TV --> Activity
+SV --> Activity
+@enduml

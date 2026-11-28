@@ -29,7 +29,10 @@ def test_export_writes_winners(loaded_client, teacher_headers, fixture_bytes):
     notes = parse_workbook(fixture_bytes("group.xlsx"))
     ws = openpyxl.load_workbook(io.BytesIO(r.content))["學習單"]
     q1, q3 = notes.questions[0], notes.questions[2]
-    assert [ws[s.cell].value for s in q1.slots] == ["（1）CPU", "（2）作業系統"]
+    # guided-notes-sheets-sync D5：子題答案寫入標籤右側填空格（H 欄），G 欄標籤不變
+    assert [s.cell for s in q1.slots] == ["H5", "H6"]
+    assert [ws[s.cell].value for s in q1.slots] == ["CPU", "作業系統"]
+    assert [ws["G5"].value, ws["G6"].value] == ["（1）", "（2）"]
     assert ws[q3.slots[0].cell].value == "一"  # 第2組先送出
     assert ws[notes.questions[3].slots[0].cell].value is None
 
@@ -38,7 +41,7 @@ def test_filename_header(loaded_client, teacher_headers):
     loaded_client.post("/api/teacher/start", headers=teacher_headers)
     loaded_client.post("/api/teacher/end", headers=teacher_headers)
     r = loaded_client.get("/api/teacher/export", headers=teacher_headers)
-    assert f"filename*=UTF-8''{quote('group-搶答結果.xlsx')}" in r.headers["content-disposition"]
+    assert f"filename*=UTF-8''{quote('group_作答情況.xlsx')}" in r.headers["content-disposition"]
 
 
 def test_export_only_when_ended(loaded_client, teacher_headers):

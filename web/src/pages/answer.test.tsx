@@ -1,3 +1,4 @@
+import { allBtn } from "../test-utils";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { StudentPanel } from "./Student";
 import type { StudentView } from "../types";
@@ -18,7 +19,7 @@ describe("學生作答", () => {
   it("題組要填滿全部子題才可送出，送出帶全部答案", () => {
     const calls: [number, string[]][] = [];
     render(<StudentPanel view={base} onSubmit={async (q, a) => void calls.push([q, a])} />);
-    const buttons = screen.getAllByText("搶答送出");
+    const buttons = allBtn("搶答送出");
     fireEvent.change(screen.getByLabelText("第 1 題 （1）"), { target: { value: "CPU" } });
     expect(buttons[0]).toBeDisabled();
     fireEvent.change(screen.getByLabelText("第 1 題 （2）"), { target: { value: "作業系統" } });
@@ -36,5 +37,27 @@ describe("學生作答", () => {
   it("準備中不顯示作答欄", () => {
     render(<StudentPanel view={{ ...base, phase: "preparing" }} />);
     expect(screen.queryByText("搶答送出")).toBeNull();
+  });
+});
+
+describe("題目敘述（question-text D5）", () => {
+  it("有敘述時顯示在子題輸入欄上方", () => {
+    const view: StudentView = {
+      ...base,
+      questions: [
+        { number: 1, labels: ["（1）", "（2）"], prompts: ["大腦英文簡稱？", "作業系統稱為？"] },
+        { number: 3, labels: [""], prompts: ["電腦使用幾進位？"] },
+      ],
+    };
+    render(<StudentPanel view={view} onSubmit={async () => {}} />);
+    expect(screen.getByText("大腦英文簡稱？")).toBeInTheDocument();
+    expect(screen.getByText("作業系統稱為？")).toBeInTheDocument();
+    expect(screen.getByText("電腦使用幾進位？")).toBeInTheDocument();
+  });
+
+  it("伺服器沒帶或為空字串時不顯示敘述段", () => {
+    const view: StudentView = { ...base, questions: [{ number: 3, labels: [""], prompts: [""] }] };
+    const { container } = render(<StudentPanel view={view} onSubmit={async () => {}} />);
+    expect(container.querySelector(".prompt")).toBeNull();
   });
 });
