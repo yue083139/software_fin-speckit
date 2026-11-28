@@ -1,0 +1,14 @@
+@startuml
+actor 老師
+participant "Teacher 工作檯" as UI
+participant "CSV helper" as Csv
+participant "TeacherView" as View
+participant "瀏覽器下載" as Browser
+老師 -> UI : 活動 ended 後點擊 CSV
+UI -> View : 讀取目前完整 view
+UI -> Csv : buildResultsCsv(view)
+Csv -> Csv : 題目 × 組別展開、跳脫欄位
+Csv --> UI : CSV 文字
+UI -> Browser : Blob + 檔名下載
+Browser --> 老師 : 儲存 CSV
+@enduml

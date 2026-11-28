@@ -201,3 +201,9 @@ rows:
     守門: web/src/pages/team-limit.test.tsx；docs/manual-verification.md
     狀態: covered
     卡: team-limit-50
+  - id: M-034
+    需求: X-02
+    聲明: 活動結束後可下載完整結果 CSV，每題每組一列，含答案、順位、得主、判定、本題得分與活動總分；未作答列保留，CSV 正確跳脫並保護公式前綴答案
+    守門: web/src/resultsCsv.test.ts；docs/manual-verification.md
+    狀態: covered
+    卡: csv-export

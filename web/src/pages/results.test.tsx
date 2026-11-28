@@ -54,15 +54,26 @@ describe("匯出", () => {
   };
 
   it("只有結束後可匯出", () => {
-    const { unmount } = render(<TeacherPanel view={{ ...view, phase: "answering" }} act={() => {}} upload={() => {}} />);
+    const { unmount } = render(
+      <TeacherPanel view={{ ...view, phase: "answering" }} act={() => {}} upload={() => {}} downloadCsv={() => {}} />,
+    );
     expect(btn("下載 xlsx（備援）")).toBeDisabled();
+    expect(btn("下載完整結果 CSV")).toBeDisabled();
     unmount();
     let clicked = 0;
     render(
-      <TeacherPanel view={{ ...view, phase: "ended" }} act={() => {}} upload={() => {}} download={() => clicked++} />,
+      <TeacherPanel
+        view={{ ...view, phase: "ended" }}
+        act={() => {}}
+        upload={() => {}}
+        download={() => clicked++}
+        downloadCsv={() => clicked++}
+      />,
     );
     screen.getByText("下載 xlsx（備援）").click();
     expect(clicked).toBe(1);
+    screen.getByText("下載完整結果 CSV").click();
+    expect(clicked).toBe(2);
   });
 });
 
